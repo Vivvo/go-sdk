@@ -1,4 +1,4 @@
-package trust_provider
+package trustprovider
 
 import (
 	"testing"
@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"github.com/pkg/errors"
+	"github.com/Vivvo/vivvo-sdk/utils"
 )
 
 type MockOnboardingParams struct {
@@ -90,7 +91,7 @@ func TestOnboarding(t *testing.T) {
 				return nil
 			}
 
-			tp, _ := NewTrustProvider(onboarding, nil, saveFunc)
+			tp, _ := New(onboarding, nil, saveFunc)
 
 			executeRequest := func(req *http.Request) *httptest.ResponseRecorder {
 				rr := httptest.NewRecorder()
@@ -151,7 +152,7 @@ func TestOnboardingFuncNotConfigured(t *testing.T) {
 		OnboardingFunc:           nil,
 	}
 
-	tp, _ := NewTrustProvider(onboarding, nil, nil)
+	tp, _ := New(onboarding, nil, nil)
 
 	executeRequest := func(req *http.Request) *httptest.ResponseRecorder {
 		rr := httptest.NewRecorder()
@@ -171,7 +172,7 @@ func TestOnboardingFuncNotConfigured(t *testing.T) {
 		t.Errorf("Error reading response body: %s", err.Error())
 	}
 
-	var response errorResponse
+	var response utils.ErrorDto
 	err = json.Unmarshal(b, &response)
 	if err != nil {
 		t.Errorf("Error unmarshalling response body: %s", err.Error())
@@ -197,7 +198,7 @@ func TestSaveFuncNotConfigured(t *testing.T) {
 		},
 	}
 
-	tp, _ := NewTrustProvider(onboarding, nil, nil)
+	tp, _ := New(onboarding, nil, nil)
 
 	executeRequest := func(req *http.Request) *httptest.ResponseRecorder {
 		rr := httptest.NewRecorder()
@@ -216,7 +217,7 @@ func TestSaveFuncNotConfigured(t *testing.T) {
 		t.Errorf("Error reading response body: %s", err.Error())
 	}
 
-	var response errorResponse
+	var response utils.ErrorDto
 	err = json.Unmarshal(b, &response)
 	if err != nil {
 		t.Errorf("Error unmarshalling response body: %s", err.Error())

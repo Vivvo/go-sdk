@@ -1,24 +1,28 @@
-package trust_provider
+package utils
 
 import (
 	"encoding/json"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"github.com/go-resty/resty"
 )
 
-func setErrorStatus(e error, s int, w http.ResponseWriter) {
+type ErrorDto struct {
+	StatusCode int    `json:"statusCode"`
+	Message    string `json:"message"`
+}
+
+func SetErrorStatus(e error, s int, w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json")
-	b := errorResponse{
+	b := ErrorDto{
 		StatusCode: s,
 		Message:    e.Error(),
 	}
 
-	writeJSON(b, s, w)
+	WriteJSON(b, s, w)
 }
 
-func writeJSON(v interface{}, s int, w http.ResponseWriter) {
+func WriteJSON(v interface{}, s int, w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json")
 
 	b, err := json.Marshal(v)
@@ -32,17 +36,12 @@ func writeJSON(v interface{}, s int, w http.ResponseWriter) {
 	w.Write(b)
 }
 
-func readBody(v interface{}, r *http.Request) error {
+func ReadBody(v interface{}, r *http.Request) error {
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		return err
 	}
 
 	err = json.Unmarshal(b, &v)
-	return err
-}
-
-func readResponseBody(v interface{}, r *resty.Response) error {
-	err := json.Unmarshal(r.Body(), &v)
 	return err
 }
