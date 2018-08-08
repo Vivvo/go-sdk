@@ -8,18 +8,8 @@ import (
 	"io/ioutil"
 	"github.com/pkg/errors"
 	"github.com/Vivvo/go-sdk/utils"
+	"strings"
 )
-
-type MockOnboardingParams struct {
-	Validation   string `json:"validation"`
-	Verification string `json:"verification"`
-	LastName     string `json:"lastName"`
-}
-
-type MockOnboardingParamsOptional struct {
-	FirstName  string `json:"firstName"`
-	MiddleName string `json:"middleName"`
-}
 
 type Account struct {
 	AccountId int
@@ -31,7 +21,7 @@ func TestOnboarding(t *testing.T) {
 
 	tests := []struct {
 		name               string
-		onboardingFunc     func(params interface{}, paramsOptional interface{}) (interface{}, error)
+		onboardingFunc     func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error)
 		saveFuncCalled     bool
 		statusCode         int
 		onboardingStatus   bool
@@ -39,7 +29,7 @@ func TestOnboarding(t *testing.T) {
 		token              bool
 	}{
 		{"Test Successful Onboarding",
-			func(params interface{}, paramsOptional interface{}) (interface{}, error) {
+			func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error) {
 				onboardingFuncCalled = true
 				return Account{AccountId: 1}, nil
 			},
@@ -50,7 +40,7 @@ func TestOnboarding(t *testing.T) {
 			true,
 		},
 		{"Test Failed Onboarding",
-			func(params interface{}, paramsOptional interface{}) (interface{}, error) {
+			func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error) {
 				onboardingFuncCalled = true
 				return nil, errors.New("Error!!")
 			},
@@ -69,9 +59,8 @@ func TestOnboarding(t *testing.T) {
 			http.DefaultServeMux = new(http.ServeMux)
 
 			onboarding := Onboarding{
-				OnboardingParams:         MockOnboardingParams{},
-				OnboardingParamsOptional: MockOnboardingParamsOptional{},
-				OnboardingFunc:           tt.onboardingFunc,
+				Parameters:     []Parameter{},
+				OnboardingFunc: tt.onboardingFunc,
 			}
 
 			saveFunc := func(account interface{}, token string) error {
@@ -100,7 +89,7 @@ func TestOnboarding(t *testing.T) {
 				return rr
 			}
 
-			req, _ := http.NewRequest("POST", "/api/register", nil)
+			req, _ := http.NewRequest("POST", "/api/register", strings.NewReader(""))
 			res := executeRequest(req)
 			if res.Code != tt.statusCode {
 				t.Errorf("Expected: %d, Actual: %d", tt.statusCode, res.Code)
@@ -147,9 +136,8 @@ func TestOnboardingFuncNotConfigured(t *testing.T) {
 	http.DefaultServeMux = new(http.ServeMux)
 
 	onboarding := Onboarding{
-		OnboardingParams:         MockOnboardingParams{},
-		OnboardingParamsOptional: MockOnboardingParamsOptional{},
-		OnboardingFunc:           nil,
+		Parameters:     []Parameter{},
+		OnboardingFunc: nil,
 	}
 
 	tp, _ := New(onboarding, nil, nil)
@@ -161,7 +149,7 @@ func TestOnboardingFuncNotConfigured(t *testing.T) {
 		return rr
 	}
 
-	req, _ := http.NewRequest("POST", "/api/register", nil)
+	req, _ := http.NewRequest("POST", "/api/register", strings.NewReader(""))
 	res := executeRequest(req)
 	if res.Code != http.StatusInternalServerError {
 		t.Errorf("Expected: %d, Actual: %d", http.StatusInternalServerError, res.Code)
@@ -191,9 +179,8 @@ func TestSaveFuncNotConfigured(t *testing.T) {
 	http.DefaultServeMux = new(http.ServeMux)
 
 	onboarding := Onboarding{
-		OnboardingParams:         MockOnboardingParams{},
-		OnboardingParamsOptional: MockOnboardingParamsOptional{},
-		OnboardingFunc: func(params interface{}, paramsOptional interface{}) (interface{}, error) {
+		Parameters: []Parameter{},
+		OnboardingFunc: func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error) {
 			return Account{AccountId: 1}, nil
 		},
 	}
@@ -232,4 +219,101 @@ func TestSaveFuncNotConfigured(t *testing.T) {
 		}
 
 	}
+}
+
+func TestParameters(t *testing.T) {
+
+	tests := []struct {
+		name       string
+		parameters []Parameter
+		body       string
+		statusCode int
+	}{
+		{"Missing required", []Parameter{{name: "customerNumber", typ: ParameterTypeFloat64, required: true}}, "", http.StatusBadRequest},
+		{"Missing non-required", []Parameter{{name: "customerNumber", typ: ParameterTypeFloat64, required: false}}, "", http.StatusCreated},
+		{"Should be num", []Parameter{{name: "customerNumber", typ: ParameterTypeFloat64, required: false}}, "{\"customerNumber\": \"blahblah\"}", http.StatusBadRequest},
+		{"Should be num", []Parameter{{name: "customerNumber", typ: ParameterTypeFloat64, required: false}}, "{\"customerNumber\": 1234565}", http.StatusCreated},
+		{"Should be string", []Parameter{{name: "customerNumber", typ: ParameterTypeString, required: false}}, "{\"customerNumber\": 12345}", http.StatusBadRequest},
+		{"Should be string", []Parameter{{name: "customerNumber", typ: ParameterTypeString, required: false}}, "{\"customerNumber\":  \"blah\"}", http.StatusCreated},
+		{"Should be bool", []Parameter{{name: "customerNumber", typ: ParameterTypeBool, required: false}}, "{\"customerNumber\": \"blahblah\"}", http.StatusBadRequest},
+		{"Should be bool", []Parameter{{name: "customerNumber", typ: ParameterTypeBool, required: false}}, "{\"customerNumber\": true}", http.StatusCreated},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			http.DefaultServeMux = new(http.ServeMux)
+
+			onboarding := Onboarding{
+				Parameters: tt.parameters,
+				OnboardingFunc: func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error) {
+					return Account{AccountId: 1}, nil
+				},
+			}
+
+			tp, _ := New(onboarding, nil, func(account interface{}, token string) error { return nil })
+
+			executeRequest := func(req *http.Request) *httptest.ResponseRecorder {
+				rr := httptest.NewRecorder()
+				tp.router.ServeHTTP(rr, req)
+				return rr
+			}
+
+			req, _ := http.NewRequest("POST", "/api/register", strings.NewReader(tt.body))
+			res := executeRequest(req)
+			if res.Code != tt.statusCode {
+				t.Errorf("Expected: %d, Actual: %d", http.StatusBadRequest, tt.statusCode)
+			}
+		})
+	}
+}
+
+func TestOnboardingCalledWithParams(t *testing.T) {
+	http.DefaultServeMux = new(http.ServeMux)
+
+	onboarding := Onboarding{
+		Parameters: []Parameter{
+			{name: "customerNumber", typ: ParameterTypeFloat64, required: true},
+			{name: "validationNumber", typ: ParameterTypeFloat64, required: true},
+			{name: "firstName", typ: ParameterTypeString, required: true},
+			{name: "middleName", typ: ParameterTypeString, required: false},
+			{name: "lastName", typ: ParameterTypeString, required: true},
+			{name: "biometrics", typ: ParameterTypeBool, required: true},
+		},
+		OnboardingFunc: func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error) {
+
+			if s["firstName"] != "Johnny" {
+				t.Errorf("Expected: %s, Actual: %s", "Johnny", s["firstName"])
+			}
+			if s["middleName"] != "" {
+				t.Errorf("Expected: %s, Actual: %s", "", s["middleName"])
+			}
+			if s["lastName"] != "Utah" {
+				t.Errorf("Expected: %s, Actual: %s", "Utah", s["lastName"])
+			}
+			if n["customerNumber"] != 123456789 {
+				t.Errorf("Expected: %v, Actual: %v", 123456789, n["customerNumber"])
+			}
+			if n["validationNumber"] != 987654321 {
+				t.Errorf("Expected: %v, Actual: %v", 987654321, n["validationNumber"])
+			}
+			if b["biometrics"] != true {
+				t.Errorf("Expected: %v, Actual: %v", true, b["biometrics"])
+			}
+
+			return Account{AccountId: 1}, nil
+		},
+	}
+
+	tp, _ := New(onboarding, nil, func(account interface{}, token string) error { return nil })
+
+	executeRequest := func(req *http.Request) *httptest.ResponseRecorder {
+		rr := httptest.NewRecorder()
+		tp.router.ServeHTTP(rr, req)
+		return rr
+	}
+
+	body := "{\"customerNumber\": 123456789, \"validationNumber\": 987654321, \"firstName\": \"Johnny\", \"lastName\": \"Utah\", \"biometrics\": true}"
+
+	req, _ := http.NewRequest("POST", "/api/register", strings.NewReader(body))
+	executeRequest(req)
 }
