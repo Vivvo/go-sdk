@@ -1,4 +1,4 @@
-package trust_provider
+package trustprovider
 
 type Onboarding struct {
 	OnboardingParams         interface{}
@@ -18,9 +18,4 @@ type onboardingResponse struct {
 	Message            string `json:"message"`
 	OnBoardingRequired bool   `json:"onBoardingRequired"`
 	Token              string `json:"token, omitempty"`
-}
-
-type errorResponse struct {
-	StatusCode int    `json:"statusCode"`
-	Message    string `json:"message"`
 }
