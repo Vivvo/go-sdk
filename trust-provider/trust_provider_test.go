@@ -9,10 +9,13 @@ import (
 	"github.com/pkg/errors"
 	"github.com/Vivvo/go-sdk/utils"
 	"strings"
+	"github.com/satori/go.uuid"
+	"fmt"
 )
 
 type Account struct {
 	AccountId int
+	Age       float64
 }
 
 func TestOnboarding(t *testing.T) {
@@ -100,7 +103,7 @@ func TestOnboarding(t *testing.T) {
 				t.Errorf("Error reading response body: %s", err.Error())
 			}
 
-			var response onboardingResponse
+			var response trustProviderResponse
 			err = json.Unmarshal(b, &response)
 			if err != nil {
 				t.Errorf("Error unmarshalling response body: %s", err.Error())
@@ -351,4 +354,134 @@ func TestOnboardingCalledWithParams(t *testing.T) {
 
 	req, _ := http.NewRequest("POST", "/api/register", strings.NewReader(body))
 	executeRequest(req)
+}
+
+func TestRules(t *testing.T) {
+
+	validToken := uuid.Must(uuid.NewV4())
+
+	tests := []struct {
+		Name       string
+		Rules      []Rule
+		Body       string
+		StatusCode int
+		Status     bool
+		Token      uuid.UUID
+		Message    string
+	}{
+		{
+			Name:       "alwayspasses",
+			Rules:      []Rule{{Name: "alwayspasses", Parameters: []Parameter{}, RuleFunc: func(s map[string]string, n map[string]float64, b map[string]bool, acct interface{}) (bool, error) { return true, nil }}},
+			Body:       "",
+			StatusCode: http.StatusOK,
+			Status:     true,
+			Token:      validToken,
+			Message:    "",
+		},
+		{
+			Name:       "alwaysfails",
+			Rules:      []Rule{{Name: "alwaysfails", Parameters: []Parameter{}, RuleFunc: func(s map[string]string, n map[string]float64, b map[string]bool, acct interface{}) (bool, error) { return false, nil }}},
+			Body:       "",
+			StatusCode: http.StatusOK,
+			Status:     false,
+			Token:      validToken,
+			Message:    "",
+		},
+		{
+			Name:       "throwsanerror",
+			Rules:      []Rule{{Name: "throwsanerror", Parameters: []Parameter{}, RuleFunc: func(s map[string]string, n map[string]float64, b map[string]bool, acct interface{}) (bool, error) { return false, errors.New("WHAT HAVE YOU DONE?") }}},
+			Body:       "",
+			StatusCode: http.StatusServiceUnavailable,
+			Status:     false,
+			Token:      validToken,
+			Message:    "WHAT HAVE YOU DONE?",
+		},
+		{
+			Name: "passeswithcorrectparam",
+			Rules: []Rule{{Name: "passeswithcorrectparam", Parameters: []Parameter{{name: "age", required: true, typ: ParameterTypeFloat64}},
+				RuleFunc: func(s map[string]string, n map[string]float64, b map[string]bool, acct interface{}) (bool, error) {
+					return n["age"] < 24, nil
+				}}},
+			Body:       "{\"age\": 19}",
+			StatusCode: http.StatusOK,
+			Status:     true,
+			Token:      validToken,
+			Message:    "",
+		},
+		{
+			Name: "failswithincorrectparam",
+			Rules: []Rule{{Name: "failswithincorrectparam", Parameters: []Parameter{{name: "age", required: true, typ: ParameterTypeFloat64}},
+				RuleFunc: func(s map[string]string, n map[string]float64, b map[string]bool, acct interface{}) (bool, error) {
+					return n["age"] > 24, nil
+				}}},
+			Body:       "{\"age\": 19}",
+			StatusCode: http.StatusOK,
+			Status:     false,
+			Token:      validToken,
+			Message:    "",
+		},
+		{
+			Name: "needsaccountobject",
+			Rules: []Rule{{Name: "needsaccountobject", Parameters: []Parameter{{name: "age", required: true, typ: ParameterTypeFloat64}},
+				RuleFunc: func(s map[string]string, n map[string]float64, b map[string]bool, acct interface{}) (bool, error) {
+					if a, ok := acct.(Account); ok {
+						return n["age"] <= a.Age, nil
+
+					} else {
+						return false, errors.New("invalid token")
+					}
+				}}},
+			Body:       "{\"age\": 19}",
+			StatusCode: http.StatusOK,
+			Status:     false,
+			Token:      validToken,
+			Message:    "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.Name, func(t *testing.T) {
+			http.DefaultServeMux = new(http.ServeMux)
+
+			onboarding := Onboarding{
+				Parameters: []Parameter{},
+				OnboardingFunc: func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error) {
+					return Account{AccountId: 1}, nil
+				},
+			}
+
+			tp, _ := New(onboarding, tt.Rules, func(account interface{}, token string) error { return nil })
+
+			executeRequest := func(req *http.Request) *httptest.ResponseRecorder {
+				rr := httptest.NewRecorder()
+				tp.router.ServeHTTP(rr, req)
+				return rr
+			}
+
+			req, _ := http.NewRequest("POST", fmt.Sprintf("/api/%s/%s", tt.Name, validToken), strings.NewReader(tt.Body))
+			res := executeRequest(req)
+
+			check(t, tt.StatusCode, res.Code)
+
+			b, err := ioutil.ReadAll(res.Body)
+			if err != nil {
+				t.Errorf("Error reading response body: %s", err.Error())
+			}
+
+			var response trustProviderResponse
+			err = json.Unmarshal(b, &response)
+			if err != nil {
+				t.Errorf("Error unmarshalling response body: %s", err.Error())
+			}
+
+			check(t, tt.Status, response.Status)
+			check(t, tt.Message, response.Message)
+		})
+	}
+}
+
+func check(t *testing.T, expected interface{}, actual interface{}) {
+	if expected != actual {
+		t.Errorf("Expected: %v, Actual: %v", expected, actual)
+	}
 }

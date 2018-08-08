@@ -33,13 +33,12 @@ type Parameter struct {
 }
 
 type Rule struct {
-	Name           string
-	Params         interface{}
-	ParamsOptional interface{}
-	RuleFunc       func() (bool, error)
+	Name       string
+	Parameters []Parameter
+	RuleFunc   func(s map[string]string, n map[string]float64, b map[string]bool, acct interface{}) (bool, error)
 }
 
-type onboardingResponse struct {
+type trustProviderResponse struct {
 	Status             bool   `json:"value"`
 	Message            string `json:"message"`
 	OnBoardingRequired bool   `json:"onBoardingRequired"`
@@ -55,13 +54,11 @@ type TrustProvider struct {
 
 type SaveToken func(account interface{}, token string) error
 
-func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
+func parseParameters(params []Parameter, r *http.Request) (map[string]string, map[string]float64, map[string]bool, error) {
 	var body interface{}
 	err := utils.ReadBody(&body, r)
 	if err != nil {
-		log.Println(err.Error())
-		utils.SetErrorStatus(err, http.StatusBadRequest, w)
-		return
+		return nil, nil, nil, err
 	}
 
 	var ve []string
@@ -70,7 +67,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 	nums := make(map[string]float64, 0)
 	bools := make(map[string]bool, 0)
 
-	for _, p := range t.onboarding.Parameters {
+	for _, p := range params {
 		if p.required {
 			if params, ok := body.(map[string]interface{}); (ok && params[p.name] == nil) || !ok {
 				ve = append(ve, fmt.Sprintf("Parameter %s is required.", p.name))
@@ -106,6 +103,16 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 		if err == nil {
 			err = errors.New(string(e))
 		}
+		return nil, nil, nil, err
+	}
+
+	return strs, nums, bools, nil
+}
+
+func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
+
+	s, n, b, err := parseParameters(t.onboarding.Parameters, r)
+	if err != nil {
 		log.Println(err.Error())
 		utils.SetErrorStatus(err, http.StatusBadRequest, w)
 		return
@@ -117,7 +124,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 		utils.SetErrorStatus(err, http.StatusInternalServerError, w)
 		return
 	}
-	account, err := t.onboarding.OnboardingFunc(strs, nums, bools)
+	account, err := t.onboarding.OnboardingFunc(s, n, b)
 	if err == nil {
 		token := uuid.Must(uuid.NewV4()).String()
 
@@ -128,24 +135,50 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if err != nil {
-			res := onboardingResponse{Status: false, OnBoardingRequired: true}
+			res := trustProviderResponse{Status: false, OnBoardingRequired: true}
 			utils.WriteJSON(res, http.StatusInternalServerError, w)
 		} else {
-			res := onboardingResponse{Status: true, OnBoardingRequired: false, Token: token}
+			res := trustProviderResponse{Status: true, OnBoardingRequired: false, Token: token}
 			utils.WriteJSON(res, http.StatusCreated, w)
 		}
 	} else {
-		res := onboardingResponse{Status: false, OnBoardingRequired: true}
+		res := trustProviderResponse{Status: false, OnBoardingRequired: true}
 		utils.WriteJSON(res, http.StatusOK, w)
 	}
 
 }
 
-func New(onboarding Onboarding, rules []Rule, saveFunc SaveToken) (TrustProvider, error) {
-	t := TrustProvider{onboarding: onboarding, rules: rules, saveFunc: saveFunc}
+func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		s, n, b, err := parseParameters(rule.Parameters, r)
+		if err != nil {
+			log.Println(err.Error())
+			utils.SetErrorStatus(err, http.StatusBadRequest, w)
+			return
+		}
+
+		status, err := rule.RuleFunc(s, n, b, nil)
+		if err != nil {
+			log.Println(err.Error())
+			utils.SetErrorStatus(err, http.StatusServiceUnavailable, w)
+			return
+		}
+
+		utils.WriteJSON(trustProviderResponse{Status: status}, http.StatusOK, w)
+	})
+}
+
+func New(onboarding Onboarding, rules []Rule, saveToken SaveToken) (TrustProvider, error) {
+	t := TrustProvider{onboarding: onboarding, rules: rules, saveFunc: saveToken}
+
 	t.router = mux.NewRouter()
 
 	t.router.HandleFunc("/api/register", t.register).Methods("POST")
+
+	for _, rule := range rules {
+		t.router.HandleFunc(fmt.Sprintf("/api/%s/{token}", rule.Name), t.handleRule(rule)).Methods("POST")
+	}
 
 	http.Handle("/", handlers.LoggingHandler(os.Stdout, t.router))
 
