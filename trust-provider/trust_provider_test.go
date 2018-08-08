@@ -207,26 +207,8 @@ func TestSaveFuncNotConfigured(t *testing.T) {
 
 	req, _ := http.NewRequest("POST", "/api/register", nil)
 	res := executeRequest(req)
-	if res.Code != http.StatusInternalServerError {
-		t.Errorf("Expected: %d, Actual: %d", http.StatusInternalServerError, res.Code)
+	if res.Code != http.StatusCreated {
+		t.Errorf("Expected: %d, Actual: %d", http.StatusCreated, res.Code)
 	}
 
-	b, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		t.Errorf("Error reading response body: %s", err.Error())
-	}
-
-	var response errorResponse
-	err = json.Unmarshal(b, &response)
-	if err != nil {
-		t.Errorf("Error unmarshalling response body: %s", err.Error())
-	}
-
-	if response.StatusCode != http.StatusInternalServerError {
-		t.Errorf("Expected: %v, Actual: %v", http.StatusInternalServerError, response.StatusCode)
-	}
-
-	if response.Message != "TrustProvider.onboarding.OnboardingFunc not implemented!" {
-		t.Errorf("Expected: %v, Actual: %v", "TrustProvider.onboarding.OnboardingFunc not implemented!", response.Message)
-	}
 }

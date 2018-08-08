@@ -32,7 +32,13 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 	account, err := t.onboarding.OnboardingFunc(nil, nil)
 	if err == nil {
 		token := uuid.Must(uuid.NewV4()).String()
-		err = t.saveToken(account, token)
+
+		if t.saveToken == nil {
+			err = defaultSaveToken(account, token)
+		} else {
+			err = t.saveToken(account, token)
+		}
+
 		if err != nil {
 			res := onboardingResponse{Status: false, OnBoardingRequired: true}
 			writeJSON(res, http.StatusInternalServerError, w)
@@ -59,4 +65,19 @@ func NewTrustProvider(onboarding Onboarding, rules []Rule, saveToken SaveToken) 
 	go http.ListenAndServe(":3000", nil)
 
 	return t, nil
+}
+
+func defaultSaveToken(account interface{}, token string) error {
+
+	err := createDevDBIfNotExists()
+	if err != nil {
+		return err
+	}
+
+	err = appendFile(account, token)
+	if err != nil {
+		return err
+	}
+
+	return err
 }
