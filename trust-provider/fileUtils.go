@@ -67,6 +67,8 @@ func appendFile(account interface{}, token string) error {
 		log.Fatalf("Error writing to file: %s", err)
 	}
 
+	log.Println("WARNING: Note you are using the default internal database.  This is for debugging only, please don't use this in production.")
+
 	return err
 
 }
