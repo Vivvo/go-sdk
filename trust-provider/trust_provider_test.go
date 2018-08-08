@@ -181,7 +181,7 @@ func TestSaveFuncNotConfigured(t *testing.T) {
 	onboarding := Onboarding{
 		Parameters: []Parameter{},
 		OnboardingFunc: func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error) {
-			return Account{AccountId: 1}, nil
+			return Account{AccountId: 100}, nil
 		},
 	}
 
@@ -219,6 +219,40 @@ func TestSaveFuncNotConfigured(t *testing.T) {
 			t.Errorf("Expected: %v, Actual: %v", http.StatusInternalServerError, response.StatusCode)
 		}
 
+	}
+}
+
+func TestSaveFuncConfigured(t *testing.T) {
+	http.DefaultServeMux = new(http.ServeMux)
+
+	onboarding := Onboarding{
+		Parameters: []Parameter{},
+		OnboardingFunc: func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error) {
+			return Account{AccountId: 100}, nil
+		},
+	}
+
+	var saveFuncCalled = false
+
+	saveFunc := func(account interface{}, token string) error {
+		saveFuncCalled = true
+		return nil
+	}
+
+	tp, _ := New(onboarding, nil, saveFunc)
+
+	executeRequest := func(req *http.Request) *httptest.ResponseRecorder {
+		rr := httptest.NewRecorder()
+		tp.router.ServeHTTP(rr, req)
+
+		return rr
+	}
+
+	req, _ := http.NewRequest("POST", "/api/register", strings.NewReader(""))
+	_ = executeRequest(req)
+
+	if !saveFuncCalled {
+		t.Errorf("Expected OnboardingFunc to have been called")
 	}
 }
 

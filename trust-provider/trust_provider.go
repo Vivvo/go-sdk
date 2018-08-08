@@ -21,7 +21,7 @@ type Onboarding struct {
 type ParameterType int
 
 const (
-	ParameterTypeBool    ParameterType = iota
+	ParameterTypeBool ParameterType = iota
 	ParameterTypeFloat64
 	ParameterTypeString
 )
@@ -50,7 +50,7 @@ type TrustProvider struct {
 	onboarding Onboarding
 	rules      []Rule
 	router     *mux.Router
-	saveToken  SaveToken
+	saveFunc   SaveToken
 }
 
 type SaveToken func(account interface{}, token string) error
@@ -121,10 +121,10 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		token := uuid.Must(uuid.NewV4()).String()
 
-		if t.saveToken == nil {
+		if t.saveFunc == nil {
 			err = defaultSaveToken(account, token)
 		} else {
-			err = t.saveToken(account, token)
+			err = t.saveFunc(account, token)
 		}
 
 		if err != nil {
@@ -141,8 +141,8 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func New(onboarding Onboarding, rules []Rule, saveToken SaveToken) (TrustProvider, error) {
-	t := TrustProvider{onboarding: onboarding, rules: rules, saveToken: saveToken}
+func New(onboarding Onboarding, rules []Rule, saveFunc SaveToken) (TrustProvider, error) {
+	t := TrustProvider{onboarding: onboarding, rules: rules, saveFunc: saveFunc}
 	t.router = mux.NewRouter()
 
 	t.router.HandleFunc("/api/register", t.register).Methods("POST")
@@ -156,11 +156,5 @@ func New(onboarding Onboarding, rules []Rule, saveToken SaveToken) (TrustProvide
 }
 
 func defaultSaveToken(account interface{}, token string) error {
-
-	err := appendFile(account, token)
-	if err != nil {
-		return err
-	}
-
-	return err
+	return utils.Save(account, token)
 }

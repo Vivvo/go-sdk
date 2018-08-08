@@ -1,4 +1,4 @@
-package trustprovider
+package utils
 
 import (
 	"log"
@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"encoding/json"
 	"io/ioutil"
+	"errors"
 )
 
 type devDBRecord struct {
@@ -30,7 +31,7 @@ func createDevDB() error {
 	return nil
 }
 
-func appendFile(account interface{}, token string) error {
+func Save(account interface{}, token string) error {
 
 	err := createDevDB()
 	if err != nil {
@@ -47,11 +48,19 @@ func appendFile(account interface{}, token string) error {
 
 	defer file.Close()
 
+	var records []devDBRecord
+
+	if account == nil {
+		return errors.New("you must provide an account object")
+	}
+
+	if token == "" {
+		return errors.New("you must provide a token")
+	}
+
 	fileContents, _ := ioutil.ReadAll(file)
 	// empty file before we write the whole array again
 	file.Truncate(0)
-
-	var records []devDBRecord
 
 	json.Unmarshal(fileContents, &records)
 
@@ -71,4 +80,29 @@ func appendFile(account interface{}, token string) error {
 
 	return err
 
+}
+
+func Read(token string) (*devDBRecord, error) {
+
+	path, err := filepath.Abs(DbFilePath)
+	file, err := os.OpenFile(path, os.O_RDWR|os.O_APPEND, 0644)
+	if err != nil {
+		return nil, errors.New("error opening file")
+	}
+
+	defer file.Close()
+
+	fileContents, _ := ioutil.ReadAll(file)
+
+	var records []devDBRecord
+
+	json.Unmarshal(fileContents, &records)
+
+	for _, record := range records {
+		if record.Token == token {
+			return &record, nil
+		}
+	}
+
+	return nil, err
 }
