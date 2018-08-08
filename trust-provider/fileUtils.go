@@ -5,20 +5,25 @@ import (
 	"os"
 	"path/filepath"
 	"encoding/json"
+	"io/ioutil"
 )
 
-func createDevDBIfNotExists() error {
+type devDBRecord struct {
+	Account interface{} `json:"account"`
+	Token   string      `json:"token"`
+}
+
+func createDevDB() error {
 	path, err := filepath.Abs(".")
 	if err != nil {
 		log.Println(err)
+		return err
 	}
 
 	path = path + "/db.json"
 
-	// Check if file exists
 	_, err = os.Stat(path)
 
-	// create file if not exists
 	if os.IsNotExist(err) {
 		var file, err = os.Create(path)
 		if err != nil {
@@ -26,44 +31,50 @@ func createDevDBIfNotExists() error {
 			return err
 		}
 		defer file.Close()
-
-		_, err = file.WriteString("[\r\n]")
-		if err != nil {
-			log.Fatalf("failed writing to file: %s", err)
-		}
 	}
 
-	return err
+	return nil
 }
 
 func appendFile(account interface{}, token string) error {
 
-	path, err := filepath.Abs("./db.json")
-	file, err := os.OpenFile(path, os.O_WRONLY|os.O_APPEND, 0644)
+	err := createDevDB()
 	if err != nil {
-		log.Fatalf("failed opening file: %s", err)
+		log.Printf("failed opening file1: %s", err)
+		return err
+	}
+
+	path, err := filepath.Abs("./db.json")
+	file, err := os.OpenFile(path, os.O_APPEND|os.O_RDWR, 0644)
+	if err != nil {
+		log.Printf("failed opening file2: %s", err)
 		return err
 	}
 
 	defer file.Close()
+
+	fileContents, _ := ioutil.ReadAll(file)
+	// empty file before we write the whole array again
+	file.Truncate(0)
+
+	var records []devDBRecord
+
+	json.Unmarshal(fileContents, &records)
 
 	var record = devDBRecord{
 		Account: account,
 		Token:   token,
 	}
 
-	r, err := json.Marshal(record)
+	records = append(records, record)
+	r, err := json.Marshal(records)
 
-	_, err = file.WriteString(string(r) + ",\r\n]")
+	file.Write(nil)
+	_, err = file.Write(r)
 	if err != nil {
 		log.Fatalf("failed writing to file: %s", err)
 	}
 
 	return err
 
-}
-
-type devDBRecord struct {
-	Account interface{} `json:"account"`
-	Token   string      `json:"token"`
 }

@@ -70,12 +70,7 @@ func New(onboarding Onboarding, rules []Rule, saveToken SaveToken) (TrustProvide
 
 func defaultSaveToken(account interface{}, token string) error {
 
-	err := createDevDBIfNotExists()
-	if err != nil {
-		return err
-	}
-
-	err = appendFile(account, token)
+	err := appendFile(account, token)
 	if err != nil {
 		return err
 	}
