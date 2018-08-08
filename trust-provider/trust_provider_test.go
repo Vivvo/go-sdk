@@ -190,10 +190,11 @@ func TestSaveFuncNotConfigured(t *testing.T) {
 	executeRequest := func(req *http.Request) *httptest.ResponseRecorder {
 		rr := httptest.NewRecorder()
 		tp.router.ServeHTTP(rr, req)
+
 		return rr
 	}
 
-	req, _ := http.NewRequest("POST", "/api/register", nil)
+	req, _ := http.NewRequest("POST", "/api/register", strings.NewReader(""))
 	res := executeRequest(req)
 
 	if res.Code != http.StatusCreated {
