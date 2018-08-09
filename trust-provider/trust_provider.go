@@ -215,8 +215,13 @@ func New(onboarding Onboarding, rules []Rule, account Account) (TrustProvider, e
 
 	http.Handle("/", handlers.LoggingHandler(os.Stdout, t.router))
 
-	//TODO: Get port from configuration
-	go http.ListenAndServe(":3000", nil)
+	const TrustProviderPortKey = "TRUST_PROVIDER_PORT"
+	port := os.Getenv(TrustProviderPortKey)
+	if port == "" {
+		port = "3000"
+	}
+
+	go http.ListenAndServe(":"+port, nil)
 
 	return t, nil
 }
