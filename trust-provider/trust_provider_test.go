@@ -12,11 +12,18 @@ import (
 	"github.com/satori/go.uuid"
 	"fmt"
 	"github.com/apex/log"
+	"os"
+	"github.com/mitchellh/mapstructure"
 )
 
 type MockAccountObj struct {
 	AccountId int
 	Age       float64
+}
+
+type MockDevDBRecord struct {
+	Account MockAccountObj `json:"account"`
+	Token   uuid.UUID      `json:"token"`
 }
 
 type MockAccount struct {
@@ -521,4 +528,83 @@ func check(t *testing.T, expected interface{}, actual interface{}) {
 	if expected != actual {
 		t.Errorf("Expected: %v, Actual: %v", expected, actual)
 	}
+}
+
+func cleanupTestFile() {
+	// delete file
+	os.Remove("./db.json")
+}
+
+func TestSave(t *testing.T) {
+
+	da := DefaultAccount{}
+
+	genericAccount := MockAccountObj{
+		AccountId: 1234567890,
+	}
+
+	validToken, _ := uuid.NewV4()
+
+	tests := []struct {
+		name            string
+		account         interface{}
+		token           uuid.UUID
+		expectedFailure bool
+		expectedError   string
+	}{
+		{"Test Successful Save", genericAccount, validToken, false, ""},
+		{"Test Failed Save - missing account", nil, validToken, true, "you must provide an account object"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := da.Update(tt.account, tt.token)
+
+			if tt.expectedFailure && err == nil {
+				t.Errorf("Expected an error and didn't recieve one")
+			}
+
+			if err != nil && tt.expectedError != err.Error() {
+				t.Errorf("Expected: %s, Actual %s", tt.expectedError, err.Error())
+			}
+
+			if !tt.expectedFailure {
+
+				record, _ := da.Read(tt.token)
+
+				var a MockDevDBRecord
+				mapstructure.Decode(record, a)
+
+				if record == nil {
+					t.Errorf("No record found")
+				} else if uuid.Equal(tt.token, a.Token) {
+					t.Errorf("Invalid token, expected: %s, actual; %s", tt.token, a.Token)
+				}
+
+				if ta, ok := tt.account.(MockDevDBRecord); ok {
+					if a.Account.AccountId != ta.Account.AccountId {
+						t.Errorf("Expected: %d, Actual: %d", ta.Account.AccountId, a.Account.AccountId)
+					}
+				}
+
+			}
+		})
+		cleanupTestFile()
+	}
+}
+
+func TestNoDB(t *testing.T) {
+	cleanupTestFile()
+	da := DefaultAccount{}
+
+	uuid, _ := uuid.NewV4()
+
+	_, err := da.Read(uuid)
+
+	if err == nil {
+		t.Errorf("Expected an error opening the file!")
+	} else if err.Error() != "error opening file" {
+		t.Errorf("Expected: %s, got: %s", "error opening file", err)
+	}
+
 }

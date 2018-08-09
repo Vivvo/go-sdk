@@ -11,6 +11,8 @@ import (
 	"encoding/json"
 	"github.com/gorilla/handlers"
 	"os"
+	"path/filepath"
+	"io/ioutil"
 )
 
 type Onboarding struct {
@@ -21,7 +23,7 @@ type Onboarding struct {
 type ParameterType int
 
 const (
-	ParameterTypeBool    ParameterType = iota
+	ParameterTypeBool ParameterType = iota
 	ParameterTypeFloat64
 	ParameterTypeString
 )
@@ -44,6 +46,13 @@ type trustProviderResponse struct {
 	OnBoardingRequired bool   `json:"onBoardingRequired"`
 	Token              string `json:"token,omitempty"`
 }
+
+type devDBRecord struct {
+	Account interface{}   `json:"account"`
+	Token   uuid.UUID `json:"token"`
+}
+
+const dbFilePath = "./db.json"
 
 // Account interface should be implemented and passed in when creating a TrustProvider.
 type Account interface {
@@ -243,10 +252,51 @@ type DefaultAccount struct{}
 
 // Update implementation stores accounts and tokens in a CSV file.
 func (d *DefaultAccount) Update(account interface{}, token uuid.UUID) error {
-	err := utils.Save(account, token.String())
+
+	err := createDevDB()
 	if err != nil {
+		log.Printf("Error creating file: %s", err)
 		return err
 	}
+
+	path, err := filepath.Abs(dbFilePath)
+	file, err := os.OpenFile(path, os.O_RDWR|os.O_APPEND, 0644)
+	if err != nil {
+		log.Printf("Error opening file: %s", err)
+		return err
+	}
+
+	defer file.Close()
+
+	var records []devDBRecord
+
+	if account == nil {
+		return errors.New("you must provide an account object")
+	}
+
+	if token.String() == "" {
+		return errors.New("you must provide a token")
+	}
+
+	fileContents, _ := ioutil.ReadAll(file)
+	// empty file before we write the whole array again
+	file.Truncate(0)
+
+	json.Unmarshal(fileContents, &records)
+
+	record := devDBRecord{
+		Account: account,
+		Token:   token,
+	}
+
+	records = append(records, record)
+	r, err := json.Marshal(records)
+	_, err = file.Write(r)
+	if err != nil {
+		log.Fatalf("Error writing to file: %s", err)
+	}
+
+	log.Println("WARNING: Note you are using the default internal database.  This is for debugging only, please don't use this in production.")
 
 	return err
 }
@@ -256,10 +306,41 @@ func (d *DefaultAccount) Update(account interface{}, token uuid.UUID) error {
 // to the appropriate struct using something like http://github.com/mitchellh/mapstructure
 // (examples: https://godoc.org/github.com/mitchellh/mapstructure#Decode)
 func (d *DefaultAccount) Read(token uuid.UUID) (interface{}, error) {
-	acct, err := utils.Read(token.String())
+
+	path, err := filepath.Abs(dbFilePath)
+	file, err := os.OpenFile(path, os.O_RDWR|os.O_APPEND, 0644)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("error opening file")
 	}
 
-	return acct.Account, err
+	defer file.Close()
+
+	fileContents, _ := ioutil.ReadAll(file)
+
+	var records []devDBRecord
+
+	json.Unmarshal(fileContents, &records)
+
+	for _, record := range records {
+		if record.Token == token {
+			return record, nil
+		}
+	}
+
+	return nil, err
+}
+
+func createDevDB() error {
+
+	_, err := os.Stat(dbFilePath)
+
+	if os.IsNotExist(err) {
+		var file, err = os.Create(dbFilePath)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+	}
+
+	return nil
 }
