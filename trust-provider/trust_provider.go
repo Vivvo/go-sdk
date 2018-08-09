@@ -40,9 +40,9 @@ type Rule struct {
 
 type trustProviderResponse struct {
 	Status             bool   `json:"value"`
-	Message            string `json:"message"`
+	Message            string `json:"message,omitempty"`
 	OnBoardingRequired bool   `json:"onBoardingRequired"`
-	Token              string `json:"token, omitempty"`
+	Token              string `json:"token,omitempty"`
 }
 
 // Account interface should be implemented and passed in when creating a TrustProvider.
@@ -73,6 +73,7 @@ type TrustProvider struct {
 	rules      []Rule
 	router     *mux.Router
 	account    Account
+	port       string
 }
 
 func parseParameters(params []Parameter, r *http.Request) (map[string]string, map[string]float64, map[string]bool, error) {
@@ -159,7 +160,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 			utils.WriteJSON(res, http.StatusCreated, w)
 		}
 	} else {
-		res := trustProviderResponse{Status: false, OnBoardingRequired: true}
+		res := trustProviderResponse{Status: false, OnBoardingRequired: true, Message: err.Error()}
 		utils.WriteJSON(res, http.StatusOK, w)
 	}
 
@@ -204,8 +205,16 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 
 // Create a new TrustProvider. Based on the onboarding, rules and account objects you pass in
 // this will bootstrap an http server with onboarding and rules endpoints exposed.
-func New(onboarding Onboarding, rules []Rule, account Account) (TrustProvider, error) {
-	t := TrustProvider{onboarding: onboarding, rules: rules, account: account, router: mux.NewRouter()}
+func New(onboarding Onboarding, rules []Rule, account ...Account) TrustProvider {
+
+	var acct Account
+	if len(account) == 1 {
+		acct = account[0]
+	} else {
+		acct = &DefaultAccount{}
+	}
+
+	t := TrustProvider{onboarding: onboarding, rules: rules, account: acct, router: mux.NewRouter()}
 
 	t.router.HandleFunc("/api/register", t.register).Methods("POST")
 
@@ -216,14 +225,15 @@ func New(onboarding Onboarding, rules []Rule, account Account) (TrustProvider, e
 	http.Handle("/", handlers.LoggingHandler(os.Stdout, t.router))
 
 	const TrustProviderPortKey = "TRUST_PROVIDER_PORT"
-	port := os.Getenv(TrustProviderPortKey)
-	if port == "" {
-		port = "3000"
+	t.port = os.Getenv(TrustProviderPortKey)
+	if t.port == "" {
+		t.port = "3000"
 	}
+	return t
+}
 
-	go http.ListenAndServe(":"+port, nil)
-
-	return t, nil
+func (t *TrustProvider) ListenAndServe() error {
+	return http.ListenAndServe(":"+t.port, nil)
 }
 
 // DefaultAccount is the default implementation of the Account interface that the TrustProvider will
@@ -241,8 +251,15 @@ func (d *DefaultAccount) Update(account interface{}, token uuid.UUID) error {
 	return err
 }
 
-// Read implementation reads an account by the given token from a CSV file.
+// Read implementation reads an account by the given token from a CSV file. The account object will be retrieved
+// as a map[string]interface{} since we know the type of the struct you've stored here. You can convert it back
+// to the appropriate struct using something like http://github.com/mitchellh/mapstructure
+// (examples: https://godoc.org/github.com/mitchellh/mapstructure#Decode)
 func (d *DefaultAccount) Read(token uuid.UUID) (interface{}, error) {
+	acct, err := utils.Read(token.String())
+	if err != nil {
+		return nil, err
+	}
 
-	return nil, nil
+	return acct.Account, err
 }
