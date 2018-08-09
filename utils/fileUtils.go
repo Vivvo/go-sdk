@@ -14,14 +14,14 @@ type devDBRecord struct {
 	Token   string      `json:"token"`
 }
 
-const DbFilePath = "./db.json"
+const dbFilePath = "./db.json"
 
 func createDevDB() error {
 
-	_, err := os.Stat(DbFilePath)
+	_, err := os.Stat(dbFilePath)
 
 	if os.IsNotExist(err) {
-		var file, err = os.Create(DbFilePath)
+		var file, err = os.Create(dbFilePath)
 		if err != nil {
 			return err
 		}
@@ -39,7 +39,7 @@ func Save(account interface{}, token string) error {
 		return err
 	}
 
-	path, err := filepath.Abs(DbFilePath)
+	path, err := filepath.Abs(dbFilePath)
 	file, err := os.OpenFile(path, os.O_RDWR|os.O_APPEND, 0644)
 	if err != nil {
 		log.Printf("Error opening file: %s", err)
@@ -84,7 +84,7 @@ func Save(account interface{}, token string) error {
 
 func Read(token string) (*devDBRecord, error) {
 
-	path, err := filepath.Abs(DbFilePath)
+	path, err := filepath.Abs(dbFilePath)
 	file, err := os.OpenFile(path, os.O_RDWR|os.O_APPEND, 0644)
 	if err != nil {
 		return nil, errors.New("error opening file")

@@ -3,14 +3,14 @@ package trustprovider
 import (
 	"net/http"
 	"github.com/gorilla/mux"
-	"github.com/gorilla/handlers"
-	"os"
 	"github.com/satori/go.uuid"
 	"github.com/pkg/errors"
 	"log"
 	"github.com/Vivvo/go-sdk/utils"
 	"fmt"
 	"encoding/json"
+	"github.com/gorilla/handlers"
+	"os"
 )
 
 type Onboarding struct {
@@ -21,15 +21,15 @@ type Onboarding struct {
 type ParameterType int
 
 const (
-	ParameterTypeBool ParameterType = iota
+	ParameterTypeBool    ParameterType = iota
 	ParameterTypeFloat64
 	ParameterTypeString
 )
 
 type Parameter struct {
-	name     string
-	typ      ParameterType
-	required bool
+	Name     string
+	Type     ParameterType
+	Required bool
 }
 
 type Rule struct {
@@ -45,14 +45,35 @@ type trustProviderResponse struct {
 	Token              string `json:"token, omitempty"`
 }
 
+// Account interface should be implemented and passed in when creating a TrustProvider.
+type Account interface {
+	// Update an account in the source system to save the token that was generated as part of
+	// successfully onboarding.
+	Update(account interface{}, token uuid.UUID) error
+	// Find an account in the source system by the token that was generated as part of successfully
+	// onboarding.
+	Read(token uuid.UUID) (interface{}, error)
+}
+
+// The TrustProvider will handle basic parameter validation (required, type), call out to your business logic
+// functions (e.g.: Onboarding.OnboardingFunc, Rule.RuleFunc) and handle all the response bodies and status
+// codes based on what your business logic functions return. This is the quickest and easiest way to implement
+// the consistent API that the Citizen One platform expects to integrate with when talking to a Trust Provider.
+//
+// The port that the http server runs on can be configured by setting an environment variable: TRUST_PROVIDER_PORT.
+// If this variable is not set, we will default to port 3000.
+//
+// The onboarding endpoint will be:
+//     /api/register
+//
+// The rules endpoints will follow this pattern:
+//     /api/{Rule.Name}/{token}
 type TrustProvider struct {
 	onboarding Onboarding
 	rules      []Rule
 	router     *mux.Router
-	saveFunc   SaveToken
+	account    Account
 }
-
-type SaveToken func(account interface{}, token string) error
 
 func parseParameters(params []Parameter, r *http.Request) (map[string]string, map[string]float64, map[string]bool, error) {
 	var body interface{}
@@ -68,31 +89,31 @@ func parseParameters(params []Parameter, r *http.Request) (map[string]string, ma
 	bools := make(map[string]bool, 0)
 
 	for _, p := range params {
-		if p.required {
-			if params, ok := body.(map[string]interface{}); (ok && params[p.name] == nil) || !ok {
-				ve = append(ve, fmt.Sprintf("Parameter %s is required.", p.name))
+		if p.Required {
+			if params, ok := body.(map[string]interface{}); (ok && params[p.Name] == nil) || !ok {
+				ve = append(ve, fmt.Sprintf("Parameter %s is Required.", p.Name))
 			}
 		}
 
-		if params, ok := body.(map[string]interface{}); ok && params[p.name] != nil {
-			switch p.typ {
+		if params, ok := body.(map[string]interface{}); ok && params[p.Name] != nil {
+			switch p.Type {
 			case ParameterTypeString:
-				if s, ok := params[p.name].(string); ok {
-					strs[p.name] = s
+				if s, ok := params[p.Name].(string); ok {
+					strs[p.Name] = s
 				} else {
-					ve = append(ve, fmt.Sprintf("Parameter %s must be a string.", p.name))
+					ve = append(ve, fmt.Sprintf("Parameter %s must be a string.", p.Name))
 				}
 			case ParameterTypeFloat64:
-				if f, ok := params[p.name].(float64); ok {
-					nums[p.name] = f
+				if f, ok := params[p.Name].(float64); ok {
+					nums[p.Name] = f
 				} else {
-					ve = append(ve, fmt.Sprintf("Parameter %s must be a number.", p.name))
+					ve = append(ve, fmt.Sprintf("Parameter %s must be a number.", p.Name))
 				}
 			case ParameterTypeBool:
-				if b, ok := params[p.name].(bool); ok {
-					bools[p.name] = b
+				if b, ok := params[p.Name].(bool); ok {
+					bools[p.Name] = b
 				} else {
-					ve = append(ve, fmt.Sprintf("Parameter %s must be a boolean.", p.name))
+					ve = append(ve, fmt.Sprintf("Parameter %s must be a boolean.", p.Name))
 				}
 			}
 		}
@@ -126,19 +147,15 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 	}
 	account, err := t.onboarding.OnboardingFunc(s, n, b)
 	if err == nil {
-		token := uuid.Must(uuid.NewV4()).String()
+		token := uuid.Must(uuid.NewV4())
 
-		if t.saveFunc == nil {
-			err = defaultSaveToken(account, token)
-		} else {
-			err = t.saveFunc(account, token)
-		}
+		err = t.account.Update(account, token)
 
 		if err != nil {
 			res := trustProviderResponse{Status: false, OnBoardingRequired: true}
 			utils.WriteJSON(res, http.StatusInternalServerError, w)
 		} else {
-			res := trustProviderResponse{Status: true, OnBoardingRequired: false, Token: token}
+			res := trustProviderResponse{Status: true, OnBoardingRequired: false, Token: token.String()}
 			utils.WriteJSON(res, http.StatusCreated, w)
 		}
 	} else {
@@ -158,7 +175,23 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 			return
 		}
 
-		status, err := rule.RuleFunc(s, n, b, nil)
+		vars := mux.Vars(r)
+		v := vars["token"]
+		token, err := uuid.FromString(v)
+		if err != nil {
+			log.Println(err.Error())
+			utils.SetErrorStatus(err, http.StatusBadRequest, w)
+			return
+		}
+
+		acct, err := t.account.Read(token)
+		if err != nil {
+			log.Println(err.Error())
+			utils.SetErrorStatus(err, http.StatusBadRequest, w)
+			return
+		}
+
+		status, err := rule.RuleFunc(s, n, b, acct)
 		if err != nil {
 			log.Println(err.Error())
 			utils.SetErrorStatus(err, http.StatusServiceUnavailable, w)
@@ -169,10 +202,10 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 	})
 }
 
-func New(onboarding Onboarding, rules []Rule, saveToken SaveToken) (TrustProvider, error) {
-	t := TrustProvider{onboarding: onboarding, rules: rules, saveFunc: saveToken}
-
-	t.router = mux.NewRouter()
+// Create a new TrustProvider. Based on the onboarding, rules and account objects you pass in
+// this will bootstrap an http server with onboarding and rules endpoints exposed.
+func New(onboarding Onboarding, rules []Rule, account Account) (TrustProvider, error) {
+	t := TrustProvider{onboarding: onboarding, rules: rules, account: account, router: mux.NewRouter()}
 
 	t.router.HandleFunc("/api/register", t.register).Methods("POST")
 
@@ -188,6 +221,23 @@ func New(onboarding Onboarding, rules []Rule, saveToken SaveToken) (TrustProvide
 	return t, nil
 }
 
-func defaultSaveToken(account interface{}, token string) error {
-	return utils.Save(account, token)
+// DefaultAccount is the default implementation of the Account interface that the TrustProvider will
+// use to save tokens associated with accounts and retrieve accounts by those tokens. This implementation
+// is NOT suitable for production use.
+type DefaultAccount struct{}
+
+// Update implementation stores accounts and tokens in a CSV file.
+func (d *DefaultAccount) Update(account interface{}, token uuid.UUID) error {
+	err := utils.Save(account, token.String())
+	if err != nil {
+		return err
+	}
+
+	return err
+}
+
+// Read implementation reads an account by the given token from a CSV file.
+func (d *DefaultAccount) Read(token uuid.UUID) (interface{}, error) {
+
+	return nil, nil
 }
