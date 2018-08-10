@@ -10,5 +10,4 @@ See the in depth SDK documentation in the standard godoc format:
 * [Trust Providers](https://godoc.org/github.com/Vivvo/go-sdk/trust-provider)
 
 ## Tutorials
-1.  [Build and Integrate a Trust Provider](./tutorials/buildAndIntegrateTrustProvider.md)  
-A step by step guide for building and integrating a new trust provider to your Citizen One instance.  
+1.  [Build and Integrate a Trust Provider](./tutorials/buildAndIntegrateTrustProvider.md)  - A step by step guide for building and integrating a new trust provider to your Citizen One instance.  
