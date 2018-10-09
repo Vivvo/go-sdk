@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"io/ioutil"
+	"github.com/Vivvo/go-sdk/did"
 )
 
 type Onboarding struct {
@@ -45,7 +46,7 @@ type trustProviderResponse struct {
 	Message            string `json:"message,omitempty"`
 	OnBoardingRequired bool   `json:"onBoardingRequired"`
 	Token              string `json:"token,omitempty"`
-	VerifiableClaim    string `json:"verifiableClaim,omitempty"`
+	VerifiableClaim    did.VerifiableClaim `json:"verifiableClaim,omitempty"`
 }
 
 type devDBRecord struct {
