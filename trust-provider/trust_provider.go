@@ -23,7 +23,7 @@ type Onboarding struct {
 type ParameterType int
 
 const (
-	ParameterTypeBool ParameterType = iota
+	ParameterTypeBool    ParameterType = iota
 	ParameterTypeFloat64
 	ParameterTypeString
 )
@@ -45,11 +45,12 @@ type trustProviderResponse struct {
 	Message            string `json:"message,omitempty"`
 	OnBoardingRequired bool   `json:"onBoardingRequired"`
 	Token              string `json:"token,omitempty"`
+	VerifiableClaim    string `json:"verifiableClaim,omitempty"`
 }
 
 type devDBRecord struct {
-	Account interface{}   `json:"account"`
-	Token   uuid.UUID `json:"token"`
+	Account interface{} `json:"account"`
+	Token   uuid.UUID   `json:"token"`
 }
 
 const dbFilePath = "./db.json"
