@@ -204,6 +204,9 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 			}
 
 			res := trustProviderResponse{Status: true, OnBoardingRequired: false, Token: token.String(), VerifiableClaim: vc}
+			b, _ := json.Marshal(res)
+			log.Printf(string(b))
+
 			utils.WriteJSON(res, http.StatusCreated, w)
 		}
 	} else {
