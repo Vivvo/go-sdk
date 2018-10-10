@@ -10,7 +10,6 @@ import (
 	"encoding/pem"
 	"crypto/x509"
 	"errors"
-	"log"
 )
 
 type Service struct {
@@ -49,7 +48,6 @@ type Resolver struct {
 func (d *Document) GetPublicKeyById(id string) (*rsa.PublicKey, error) {
 	for _, v := range d.PublicKey {
 		if strings.Compare(v.Id, id) == 0 {
-			log.Println(string(v.PublicKeyPem))
 			block, _ := pem.Decode([]byte(v.PublicKeyPem))
 			rsaPubKey, err := x509.ParsePKIXPublicKey(block.Bytes)
 			if err != nil {

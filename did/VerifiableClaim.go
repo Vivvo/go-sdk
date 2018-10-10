@@ -13,29 +13,32 @@ import (
 	"crypto/rand"
 )
 
-type VerifiableClaim struct {
-	Id     string    `json:"id"`
-	Type   []string  `json:"type"`
-	Issuer string    `json:"issuer"`
-	Issued string    `json:"issued"`
-	Claim  AuthClaim `json:"claim"`
-	Proof  *Proof    `json:"proof,omitempty"`
-}
+const VerifiableCredential = "VerifiableCredential"
+const TokenizedConnectionCredential = "TokenizedConnectionCredential"
+const IAmMeCredential = "IAmMeCredential"
+
+const SubjectClaim = "id"
+const PublicKeyClaim = "publicKey"
+const FirstNameClaim = "firstName"
+const LastNameClaim = "lastName"
+const EmailAddressClaim = "emailAddress"
+const TokenClaim = "token"
 
 type Claim struct {
-	Id     string    `json:"id"`
-	Type   []string  `json:"type"`
-	Issuer string    `json:"issuer"`
-	Issued string    `json:"issued"`
-	Claim  AuthClaim `json:"claim"`
+	Id     string            `json:"id"`
+	Type   []string          `json:"type"`
+	Issuer string            `json:"issuer"`
+	Issued string            `json:"issued"`
+	Claim  map[string]string `json:"claim"`
 }
 
-type AuthClaim struct {
-	Id           string `json:"id"`
-	FirstName    string `json:"firstName,omitempty"`
-	LastName     string `json:"lastName,omitempty"`
-	EmailAddress string `json:"emailAddress"`
-	PublicKey    string `json:"publicKey"`
+type VerifiableClaim struct {
+	Id     string            `json:"id"`
+	Type   []string          `json:"type"`
+	Issuer string            `json:"issuer"`
+	Issued string            `json:"issued"`
+	Claim  map[string]string `json:"claim"`
+	Proof  *Proof            `json:"proof,omitempty"`
 }
 
 type Proof struct {
@@ -108,13 +111,13 @@ func (vc *VerifiableClaim) Verify(types []string, nonce string, resolver Resolve
 		}
 	}
 
-	didDocument, err := resolver.Resolve(vc.Claim.Id)
+	didDocument, err := resolver.Resolve(vc.Issuer)
 	if err != nil {
 		return err
 	}
 
 	// Find the public key that the claim is using
-	pubKey, err := didDocument.GetPublicKeyById(vc.Claim.PublicKey)
+	pubKey, err := didDocument.GetPublicKeyById(vc.Claim[PublicKeyClaim])
 	if err != nil {
 		return err
 	}

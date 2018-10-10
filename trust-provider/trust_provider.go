@@ -14,6 +14,9 @@ import (
 	"path/filepath"
 	"io/ioutil"
 	"github.com/Vivvo/go-sdk/did"
+	"crypto/rsa"
+	"golang.org/x/crypto/ssh"
+	"time"
 )
 
 type Onboarding struct {
@@ -42,19 +45,19 @@ type Rule struct {
 }
 
 type trustProviderResponse struct {
-	Status             bool   `json:"value"`
-	Message            string `json:"message,omitempty"`
-	OnBoardingRequired bool   `json:"onBoardingRequired"`
-	Token              string `json:"token,omitempty"`
-	VerifiableClaim    did.VerifiableClaim `json:"verifiableClaim,omitempty"`
+	Status             bool                 `json:"value"`
+	Message            string               `json:"message,omitempty"`
+	OnBoardingRequired bool                 `json:"onBoardingRequired"`
+	Token              string               `json:"token,omitempty"`
+	VerifiableClaim    *did.VerifiableClaim `json:"verifiableClaim,omitempty"`
 }
 
-type devDBRecord struct {
+type DefaultDBRecord struct {
 	Account interface{} `json:"account"`
 	Token   uuid.UUID   `json:"token"`
 }
 
-const dbFilePath = "./db.json"
+const DefaultCsvFilePath = "./db.json"
 
 // Account interface should be implemented and passed in when creating a TrustProvider.
 type Account interface {
@@ -85,13 +88,16 @@ type TrustProvider struct {
 	router     *mux.Router
 	account    Account
 	port       string
+	did        string
+	privateKey *rsa.PrivateKey
+	resolver   did.ResolverInterface
 }
 
-func parseParameters(params []Parameter, r *http.Request) (map[string]string, map[string]float64, map[string]bool, error) {
+func (t *TrustProvider) parseParameters(params []Parameter, r *http.Request) (map[string]string, map[string]float64, map[string]bool, *did.VerifiableClaim, error) {
 	var body interface{}
 	err := utils.ReadBody(&body, r)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	var ve []string
@@ -131,20 +137,43 @@ func parseParameters(params []Parameter, r *http.Request) (map[string]string, ma
 		}
 	}
 
+	var iAmMeCredential *did.VerifiableClaim
+
+	if b, ok := body.(map[string]interface{}); ok && b["iAmMeCredential"] != nil {
+		vc, err := json.Marshal(b["iAmMeCredential"])
+		if err != nil {
+			ve = append(ve, fmt.Sprintf("Unable to unmarshal IAmMeCredential."))
+		} else {
+			var cred did.VerifiableClaim
+			err = json.Unmarshal(vc, &cred)
+			if err != nil {
+				ve = append(ve, fmt.Sprintf("Unable to unmarshal IAmMeCredential."))
+			} else {
+				iAmMeCredential = &cred
+
+				err = cred.Verify([]string{did.VerifiableCredential, did.IAmMeCredential}, cred.Proof.Nonce, t.resolver)
+				if err != nil {
+					ve = append(ve, fmt.Sprintf("Unable to verify IAmMeCredential."))
+				}
+			}
+		}
+
+	}
+
 	if len(ve) > 0 {
 		e, err := json.Marshal(ve)
 		if err == nil {
 			err = errors.New(string(e))
 		}
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
-	return strs, nums, bools, nil
+	return strs, nums, bools, iAmMeCredential, nil
 }
 
 func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 
-	s, n, b, err := parseParameters(t.onboarding.Parameters, r)
+	s, n, b, iAmMeCredential, err := t.parseParameters(t.onboarding.Parameters, r)
 	if err != nil {
 		log.Println(err.Error())
 		utils.SetErrorStatus(err, http.StatusBadRequest, w)
@@ -167,7 +196,14 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 			res := trustProviderResponse{Status: false, OnBoardingRequired: true}
 			utils.WriteJSON(res, http.StatusInternalServerError, w)
 		} else {
-			res := trustProviderResponse{Status: true, OnBoardingRequired: false, Token: token.String()}
+			var vc *did.VerifiableClaim
+			if t.didIsConfigured() && iAmMeCredential != nil {
+				claim, _ := t.generateVerifiableClaim(iAmMeCredential.Claim, token.String())
+				vc = &claim
+				//FIXME Handle error!
+			}
+
+			res := trustProviderResponse{Status: true, OnBoardingRequired: false, Token: token.String(), VerifiableClaim: vc}
 			utils.WriteJSON(res, http.StatusCreated, w)
 		}
 	} else {
@@ -177,10 +213,33 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func (t *TrustProvider) didIsConfigured() bool {
+	return t.did != ""
+}
+
+func (t *TrustProvider) generateVerifiableClaim(ac map[string]string, token string) (did.VerifiableClaim, error) {
+	subject := ac[did.SubjectClaim]
+
+	claims := make(map[string]string)
+	claims[did.SubjectClaim] = subject
+	claims[did.TokenClaim] = token
+	claims[did.PublicKeyClaim] = fmt.Sprintf("%s#keys-1", t.did)
+
+	var claim = did.Claim{
+		token,
+		[]string{did.VerifiableCredential, did.TokenizedConnectionCredential},
+		t.did,
+		time.Now().Format("2006-01-02"),
+		claims,
+	}
+
+	return claim.Sign(t.privateKey, uuid.Must(uuid.NewV4()).String())
+}
+
 func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		s, n, b, err := parseParameters(rule.Parameters, r)
+		s, n, b, _, err := t.parseParameters(rule.Parameters, r)
 		if err != nil {
 			log.Println(err.Error())
 			utils.SetErrorStatus(err, http.StatusBadRequest, w)
@@ -216,16 +275,22 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 
 // Create a new TrustProvider. Based on the onboarding, rules and account objects you pass in
 // this will bootstrap an http server with onboarding and rules endpoints exposed.
-func New(onboarding Onboarding, rules []Rule, account ...Account) TrustProvider {
+func New(onboarding Onboarding, rules []Rule, account Account, resolver did.ResolverInterface) TrustProvider {
+	t := TrustProvider{onboarding: onboarding, rules: rules, account: account, router: mux.NewRouter(), resolver: resolver}
 
-	var acct Account
-	if len(account) == 1 {
-		acct = account[0]
-	} else {
-		acct = &DefaultAccount{}
+	t.did = os.Getenv("DID")
+	if t.did != "" {
+		privateKeyPem := os.Getenv("PRIVATE_KEY_PEM")
+		privateKey, err := ssh.ParseRawPrivateKey([]byte(privateKeyPem))
+		if err != nil {
+			panic(err.Error())
+		}
+		if pk, ok := privateKey.(*rsa.PrivateKey); ok {
+			t.privateKey = pk
+		} else {
+			panic("expected RSA private key")
+		}
 	}
-
-	t := TrustProvider{onboarding: onboarding, rules: rules, account: acct, router: mux.NewRouter()}
 
 	t.router.HandleFunc("/api/register", t.register).Methods("POST")
 
@@ -244,6 +309,7 @@ func New(onboarding Onboarding, rules []Rule, account ...Account) TrustProvider 
 }
 
 func (t *TrustProvider) ListenAndServe() error {
+	log.Printf("Listening on port: %s", t.port)
 	return http.ListenAndServe(":"+t.port, nil)
 }
 
@@ -261,7 +327,7 @@ func (d *DefaultAccount) Update(account interface{}, token uuid.UUID) error {
 		return err
 	}
 
-	path, err := filepath.Abs(dbFilePath)
+	path, err := filepath.Abs(DefaultCsvFilePath)
 	file, err := os.OpenFile(path, os.O_RDWR|os.O_APPEND, 0644)
 	if err != nil {
 		log.Printf("Error opening file: %s", err)
@@ -270,7 +336,7 @@ func (d *DefaultAccount) Update(account interface{}, token uuid.UUID) error {
 
 	defer file.Close()
 
-	var records []devDBRecord
+	var records []DefaultDBRecord
 
 	if account == nil {
 		return errors.New("you must provide an account object")
@@ -286,7 +352,7 @@ func (d *DefaultAccount) Update(account interface{}, token uuid.UUID) error {
 
 	json.Unmarshal(fileContents, &records)
 
-	record := devDBRecord{
+	record := DefaultDBRecord{
 		Account: account,
 		Token:   token,
 	}
@@ -309,7 +375,7 @@ func (d *DefaultAccount) Update(account interface{}, token uuid.UUID) error {
 // (examples: https://godoc.org/github.com/mitchellh/mapstructure#Decode)
 func (d *DefaultAccount) Read(token uuid.UUID) (interface{}, error) {
 
-	path, err := filepath.Abs(dbFilePath)
+	path, err := filepath.Abs(DefaultCsvFilePath)
 	file, err := os.OpenFile(path, os.O_RDWR|os.O_APPEND, 0644)
 	if err != nil {
 		return nil, errors.New("error opening file")
@@ -319,13 +385,13 @@ func (d *DefaultAccount) Read(token uuid.UUID) (interface{}, error) {
 
 	fileContents, _ := ioutil.ReadAll(file)
 
-	var records []devDBRecord
+	var records []DefaultDBRecord
 
 	json.Unmarshal(fileContents, &records)
 
 	for _, record := range records {
 		if record.Token == token {
-			return record, nil
+			return record.Account, nil
 		}
 	}
 
@@ -334,10 +400,10 @@ func (d *DefaultAccount) Read(token uuid.UUID) (interface{}, error) {
 
 func createDevDB() error {
 
-	_, err := os.Stat(dbFilePath)
+	_, err := os.Stat(DefaultCsvFilePath)
 
 	if os.IsNotExist(err) {
-		var file, err = os.Create(dbFilePath)
+		var file, err = os.Create(DefaultCsvFilePath)
 		if err != nil {
 			return err
 		}

@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"time"
 	"github.com/satori/go.uuid"
+	"github.com/Vivvo/go-sdk/did"
 )
 
 type DMVAccountManager struct{}
@@ -100,6 +101,6 @@ func main() {
 		{Name: "is19yearsold", Parameters: []trustprovider.Parameter{}, RuleFunc: is19YearsOld},
 	}
 
-	tp := trustprovider.New(onboarding, rules, &DMVAccountManager{})
+	tp := trustprovider.New(onboarding, rules, &DMVAccountManager{}, &did.Resolver{})
 	log.Fatal(tp.ListenAndServe())
 }
