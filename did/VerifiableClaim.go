@@ -34,7 +34,7 @@ type AuthClaim struct {
 	Id           string `json:"id"`
 	FirstName    string `json:"firstName,omitempty"`
 	LastName     string `json:"lastName,omitempty"`
-	EmailAddress string `json:"emailAddress,omitempty"`
+	EmailAddress string `json:"emailAddress"`
 	PublicKey    string `json:"publicKey"`
 }
 
@@ -68,7 +68,7 @@ func (vc *Claim) Sign(privateKey *rsa.PrivateKey, nonce string) (VerifiableClaim
 	}
 
 	var proof = Proof{
-		Created: time.Now().Format("2006-01-02T15:04:05Z"),
+		Created: time.Now().Format("2006-01-02T15:04:05-0700"),
 		Creator: claim.Issuer,
 		Nonce:   nonce,
 	}
@@ -166,7 +166,6 @@ func (vc *VerifiableClaim) Verify(types []string, nonce string, resolver Resolve
 
 	return nil
 }
-
 
 // Converts struct `o` to a lexicographically sorted json object
 func canonicalizeVerifiableClaim(o interface{}) ([]byte, error) {
