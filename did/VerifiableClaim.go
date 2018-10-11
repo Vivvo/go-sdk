@@ -45,7 +45,7 @@ type Proof struct {
 	Typ            string `json:"type,omitempty"`
 	Created        string `json:"created,omitempty"`
 	Creator        string `json:"creator,omitempty"`
-	Nonce          string `json:"nonce,omitempty"`
+	Nonce          string `json:"nonce"`
 	SignatureValue string `json:"signatureValue,omitempty"`
 }
 
