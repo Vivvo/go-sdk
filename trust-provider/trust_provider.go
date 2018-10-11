@@ -155,6 +155,7 @@ func (t *TrustProvider) parseParameters(params []Parameter, r *http.Request) (ma
 
 				err = cred.Verify([]string{did.VerifiableCredential, did.IAmMeCredential}, cred.Proof.Nonce, t.resolver)
 				if err != nil {
+					log.Println(err.Error())
 					ve = append(ve, fmt.Sprintf("Unable to verify IAmMeCredential."))
 				}
 			}
