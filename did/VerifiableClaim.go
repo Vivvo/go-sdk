@@ -13,10 +13,12 @@ import (
 	"crypto/rand"
 )
 
-const VerifiableCredential = "VerifiableCredential"
-const TokenizedConnectionCredential = "TokenizedConnectionCredential"
-const ProofOfAgeCredential = "ProofOfAgeCredential"
 const IAmMeCredential = "IAmMeCredential"
+const ProofOfAgeCredential = "ProofOfAgeCredential"
+const ProofOfLegalNameCredential = "ProofOfLegalNameCredential"
+const ProofOfResidencyCredential = "ProofOfResidencyCredential"
+const TokenizedConnectionCredential = "TokenizedConnectionCredential"
+const VerifiableCredential = "VerifiableCredential"
 
 const EmailAddressClaim = "emailAddress"
 const FirstNameClaim = "firstName"
