@@ -139,8 +139,10 @@ func (t *TrustProvider) parseParameters(params []Parameter, r *http.Request) (ma
 
 	var iAmMeCredential *did.VerifiableClaim
 
+	log.Println("Checking for Verifiable Credential...")
 	if b, ok := body.(map[string]interface{}); ok && b["iAmMeCredential"] != nil {
 		vc, err := json.Marshal(b["iAmMeCredential"])
+		log.Println(string(vc))
 		if err != nil {
 			ve = append(ve, fmt.Sprintf("Unable to unmarshal IAmMeCredential."))
 		} else {
@@ -157,7 +159,8 @@ func (t *TrustProvider) parseParameters(params []Parameter, r *http.Request) (ma
 				}
 			}
 		}
-
+	} else {
+		log.Println("Verifiable Credential not found.")
 	}
 
 	if len(ve) > 0 {
