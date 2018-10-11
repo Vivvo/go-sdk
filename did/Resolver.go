@@ -10,6 +10,7 @@ import (
 	"encoding/pem"
 	"crypto/x509"
 	"errors"
+	"fmt"
 )
 
 type Service struct {
@@ -61,7 +62,7 @@ func (d *Document) GetPublicKeyById(id string) (*rsa.PublicKey, error) {
 			}
 		}
 	}
-	return nil, errors.New("not found")
+	return nil, errors.New(fmt.Sprintf("public key [%s] not found in did document", id))
 }
 
 func (d *Resolver) Resolve(did string) (*Document, error) {

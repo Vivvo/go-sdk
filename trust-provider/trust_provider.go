@@ -42,6 +42,7 @@ type Rule struct {
 	Name       string
 	Parameters []Parameter
 	RuleFunc   func(s map[string]string, n map[string]float64, b map[string]bool, acct interface{}) (bool, error)
+	Claims     []string
 }
 
 type trustProviderResponse struct {
@@ -93,13 +94,7 @@ type TrustProvider struct {
 	resolver   did.ResolverInterface
 }
 
-func (t *TrustProvider) parseParameters(params []Parameter, r *http.Request) (map[string]string, map[string]float64, map[string]bool, *did.VerifiableClaim, error) {
-	var body interface{}
-	err := utils.ReadBody(&body, r)
-	if err != nil {
-		return nil, nil, nil, nil, err
-	}
-
+func (t *TrustProvider) parseParameters(body interface{}, params []Parameter, r *http.Request) (map[string]string, map[string]float64, map[string]bool, error) {
 	var ve []string
 
 	strs := make(map[string]string, 0)
@@ -137,47 +132,27 @@ func (t *TrustProvider) parseParameters(params []Parameter, r *http.Request) (ma
 		}
 	}
 
-	var iAmMeCredential *did.VerifiableClaim
-
-	log.Println("Checking for Verifiable Credential...")
-	if b, ok := body.(map[string]interface{}); ok && b["iAmMeCredential"] != nil {
-		vc, err := json.Marshal(b["iAmMeCredential"])
-		log.Println(string(vc))
-		if err != nil {
-			ve = append(ve, fmt.Sprintf("Unable to unmarshal IAmMeCredential."))
-		} else {
-			var cred did.VerifiableClaim
-			err = json.Unmarshal(vc, &cred)
-			if err != nil {
-				ve = append(ve, fmt.Sprintf("Unable to unmarshal IAmMeCredential."))
-			} else {
-				iAmMeCredential = &cred
-
-				err = cred.Verify([]string{did.VerifiableCredential, did.IAmMeCredential}, cred.Proof.Nonce, t.resolver)
-				if err != nil {
-					log.Println(err.Error())
-					ve = append(ve, fmt.Sprintf("Unable to verify IAmMeCredential."))
-				}
-			}
-		}
-	} else {
-		log.Println("Verifiable Credential not found.")
-	}
-
 	if len(ve) > 0 {
 		e, err := json.Marshal(ve)
 		if err == nil {
 			err = errors.New(string(e))
 		}
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	return strs, nums, bools, iAmMeCredential, nil
+	return strs, nums, bools, nil
 }
 
 func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
+	var body interface{}
+	err := utils.ReadBody(&body, r)
+	if err != nil {
+		log.Println(err.Error())
+		utils.SetErrorStatus(err, http.StatusBadRequest, w)
+		return
+	}
 
-	s, n, b, iAmMeCredential, err := t.parseParameters(t.onboarding.Parameters, r)
+	s, n, b, err := t.parseParameters(body, t.onboarding.Parameters, r)
 	if err != nil {
 		log.Println(err.Error())
 		utils.SetErrorStatus(err, http.StatusBadRequest, w)
@@ -201,10 +176,32 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 			utils.WriteJSON(res, http.StatusInternalServerError, w)
 		} else {
 			var vc *did.VerifiableClaim
-			if t.didIsConfigured() && iAmMeCredential != nil {
-				claim, _ := t.generateVerifiableClaim(iAmMeCredential.Claim, token.String())
-				vc = &claim
-				//FIXME Handle error!
+			if t.didIsConfigured() {
+
+				iAmMeCredential, ve := t.parseVerifiableCredential(body, "iAmMeCredential", []string{did.VerifiableCredential, did.IAmMeCredential})
+				if len(ve) > 0 {
+					e, err := json.Marshal(ve)
+					if err == nil {
+						err = errors.New(string(e))
+					}
+					utils.SetErrorStatus(err, http.StatusBadRequest, w)
+					return
+				}
+
+				if iAmMeCredential != nil {
+					subject := iAmMeCredential.Claim[did.SubjectClaim].(string)
+
+					ac := make(map[string]interface{})
+					ac[did.TokenClaim] = token.String()
+
+					claim, _ := t.generateVerifiableClaim(ac, subject, token.String(), []string{did.VerifiableCredential, did.TokenizedConnectionCredential})
+					if err != nil {
+						log.Println(err.Error())
+						utils.SetErrorStatus(err, http.StatusInternalServerError, w)
+						return
+					}
+					vc = &claim
+				}
 			}
 
 			res := trustProviderResponse{Status: true, OnBoardingRequired: false, Token: token.String(), VerifiableClaim: vc}
@@ -220,24 +217,50 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func (t *TrustProvider) parseVerifiableCredential(body interface{}, attributeName string, types []string) (*did.VerifiableClaim, []string) {
+	var iAmMeCredential *did.VerifiableClaim
+	var ve []string
+	log.Println("Checking for Verifiable Credential...")
+	if b, ok := body.(map[string]interface{}); ok && b[attributeName] != nil {
+		vc, err := json.Marshal(b[attributeName])
+		if err != nil {
+			ve = append(ve, fmt.Sprintf("Unable to unmarshal Verifiable Credential."))
+		} else {
+			var cred did.VerifiableClaim
+			err = json.Unmarshal(vc, &cred)
+			if err != nil {
+				ve = append(ve, fmt.Sprintf("Unable to unmarshal Verifiable Credential."))
+			} else {
+				iAmMeCredential = &cred
+
+				err = cred.Verify(types, cred.Proof.Nonce, t.resolver)
+				if err != nil {
+					log.Println(err.Error())
+					ve = append(ve, fmt.Sprintf("Unable to verify Verifiable Credential."))
+				}
+			}
+		}
+	} else {
+		log.Println("Verifiable Credential not found.")
+	}
+	return iAmMeCredential, ve
+}
+
 func (t *TrustProvider) didIsConfigured() bool {
 	return t.did != ""
 }
 
-func (t *TrustProvider) generateVerifiableClaim(ac map[string]string, token string) (did.VerifiableClaim, error) {
-	subject := ac[did.SubjectClaim]
+func (t *TrustProvider) generateVerifiableClaim(ac map[string]interface{}, subject string, id string, types []string) (did.VerifiableClaim, error) {
 
-	claims := make(map[string]string)
-	claims[did.SubjectClaim] = subject
-	claims[did.TokenClaim] = token
-	claims[did.PublicKeyClaim] = fmt.Sprintf("%s#keys-1", t.did)
+	ac[did.SubjectClaim] = subject
+	ac[did.PublicKeyClaim] = fmt.Sprintf("%s#keys-1", t.did)
 
 	var claim = did.Claim{
-		token,
-		[]string{did.VerifiableCredential, did.TokenizedConnectionCredential},
+		id,
+		types,
 		t.did,
 		time.Now().Format("2006-01-02"),
-		claims,
+		ac,
 	}
 
 	return claim.Sign(t.privateKey, uuid.Must(uuid.NewV4()).String())
@@ -245,8 +268,15 @@ func (t *TrustProvider) generateVerifiableClaim(ac map[string]string, token stri
 
 func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body interface{}
+		err := utils.ReadBody(&body, r)
+		if err != nil {
+			log.Println(err.Error())
+			utils.SetErrorStatus(err, http.StatusBadRequest, w)
+			return
+		}
 
-		s, n, b, _, err := t.parseParameters(rule.Parameters, r)
+		s, n, b, err := t.parseParameters(body, rule.Parameters, r)
 		if err != nil {
 			log.Println(err.Error())
 			utils.SetErrorStatus(err, http.StatusBadRequest, w)
@@ -276,7 +306,44 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 			return
 		}
 
-		utils.WriteJSON(trustProviderResponse{Status: status}, http.StatusOK, w)
+		if status {
+			var vc *did.VerifiableClaim
+			if t.didIsConfigured() {
+				connectionClaim, ve := t.parseVerifiableCredential(body, "verifiableClaim", []string{did.VerifiableCredential, did.TokenizedConnectionCredential})
+				if len(ve) > 0 {
+					e, err := json.Marshal(ve)
+					if err == nil {
+						err = errors.New(string(e))
+					}
+					utils.SetErrorStatus(err, http.StatusBadRequest, w)
+					return
+				}
+
+				if connectionClaim != nil {
+					ac := make(map[string]interface{})
+					for k, v := range s {
+						ac[k] = v
+					}
+					for k, v := range n {
+						ac[k] = v
+					}
+					for k, v := range b {
+						ac[k] = v
+					}
+
+					claim, err := t.generateVerifiableClaim(ac, connectionClaim.Claim[did.SubjectClaim].(string), uuid.Must(uuid.NewV4()).String(), rule.Claims)
+					if err != nil {
+						log.Println(err.Error())
+						utils.SetErrorStatus(err, http.StatusInternalServerError, w)
+						return
+					}
+					vc = &claim
+				}
+			}
+			utils.WriteJSON(trustProviderResponse{Status: status, VerifiableClaim: vc}, http.StatusOK, w)
+		} else {
+			utils.WriteJSON(trustProviderResponse{Status: status}, http.StatusOK, w)
+		}
 	})
 }
 

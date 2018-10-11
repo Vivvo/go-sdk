@@ -15,30 +15,31 @@ import (
 
 const VerifiableCredential = "VerifiableCredential"
 const TokenizedConnectionCredential = "TokenizedConnectionCredential"
+const ProofOfAgeCredential = "ProofOfAgeCredential"
 const IAmMeCredential = "IAmMeCredential"
 
-const SubjectClaim = "id"
-const PublicKeyClaim = "publicKey"
+const EmailAddressClaim = "emailAddress"
 const FirstNameClaim = "firstName"
 const LastNameClaim = "lastName"
-const EmailAddressClaim = "emailAddress"
+const PublicKeyClaim = "publicKey"
+const SubjectClaim = "id"
 const TokenClaim = "token"
 
 type Claim struct {
-	Id     string            `json:"id"`
-	Type   []string          `json:"type"`
-	Issuer string            `json:"issuer"`
-	Issued string            `json:"issued"`
-	Claim  map[string]string `json:"claim"`
+	Id     string                 `json:"id"`
+	Type   []string               `json:"type"`
+	Issuer string                 `json:"issuer"`
+	Issued string                 `json:"issued"`
+	Claim  map[string]interface{} `json:"claim"`
 }
 
 type VerifiableClaim struct {
-	Id     string            `json:"id"`
-	Type   []string          `json:"type"`
-	Issuer string            `json:"issuer"`
-	Issued string            `json:"issued"`
-	Claim  map[string]string `json:"claim"`
-	Proof  *Proof            `json:"proof,omitempty"`
+	Id     string                 `json:"id"`
+	Type   []string               `json:"type"`
+	Issuer string                 `json:"issuer"`
+	Issued string                 `json:"issued"`
+	Claim  map[string]interface{} `json:"claim"`
+	Proof  *Proof                 `json:"proof,omitempty"`
 }
 
 type Proof struct {
@@ -117,7 +118,7 @@ func (vc *VerifiableClaim) Verify(types []string, nonce string, resolver Resolve
 	}
 
 	// Find the public key that the claim is using
-	pubKey, err := didDocument.GetPublicKeyById(vc.Claim[PublicKeyClaim])
+	pubKey, err := didDocument.GetPublicKeyById(vc.Claim[PublicKeyClaim].(string))
 	if err != nil {
 		return err
 	}

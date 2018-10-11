@@ -13,6 +13,7 @@ import (
 	"time"
 	"crypto/rsa"
 	"os"
+	"fmt"
 )
 
 const privateKeyPem = `-----BEGIN RSA PRIVATE KEY-----
@@ -171,7 +172,7 @@ func buildIAmMeCredential(t *testing.T) (did.VerifiableClaim) {
 	}
 	nonce := uuid.Must(uuid.NewV4()).String()
 
-	claims := make(map[string]string)
+	claims := make(map[string]interface{})
 	claims[did.SubjectClaim] = "did:vvo:12H6btMP6hPy32VXbwKvGE"
 	claims[did.PublicKeyClaim] = "did:vvo:12H6btMP6hPy32VXbwKvGE#keys-1"
 
@@ -192,4 +193,103 @@ func buildIAmMeCredential(t *testing.T) (did.VerifiableClaim) {
 		}
 	}
 	return vc
+}
+
+func TestRulesVerifiableCredential(t *testing.T) {
+
+	validToken := uuid.Must(uuid.NewV4())
+
+	tests := []struct {
+		Name       string
+		Rules      []Rule
+		Body       string
+		StatusCode int
+		Status     bool
+		Token      uuid.UUID
+		Message    string
+	}{
+		{
+			Name:       "alwayspasses",
+			Rules:      []Rule{{Claims: []string{did.VerifiableCredential, did.ProofOfAgeCredential}, Name: "alwayspasses", Parameters: []Parameter{{Name: "age", Type: ParameterTypeFloat64, Required: true}}, RuleFunc: func(s map[string]string, n map[string]float64, b map[string]bool, acct interface{}) (bool, error) { return true, nil }}},
+			StatusCode: http.StatusOK,
+			Status:     true,
+			Token:      validToken,
+			Message:    "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.Name, func(t *testing.T) {
+			http.DefaultServeMux = new(http.ServeMux)
+
+			onboarding := Onboarding{
+				Parameters: []Parameter{},
+				OnboardingFunc: func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error) {
+					return MockAccountObj{AccountId: 1}, nil
+				},
+			}
+
+			mockAccount := MockAccount{}
+			mockAccount.SetUpdateFunc(func(account interface{}, token uuid.UUID) error { return nil })
+			mockAccount.SetReadFunc(func(token uuid.UUID) (interface{}, error) {
+				return MockAccountObj{AccountId: 1234567890, Age: 30}, nil
+			})
+
+			os.Setenv("DID", "did:vvo:12H6btMP6hPy32VXbwKvGE")
+			os.Setenv("PRIVATE_KEY_PEM", privateKeyPem)
+
+			tp := New(onboarding, tt.Rules, &mockAccount, &MockResolver{})
+
+			executeRequest := func(req *http.Request) *httptest.ResponseRecorder {
+				rr := httptest.NewRecorder()
+				tp.router.ServeHTTP(rr, req)
+				return rr
+			}
+
+			ac := make(map[string]interface{})
+			ac[did.TokenClaim] = uuid.Must(uuid.NewV4()).String()
+			vc, _ := tp.generateVerifiableClaim(ac, "did:vvo:12H6btMP6hPy32VXbwKvGE", ac[did.TokenClaim].(string), []string{did.VerifiableCredential, did.TokenizedConnectionCredential})
+
+			body := struct {
+				Age             float64             `json:"age"`
+				VerifiableClaim did.VerifiableClaim `json:"verifiableClaim"`
+			}{
+				25,
+				vc,
+			}
+
+			b, _ := json.Marshal(body)
+
+			req, _ := http.NewRequest("POST", fmt.Sprintf("/api/%s/%s", tt.Name, validToken), strings.NewReader(string(b)))
+			res := executeRequest(req)
+
+			b, err := ioutil.ReadAll(res.Body)
+			if err != nil {
+				t.Errorf("Error reading response body: %s", err.Error())
+			}
+
+			var response trustProviderResponse
+			err = json.Unmarshal(b, &response)
+			if err != nil {
+				t.Errorf("Error unmarshalling response body: %s", err.Error())
+			}
+
+			if response.VerifiableClaim == nil {
+				t.Fatal("Expected a verifiable claim in the response body.")
+			}
+
+			err = response.VerifiableClaim.Verify([]string{did.VerifiableCredential, did.ProofOfAgeCredential}, response.VerifiableClaim.Proof.Nonce, &MockResolver{})
+			if err != nil {
+				t.Fatal(err.Error())
+			}
+
+			if response.VerifiableClaim.Claim[did.SubjectClaim] != "did:vvo:12H6btMP6hPy32VXbwKvGE" {
+				t.Fatalf("Expected: %s, Actual: %s", "did:vvo:12H6btMP6hPy32VXbwKvGE", response.VerifiableClaim.Claim[did.SubjectClaim])
+			}
+
+			if response.VerifiableClaim.Claim["age"] != float64(25) {
+				t.Fatalf("Expected: %s, Actual: %s", 25, response.VerifiableClaim.Claim["age"])
+			}
+		})
+	}
 }
