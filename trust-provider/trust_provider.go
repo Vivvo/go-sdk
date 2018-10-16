@@ -267,6 +267,8 @@ func (t *TrustProvider) generateVerifiableClaim(ac map[string]interface{}, subje
 	return claim.Sign(t.privateKey, uuid.Must(uuid.NewV4()).String())
 }
 
+
+
 func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var body interface{}
