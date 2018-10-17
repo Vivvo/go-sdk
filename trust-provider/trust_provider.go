@@ -1,6 +1,7 @@
 package trustprovider
 
 import (
+	"github.com/newrelic/go-agent"
 	"net/http"
 	"github.com/gorilla/mux"
 	"github.com/satori/go.uuid"
@@ -347,6 +348,19 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 	})
 }
 
+func applyNewRelic(pattern string, handler http.Handler) (string, http.Handler) {
+	newRelicConfig := newrelic.NewConfig(os.Getenv("NEW_RELIC_APP_NAME"), os.Getenv("NEW_RELIC_LICENSE_KEY"))
+	app, err := newrelic.NewApplication(newRelicConfig)
+	if err != nil {
+		log.Println("Unable to create New Relic application:", err.Error())
+	}
+
+	if app != nil {
+		return newrelic.WrapHandle(app, pattern, handler)
+	}
+	return pattern, handler
+}
+
 // Create a new TrustProvider. Based on the onboarding, rules and account objects you pass in
 // this will bootstrap an http server with onboarding and rules endpoints exposed.
 func New(onboarding Onboarding, rules []Rule, account Account, resolver did.ResolverInterface) TrustProvider {
@@ -372,7 +386,7 @@ func New(onboarding Onboarding, rules []Rule, account Account, resolver did.Reso
 		t.router.HandleFunc(fmt.Sprintf("/api/%s/{token}", rule.Name), t.handleRule(rule)).Methods("POST")
 	}
 
-	http.Handle("/", handlers.LoggingHandler(os.Stdout, t.router))
+	http.Handle(applyNewRelic("/", handlers.LoggingHandler(os.Stdout, t.router)))
 
 	const TrustProviderPortKey = "TRUST_PROVIDER_PORT"
 	t.port = os.Getenv(TrustProviderPortKey)
