@@ -2,8 +2,8 @@ package middleware
 
 import (
 	"context"
-	"github.com/Vivvo/vivvo-privacy-proxy/src/utils"
 	"github.com/satori/go.uuid"
+	"github.com/Vivvo/go-sdk/utils"
 	"net/http"
 )
 
