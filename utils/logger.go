@@ -2,7 +2,6 @@ package utils
 
 import (
 	"context"
-	"github.com/Vivvo/go-sdk/middleware"
 	"go.uber.org/zap"
 )
 
@@ -16,14 +15,14 @@ func init() {
 
 // WithRequestId returns a context which knows its request ID
 func WithRequestId(ctx context.Context, requestId string) context.Context {
-	return context.WithValue(ctx, middleware.CorrelationIdConst, requestId)
+	return context.WithValue(ctx, CorrelationIdConst, requestId)
 }
 
 // Logger returns a zap logger with as much context as possible
 func Logger(ctx context.Context) *zap.SugaredLogger {
 	newLogger := logger
 	if ctx != nil {
-		if ctxRequestId, ok := ctx.Value(middleware.CorrelationIdConst).(string); ok {
+		if ctxRequestId, ok := ctx.Value(CorrelationIdConst).(string); ok {
 			newLogger = newLogger.With(zap.String("correlation-id", ctxRequestId))
 		}
 	}
