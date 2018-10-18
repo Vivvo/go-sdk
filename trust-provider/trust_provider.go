@@ -320,6 +320,9 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 					if err == nil {
 						err = errors.New(string(e))
 					}
+
+					logger.Errorf("Problem verifying Verifiable Credential", "error", err.Error())
+
 					utils.SetErrorStatus(err, http.StatusBadRequest, w)
 					return
 				}
