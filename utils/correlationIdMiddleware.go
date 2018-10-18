@@ -1,17 +1,16 @@
-package middleware
+package utils
 
 import (
 	"context"
 	"github.com/satori/go.uuid"
-	"github.com/Vivvo/go-sdk/utils"
 	"net/http"
 )
 
 const CorrelationIdConst = "correlation-id"
 
-func CorrelationId(handler http.Handler) http.Handler {
+func CorrelationIdMiddleware(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		logger := utils.Logger(r.Context())
+		logger := Logger(r.Context())
 		defer logger.Sync()
 
 		correlationId := r.Header.Get("X-Trace-Id")

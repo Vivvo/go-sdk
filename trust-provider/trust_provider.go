@@ -18,7 +18,6 @@ import (
 	"os"
 	"path/filepath"
 	"time"
-	"github.com/Vivvo/go-sdk/middleware"
 	"go.uber.org/zap"
 )
 
@@ -269,10 +268,11 @@ func (t *TrustProvider) generateVerifiableClaim(ac map[string]interface{}, subje
 	return claim.Sign(t.privateKey, uuid.Must(uuid.NewV4()).String())
 }
 
-
-
 func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		logger := utils.Logger(r.Context())
+
 		var body interface{}
 		err := utils.ReadBody(&body, r)
 		if err != nil {
@@ -314,7 +314,7 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 		if status {
 			var vc *did.VerifiableClaim
 			if t.didIsConfigured() {
-				connectionClaim, ve := t.parseVerifiableCredential(body, "verifiableClaim", []string{did.VerifiableCredential, did.TokenizedConnectionCredential})
+				connectionClaim, ve := t.parseVerifiableCredential(body, "verifiableClaim", []string{did.VerifiableCredential, did.TokenizedConnectionCredential}, logger)
 				if len(ve) > 0 {
 					e, err := json.Marshal(ve)
 					if err == nil {
@@ -390,7 +390,7 @@ func New(onboarding Onboarding, rules []Rule, account Account, resolver did.Reso
 		t.router.HandleFunc(fmt.Sprintf("/api/%s/{token}", rule.Name), t.handleRule(rule)).Methods("POST")
 	}
 
-	http.Handle(applyNewRelic("/", handlers.LoggingHandler(os.Stdout, middleware.CorrelationId(t.router))))
+	http.Handle(applyNewRelic("/", handlers.LoggingHandler(os.Stdout, utils.CorrelationIdMiddleware(t.router))))
 
 	const TrustProviderPortKey = "TRUST_PROVIDER_PORT"
 	t.port = os.Getenv(TrustProviderPortKey)
