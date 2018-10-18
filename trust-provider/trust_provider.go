@@ -276,14 +276,14 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 		var body interface{}
 		err := utils.ReadBody(&body, r)
 		if err != nil {
-			log.Println(err.Error())
+			logger.Error("error", err.Error())
 			utils.SetErrorStatus(err, http.StatusBadRequest, w)
 			return
 		}
 
 		s, n, b, err := t.parseParameters(body, rule.Parameters, r)
 		if err != nil {
-			log.Println(err.Error())
+			logger.Error("error", err.Error())
 			utils.SetErrorStatus(err, http.StatusBadRequest, w)
 			return
 		}
@@ -292,21 +292,21 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 		v := vars["token"]
 		token, err := uuid.FromString(v)
 		if err != nil {
-			log.Println(err.Error())
+			logger.Error("error", err.Error())
 			utils.SetErrorStatus(err, http.StatusBadRequest, w)
 			return
 		}
 
 		acct, err := t.account.Read(token)
 		if err != nil {
-			log.Println(err.Error())
+			logger.Error("error", err.Error())
 			utils.SetErrorStatus(err, http.StatusBadRequest, w)
 			return
 		}
 
 		status, err := rule.RuleFunc(s, n, b, acct)
 		if err != nil {
-			log.Println(err.Error())
+			logger.Error("error", err.Error())
 			utils.SetErrorStatus(err, http.StatusServiceUnavailable, w)
 			return
 		}
@@ -341,7 +341,7 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 
 					claim, err := t.generateVerifiableClaim(ac, connectionClaim.Claim[did.SubjectClaim].(string), uuid.Must(uuid.NewV4()).String(), rule.Claims)
 					if err != nil {
-						log.Println(err.Error())
+						logger.Error("error", err.Error())
 						utils.SetErrorStatus(err, http.StatusInternalServerError, w)
 						return
 					}
