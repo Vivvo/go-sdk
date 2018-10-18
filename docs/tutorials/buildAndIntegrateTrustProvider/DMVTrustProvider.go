@@ -1,15 +1,15 @@
 package main
 
 import (
-	"github.com/Vivvo/go-sdk/trust-provider"
-	"log"
 	"encoding/csv"
+	"github.com/Vivvo/go-sdk/did"
+	"github.com/Vivvo/go-sdk/trust-provider"
+	"github.com/pkg/errors"
+	"github.com/satori/go.uuid"
+	"log"
 	"os"
 	"strings"
-	"github.com/pkg/errors"
 	"time"
-	"github.com/satori/go.uuid"
-	"github.com/Vivvo/go-sdk/did"
 )
 
 type DMVAccountManager struct{}

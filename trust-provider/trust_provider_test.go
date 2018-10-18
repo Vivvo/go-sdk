@@ -1,19 +1,19 @@
 package trustprovider
 
 import (
-	"testing"
+	"encoding/json"
+	"fmt"
+	"github.com/Vivvo/go-sdk/utils"
+	"github.com/apex/log"
+	"github.com/mitchellh/mapstructure"
+	"github.com/pkg/errors"
+	"github.com/satori/go.uuid"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	"encoding/json"
-	"io/ioutil"
-	"github.com/pkg/errors"
-	"github.com/Vivvo/go-sdk/utils"
-	"strings"
-	"github.com/satori/go.uuid"
-	"fmt"
-	"github.com/apex/log"
 	"os"
-	"github.com/mitchellh/mapstructure"
+	"strings"
+	"testing"
 )
 
 type MockAccountObj struct {
@@ -408,8 +408,10 @@ func TestRules(t *testing.T) {
 		Message    string
 	}{
 		{
-			Name:       "alwayspasses",
-			Rules:      []Rule{{Name: "alwayspasses", Parameters: []Parameter{}, RuleFunc: func(s map[string]string, n map[string]float64, b map[string]bool, acct interface{}) (bool, error) { return true, nil }}},
+			Name: "alwayspasses",
+			Rules: []Rule{{Name: "alwayspasses", Parameters: []Parameter{}, RuleFunc: func(s map[string]string, n map[string]float64, b map[string]bool, acct interface{}) (bool, error) {
+				return true, nil
+			}}},
 			Body:       "",
 			StatusCode: http.StatusOK,
 			Status:     true,
@@ -417,8 +419,10 @@ func TestRules(t *testing.T) {
 			Message:    "",
 		},
 		{
-			Name:       "alwaysfails",
-			Rules:      []Rule{{Name: "alwaysfails", Parameters: []Parameter{}, RuleFunc: func(s map[string]string, n map[string]float64, b map[string]bool, acct interface{}) (bool, error) { return false, nil }}},
+			Name: "alwaysfails",
+			Rules: []Rule{{Name: "alwaysfails", Parameters: []Parameter{}, RuleFunc: func(s map[string]string, n map[string]float64, b map[string]bool, acct interface{}) (bool, error) {
+				return false, nil
+			}}},
 			Body:       "",
 			StatusCode: http.StatusOK,
 			Status:     false,
@@ -426,8 +430,10 @@ func TestRules(t *testing.T) {
 			Message:    "",
 		},
 		{
-			Name:       "throwsanerror",
-			Rules:      []Rule{{Name: "throwsanerror", Parameters: []Parameter{}, RuleFunc: func(s map[string]string, n map[string]float64, b map[string]bool, acct interface{}) (bool, error) { return false, errors.New("WHAT HAVE YOU DONE?") }}},
+			Name: "throwsanerror",
+			Rules: []Rule{{Name: "throwsanerror", Parameters: []Parameter{}, RuleFunc: func(s map[string]string, n map[string]float64, b map[string]bool, acct interface{}) (bool, error) {
+				return false, errors.New("WHAT HAVE YOU DONE?")
+			}}},
 			Body:       "",
 			StatusCode: http.StatusServiceUnavailable,
 			Status:     false,

@@ -1,19 +1,19 @@
 package trustprovider
 
 import (
-	"testing"
+	"crypto/rsa"
+	"encoding/json"
+	"fmt"
+	"github.com/Vivvo/go-sdk/did"
+	"github.com/satori/go.uuid"
+	"golang.org/x/crypto/ssh"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	"strings"
-	"io/ioutil"
-	"github.com/satori/go.uuid"
-	"encoding/json"
-	"golang.org/x/crypto/ssh"
-	"github.com/Vivvo/go-sdk/did"
-	"time"
-	"crypto/rsa"
 	"os"
-	"fmt"
+	"strings"
+	"testing"
+	"time"
 )
 
 const privateKeyPem = `-----BEGIN RSA PRIVATE KEY-----
@@ -165,7 +165,7 @@ func TestOnboardingVerifiableClaim(t *testing.T) {
 
 }
 
-func buildIAmMeCredential(t *testing.T) (did.VerifiableClaim) {
+func buildIAmMeCredential(t *testing.T) did.VerifiableClaim {
 	privateKey, err := ssh.ParseRawPrivateKey([]byte(privateKeyPem))
 	if err != nil {
 		t.Fatal(err.Error())
@@ -209,8 +209,10 @@ func TestRulesVerifiableCredential(t *testing.T) {
 		Message    string
 	}{
 		{
-			Name:       "alwayspasses",
-			Rules:      []Rule{{Claims: []string{did.VerifiableCredential, did.ProofOfAgeCredential}, Name: "alwayspasses", Parameters: []Parameter{{Name: "age", Type: ParameterTypeFloat64, Required: true}}, RuleFunc: func(s map[string]string, n map[string]float64, b map[string]bool, acct interface{}) (bool, error) { return true, nil }}},
+			Name: "alwayspasses",
+			Rules: []Rule{{Claims: []string{did.VerifiableCredential, did.ProofOfAgeCredential}, Name: "alwayspasses", Parameters: []Parameter{{Name: "age", Type: ParameterTypeFloat64, Required: true}}, RuleFunc: func(s map[string]string, n map[string]float64, b map[string]bool, acct interface{}) (bool, error) {
+				return true, nil
+			}}},
 			StatusCode: http.StatusOK,
 			Status:     true,
 			Token:      validToken,

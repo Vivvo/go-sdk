@@ -1,16 +1,16 @@
 package did
 
 import (
-	"strings"
-	"crypto/sha256"
-	"encoding/json"
 	"crypto"
-	"crypto/rsa"
-	"github.com/pkg/errors"
-	"fmt"
-	"encoding/base64"
-	"time"
 	"crypto/rand"
+	"crypto/rsa"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"github.com/pkg/errors"
+	"strings"
+	"time"
 )
 
 const IAmMeCredential = "IAmMeCredential"

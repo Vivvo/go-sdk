@@ -38,7 +38,6 @@ func WriteJSON(v interface{}, s int, w http.ResponseWriter) {
 
 func ReadBody(v interface{}, r *http.Request) error {
 	b, err := ioutil.ReadAll(r.Body)
-	log.Println(string(b))
 
 	if len(b) == 0 {
 		return nil

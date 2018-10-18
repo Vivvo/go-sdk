@@ -1,23 +1,25 @@
 package trustprovider
 
 import (
-	"github.com/newrelic/go-agent"
-	"net/http"
-	"github.com/gorilla/mux"
-	"github.com/satori/go.uuid"
-	"github.com/pkg/errors"
-	"log"
-	"github.com/Vivvo/go-sdk/utils"
-	"fmt"
+	"crypto/rsa"
 	"encoding/json"
+	"fmt"
+	"github.com/Vivvo/go-sdk/did"
+	"github.com/Vivvo/go-sdk/utils"
 	"github.com/gorilla/handlers"
+	"github.com/gorilla/mux"
+	"github.com/newrelic/go-agent"
+	"github.com/pkg/errors"
+	"github.com/satori/go.uuid"
+	"golang.org/x/crypto/ssh"
+	"io/ioutil"
+	"log"
+	"net/http"
 	"os"
 	"path/filepath"
-	"io/ioutil"
-	"github.com/Vivvo/go-sdk/did"
-	"crypto/rsa"
-	"golang.org/x/crypto/ssh"
 	"time"
+	"github.com/Vivvo/go-sdk/middleware"
+	"go.uber.org/zap"
 )
 
 type Onboarding struct {
@@ -145,31 +147,33 @@ func (t *TrustProvider) parseParameters(body interface{}, params []Parameter, r 
 }
 
 func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
+
+	logger := utils.Logger(r.Context())
+
 	var body interface{}
 	err := utils.ReadBody(&body, r)
 	if err != nil {
-		log.Println(err.Error())
+		logger.Errorf("Problem unmarshalling onboarding request body", "error", err.Error())
 		utils.SetErrorStatus(err, http.StatusBadRequest, w)
 		return
 	}
 
 	s, n, b, err := t.parseParameters(body, t.onboarding.Parameters, r)
 	if err != nil {
-		log.Println(err.Error())
+		logger.Errorf("Problem parsing onboarding request parameters", "error", err.Error())
 		utils.SetErrorStatus(err, http.StatusBadRequest, w)
 		return
 	}
 
 	if t.onboarding.OnboardingFunc == nil {
 		err := errors.New("TrustProvider.onboarding.OnboardingFunc not implemented!")
-		log.Println(err.Error())
+		logger.Errorf("TrustProvider.onboarding.OnboardingFunc not implemented!")
 		utils.SetErrorStatus(err, http.StatusInternalServerError, w)
 		return
 	}
 	account, err := t.onboarding.OnboardingFunc(s, n, b)
 	if err == nil {
 		token := uuid.Must(uuid.NewV4())
-
 		err = t.account.Update(account, token)
 
 		if err != nil {
@@ -179,12 +183,13 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 			var vc *did.VerifiableClaim
 			if t.didIsConfigured() {
 
-				iAmMeCredential, ve := t.parseVerifiableCredential(body, "iAmMeCredential", []string{did.VerifiableCredential, did.IAmMeCredential})
+				iAmMeCredential, ve := t.parseVerifiableCredential(body, "iAmMeCredential", []string{did.VerifiableCredential, did.IAmMeCredential}, logger)
 				if len(ve) > 0 {
 					e, err := json.Marshal(ve)
 					if err == nil {
 						err = errors.New(string(e))
 					}
+					logger.Errorf("Problem verifying the Verifiable Credential", "error", ve)
 					utils.SetErrorStatus(err, http.StatusBadRequest, w)
 					return
 				}
@@ -197,7 +202,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 
 					claim, _ := t.generateVerifiableClaim(ac, subject, token.String(), []string{did.VerifiableCredential, did.TokenizedConnectionCredential})
 					if err != nil {
-						log.Println(err.Error())
+						logger.Errorf("Problem generating a verifiable credential response", "error", err.Error())
 						utils.SetErrorStatus(err, http.StatusInternalServerError, w)
 						return
 					}
@@ -206,9 +211,6 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 			}
 
 			res := trustProviderResponse{Status: true, OnBoardingRequired: false, Token: token.String(), VerifiableClaim: vc}
-			b, _ := json.Marshal(res)
-			log.Printf(string(b))
-
 			utils.WriteJSON(res, http.StatusCreated, w)
 		}
 	} else {
@@ -218,10 +220,10 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (t *TrustProvider) parseVerifiableCredential(body interface{}, attributeName string, types []string) (*did.VerifiableClaim, []string) {
+func (t *TrustProvider) parseVerifiableCredential(body interface{}, attributeName string, types []string, logger *zap.SugaredLogger) (*did.VerifiableClaim, []string) {
 	var iAmMeCredential *did.VerifiableClaim
 	var ve []string
-	log.Println("Checking for Verifiable Credential...")
+	logger.Infow("Checking for Verifiable Credential...")
 	if b, ok := body.(map[string]interface{}); ok && b[attributeName] != nil {
 		vc, err := json.Marshal(b[attributeName])
 		if err != nil {
@@ -242,7 +244,7 @@ func (t *TrustProvider) parseVerifiableCredential(body interface{}, attributeNam
 			}
 		}
 	} else {
-		log.Println("Verifiable Credential not found.")
+		logger.Infow("Verifiable Credential not found.")
 	}
 	return iAmMeCredential, ve
 }
@@ -388,7 +390,7 @@ func New(onboarding Onboarding, rules []Rule, account Account, resolver did.Reso
 		t.router.HandleFunc(fmt.Sprintf("/api/%s/{token}", rule.Name), t.handleRule(rule)).Methods("POST")
 	}
 
-	http.Handle(applyNewRelic("/", handlers.LoggingHandler(os.Stdout, t.router)))
+	http.Handle(applyNewRelic("/", handlers.LoggingHandler(os.Stdout, middleware.CorrelationId(t.router))))
 
 	const TrustProviderPortKey = "TRUST_PROVIDER_PORT"
 	t.port = os.Getenv(TrustProviderPortKey)

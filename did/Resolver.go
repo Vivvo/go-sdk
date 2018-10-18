@@ -1,16 +1,16 @@
 package did
 
 import (
-	"os"
-	"net/http"
-	"io/ioutil"
-	"encoding/json"
 	"crypto/rsa"
-	"strings"
-	"encoding/pem"
 	"crypto/x509"
+	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"os"
+	"strings"
 )
 
 type Service struct {
@@ -32,11 +32,11 @@ type PublicKey struct {
 }
 
 type Document struct {
-	Context        string            `json:"@context"`
-	Id             string            `json:"id"`
-	PublicKey      [] PublicKey      `json:"publicKey"`
-	Authentication [] Authentication `json:"authentication"`
-	Service        [] Service        `json:"service"`
+	Context        string           `json:"@context"`
+	Id             string           `json:"id"`
+	PublicKey      []PublicKey      `json:"publicKey"`
+	Authentication []Authentication `json:"authentication"`
+	Service        []Service        `json:"service"`
 }
 
 type ResolverInterface interface {
