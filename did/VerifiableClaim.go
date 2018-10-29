@@ -13,6 +13,7 @@ import (
 	"time"
 )
 
+const AuthenticationChallenge = "AuthenticationChallenge"
 const IAmMeCredential = "IAmMeCredential"
 const ProofOfAgeCredential = "ProofOfAgeCredential"
 const ProofOfLegalNameCredential = "ProofOfLegalNameCredential"
@@ -20,9 +21,13 @@ const ProofOfResidencyCredential = "ProofOfResidencyCredential"
 const TokenizedConnectionCredential = "TokenizedConnectionCredential"
 const VerifiableCredential = "VerifiableCredential"
 
+const AuthenticationChallengeClaim = "challenge"
+const CallbackClaim = "callback"
 const EmailAddressClaim = "emailAddress"
 const FirstNameClaim = "firstName"
 const LastNameClaim = "lastName"
+const LogoClaim = "logo"
+const NameClaim = "name"
 const PublicKeyClaim = "publicKey"
 const SubjectClaim = "id"
 const TokenClaim = "token"
