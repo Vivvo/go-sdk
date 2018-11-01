@@ -59,7 +59,7 @@ func TestOnboardingVerifiableClaim(t *testing.T) {
 
 	tests := []struct {
 		name               string
-		onboardingFunc     func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error)
+		onboardingFunc     func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error, string)
 		saveFuncCalled     bool
 		statusCode         int
 		onboardingStatus   bool
@@ -67,9 +67,9 @@ func TestOnboardingVerifiableClaim(t *testing.T) {
 		token              bool
 	}{
 		{"Test Successful Onboarding",
-			func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error) {
+			func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error, string) {
 				onboardingFuncCalled = true
-				return MockAccountObj{AccountId: 1}, nil
+				return MockAccountObj{AccountId: 1}, nil, ""
 			},
 			true,
 			http.StatusCreated,
@@ -91,7 +91,7 @@ func TestOnboardingVerifiableClaim(t *testing.T) {
 			}
 
 			mockAccount := MockAccount{}
-			mockAccount.SetUpdateFunc(func(account interface{}, token uuid.UUID) error {
+			mockAccount.SetUpdateFunc(func(account interface{}, token string) error {
 				saveFuncCalled = true
 
 				if a, ok := account.(MockAccountObj); ok == true {
@@ -101,7 +101,7 @@ func TestOnboardingVerifiableClaim(t *testing.T) {
 				} else {
 					t.Errorf("Expected an Account object")
 				}
-				if token.String() == "" {
+				if token == "" {
 					t.Errorf("Expected to receive a token")
 				}
 
@@ -226,14 +226,14 @@ func TestRulesVerifiableCredential(t *testing.T) {
 
 			onboarding := Onboarding{
 				Parameters: []Parameter{},
-				OnboardingFunc: func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error) {
-					return MockAccountObj{AccountId: 1}, nil
+				OnboardingFunc: func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error, string) {
+					return MockAccountObj{AccountId: 1}, nil, ""
 				},
 			}
 
 			mockAccount := MockAccount{}
-			mockAccount.SetUpdateFunc(func(account interface{}, token uuid.UUID) error { return nil })
-			mockAccount.SetReadFunc(func(token uuid.UUID) (interface{}, error) {
+			mockAccount.SetUpdateFunc(func(account interface{}, token string) error { return nil })
+			mockAccount.SetReadFunc(func(token string) (interface{}, error) {
 				return MockAccountObj{AccountId: 1234567890, Age: 30}, nil
 			})
 

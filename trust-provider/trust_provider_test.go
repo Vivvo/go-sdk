@@ -27,23 +27,23 @@ type MockDevDBRecord struct {
 }
 
 type MockAccount struct {
-	update func(account interface{}, token uuid.UUID) error
-	read   func(token uuid.UUID) (interface{}, error)
+	update func(account interface{}, token string) error
+	read   func(token string) (interface{}, error)
 }
 
-func (d *MockAccount) SetUpdateFunc(update func(account interface{}, token uuid.UUID) error) {
+func (d *MockAccount) SetUpdateFunc(update func(account interface{}, token string) error) {
 	d.update = update
 }
 
-func (d *MockAccount) Update(account interface{}, token uuid.UUID) error {
+func (d *MockAccount) Update(account interface{}, token string) error {
 	return d.update(account, token)
 }
 
-func (d *MockAccount) SetReadFunc(read func(token uuid.UUID) (interface{}, error)) {
+func (d *MockAccount) SetReadFunc(read func(token string) (interface{}, error)) {
 	d.read = read
 }
 
-func (d *MockAccount) Read(token uuid.UUID) (interface{}, error) {
+func (d *MockAccount) Read(token string) (interface{}, error) {
 	return d.read(token)
 }
 
@@ -53,7 +53,7 @@ func TestOnboarding(t *testing.T) {
 
 	tests := []struct {
 		name               string
-		onboardingFunc     func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error)
+		onboardingFunc     func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error, string)
 		saveFuncCalled     bool
 		statusCode         int
 		onboardingStatus   bool
@@ -61,9 +61,9 @@ func TestOnboarding(t *testing.T) {
 		token              bool
 	}{
 		{"Test Successful Onboarding",
-			func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error) {
+			func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error, string) {
 				onboardingFuncCalled = true
-				return MockAccountObj{AccountId: 1}, nil
+				return MockAccountObj{AccountId: 1}, nil, ""
 			},
 			true,
 			http.StatusCreated,
@@ -72,9 +72,9 @@ func TestOnboarding(t *testing.T) {
 			true,
 		},
 		{"Test Failed Onboarding",
-			func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error) {
+			func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error, string) {
 				onboardingFuncCalled = true
-				return nil, errors.New("Error!!")
+				return nil, errors.New("Error!!"), ""
 			},
 			false,
 			http.StatusOK,
@@ -96,7 +96,7 @@ func TestOnboarding(t *testing.T) {
 			}
 
 			mockAccount := MockAccount{}
-			mockAccount.SetUpdateFunc(func(account interface{}, token uuid.UUID) error {
+			mockAccount.SetUpdateFunc(func(account interface{}, token string) error {
 				saveFuncCalled = true
 
 				if a, ok := account.(MockAccountObj); ok == true {
@@ -106,7 +106,7 @@ func TestOnboarding(t *testing.T) {
 				} else {
 					t.Errorf("Expected an Account object")
 				}
-				if token.String() == "" {
+				if token == "" {
 					t.Errorf("Expected to receive a token")
 				}
 
@@ -214,8 +214,8 @@ func _TestSaveFuncNotConfigured(t *testing.T) {
 
 	onboarding := Onboarding{
 		Parameters: []Parameter{},
-		OnboardingFunc: func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error) {
-			return MockAccountObj{AccountId: 1}, nil
+		OnboardingFunc: func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error, string) {
+			return MockAccountObj{AccountId: 1}, nil, ""
 		},
 	}
 
@@ -261,15 +261,15 @@ func TestSaveFuncConfigured(t *testing.T) {
 
 	onboarding := Onboarding{
 		Parameters: []Parameter{},
-		OnboardingFunc: func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error) {
-			return MockAccountObj{AccountId: 100}, nil
+		OnboardingFunc: func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error, string) {
+			return MockAccountObj{AccountId: 100}, nil, ""
 		},
 	}
 
 	var saveFuncCalled = false
 
 	mockAccount := MockAccount{}
-	mockAccount.SetUpdateFunc(func(account interface{}, token uuid.UUID) error {
+	mockAccount.SetUpdateFunc(func(account interface{}, token string) error {
 		saveFuncCalled = true
 		return nil
 	})
@@ -315,13 +315,13 @@ func TestParameters(t *testing.T) {
 
 			onboarding := Onboarding{
 				Parameters: tt.parameters,
-				OnboardingFunc: func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error) {
-					return MockAccountObj{AccountId: 1}, nil
+				OnboardingFunc: func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error, string) {
+					return MockAccountObj{AccountId: 1}, nil, ""
 				},
 			}
 
 			mockAccount := MockAccount{}
-			mockAccount.SetUpdateFunc(func(account interface{}, token uuid.UUID) error { return nil })
+			mockAccount.SetUpdateFunc(func(account interface{}, token string) error { return nil })
 
 			tp := New(onboarding, nil, &mockAccount, &MockResolver{})
 
@@ -352,7 +352,7 @@ func TestOnboardingCalledWithParams(t *testing.T) {
 			{Name: "lastName", Type: ParameterTypeString, Required: true},
 			{Name: "biometrics", Type: ParameterTypeBool, Required: true},
 		},
-		OnboardingFunc: func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error) {
+		OnboardingFunc: func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error, string) {
 
 			if s["firstName"] != "Johnny" {
 				t.Errorf("Expected: %s, Actual: %s", "Johnny", s["firstName"])
@@ -373,12 +373,12 @@ func TestOnboardingCalledWithParams(t *testing.T) {
 				t.Errorf("Expected: %v, Actual: %v", true, b["biometrics"])
 			}
 
-			return MockAccountObj{AccountId: 1}, nil
+			return MockAccountObj{AccountId: 1}, nil, ""
 		},
 	}
 
 	mockAccount := MockAccount{}
-	mockAccount.SetUpdateFunc(func(account interface{}, token uuid.UUID) error { return nil })
+	mockAccount.SetUpdateFunc(func(account interface{}, token string) error { return nil })
 
 	tp := New(onboarding, nil, &mockAccount, &MockResolver{})
 
@@ -489,14 +489,14 @@ func TestRules(t *testing.T) {
 
 			onboarding := Onboarding{
 				Parameters: []Parameter{},
-				OnboardingFunc: func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error) {
-					return MockAccountObj{AccountId: 1}, nil
+				OnboardingFunc: func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error, string) {
+					return MockAccountObj{AccountId: 1}, nil, ""
 				},
 			}
 
 			mockAccount := MockAccount{}
-			mockAccount.SetUpdateFunc(func(account interface{}, token uuid.UUID) error { return nil })
-			mockAccount.SetReadFunc(func(token uuid.UUID) (interface{}, error) {
+			mockAccount.SetUpdateFunc(func(account interface{}, token string) error { return nil })
+			mockAccount.SetReadFunc(func(token string) (interface{}, error) {
 				return MockAccountObj{AccountId: 1234567890, Age: 30}, nil
 			})
 
