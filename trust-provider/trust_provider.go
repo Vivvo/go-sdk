@@ -23,7 +23,7 @@ import (
 
 type Onboarding struct {
 	Parameters     []Parameter
-	OnboardingFunc func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error)
+	OnboardingFunc func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error, string)
 }
 
 type ParameterType int
@@ -66,10 +66,10 @@ const DefaultCsvFilePath = "./db.json"
 type Account interface {
 	// Update an account in the source system to save the token that was generated as part of
 	// successfully onboarding.
-	Update(account interface{}, token uuid.UUID) error
+	Update(account interface{}, token string) error
 	// Find an account in the source system by the token that was generated as part of successfully
 	// onboarding.
-	Read(token uuid.UUID) (interface{}, error)
+	Read(token string) (interface{}, error)
 }
 
 // The TrustProvider will handle basic parameter validation (required, type), call out to your business logic
@@ -170,9 +170,12 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 		utils.SetErrorStatus(err, http.StatusInternalServerError, w)
 		return
 	}
-	account, err := t.onboarding.OnboardingFunc(s, n, b)
+	account, err, token := t.onboarding.OnboardingFunc(s, n, b)
 	if err == nil {
-		token := uuid.Must(uuid.NewV4())
+		if token == "" {
+			token = uuid.Must(uuid.NewV4()).String()
+		}
+
 		err = t.account.Update(account, token)
 
 		if err != nil {
@@ -197,9 +200,9 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 					subject := iAmMeCredential.Claim[did.SubjectClaim].(string)
 
 					ac := make(map[string]interface{})
-					ac[did.TokenClaim] = token.String()
+					ac[did.TokenClaim] = token
 
-					claim, _ := t.generateVerifiableClaim(ac, subject, token.String(), []string{did.VerifiableCredential, did.TokenizedConnectionCredential})
+					claim, _ := t.generateVerifiableClaim(ac, subject, token, []string{did.VerifiableCredential, did.TokenizedConnectionCredential})
 					if err != nil {
 						logger.Errorf("Problem generating a verifiable credential response", "error", err.Error())
 						utils.SetErrorStatus(err, http.StatusInternalServerError, w)
@@ -209,7 +212,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 
-			res := trustProviderResponse{Status: true, OnBoardingRequired: false, Token: token.String(), VerifiableClaim: vc}
+			res := trustProviderResponse{Status: true, OnBoardingRequired: false, Token: token, VerifiableClaim: vc}
 			utils.WriteJSON(res, http.StatusCreated, w)
 		}
 	} else {
@@ -289,13 +292,7 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 		}
 
 		vars := mux.Vars(r)
-		v := vars["token"]
-		token, err := uuid.FromString(v)
-		if err != nil {
-			logger.Error("error", err.Error())
-			utils.SetErrorStatus(err, http.StatusBadRequest, w)
-			return
-		}
+		token := vars["token"]
 
 		acct, err := t.account.Read(token)
 		if err != nil {
