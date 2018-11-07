@@ -57,7 +57,7 @@ type trustProviderResponse struct {
 
 type DefaultDBRecord struct {
 	Account interface{} `json:"account"`
-	Token   uuid.UUID   `json:"token"`
+	Token   string      `json:"token"`
 }
 
 const DefaultCsvFilePath = "./db.json"
@@ -411,7 +411,7 @@ func (t *TrustProvider) ListenAndServe() error {
 type DefaultAccount struct{}
 
 // Update implementation stores accounts and tokens in a CSV file.
-func (d *DefaultAccount) Update(account interface{}, token uuid.UUID) error {
+func (d *DefaultAccount) Update(account interface{}, token string) error {
 
 	err := createDevDB()
 	if err != nil {
@@ -434,7 +434,7 @@ func (d *DefaultAccount) Update(account interface{}, token uuid.UUID) error {
 		return errors.New("you must provide an account object")
 	}
 
-	if token.String() == "" {
+	if token == "" {
 		return errors.New("you must provide a token")
 	}
 
@@ -465,7 +465,7 @@ func (d *DefaultAccount) Update(account interface{}, token uuid.UUID) error {
 // as a map[string]interface{} since we know the type of the struct you've stored here. You can convert it back
 // to the appropriate struct using something like http://github.com/mitchellh/mapstructure
 // (examples: https://godoc.org/github.com/mitchellh/mapstructure#Decode)
-func (d *DefaultAccount) Read(token uuid.UUID) (interface{}, error) {
+func (d *DefaultAccount) Read(token string) (interface{}, error) {
 
 	path, err := filepath.Abs(DefaultCsvFilePath)
 	file, err := os.OpenFile(path, os.O_RDWR|os.O_APPEND, 0644)
