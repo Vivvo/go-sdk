@@ -14,6 +14,7 @@ import (
 )
 
 const AuthenticationChallenge = "AuthenticationChallenge"
+const DeviceRegistrationCredential = "DeviceRegistrationCredential"
 const IAmMeCredential = "IAmMeCredential"
 const ProofOfAgeCredential = "ProofOfAgeCredential"
 const ProofOfLegalNameCredential = "ProofOfLegalNameCredential"
