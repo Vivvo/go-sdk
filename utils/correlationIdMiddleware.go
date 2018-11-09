@@ -2,7 +2,7 @@ package utils
 
 import (
 	"context"
-	"github.com/satori/go.uuid"
+	"github.com/google/uuid"
 	"net/http"
 )
 
@@ -15,7 +15,7 @@ func CorrelationIdMiddleware(handler http.Handler) http.Handler {
 
 		correlationId := r.Header.Get("X-Trace-Id")
 		if correlationId == "" {
-			correlationId = uuid.Must(uuid.NewV4()).String()
+			correlationId = uuid.New().String()
 		}
 
 		logger.Infow("Adding correlation-id to request context", "correlation-id", correlationId)
