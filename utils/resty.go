@@ -42,7 +42,7 @@ func Resty(ctx context.Context) *resty.Client {
 	client.OnAfterResponse(func(c *resty.Client, r *resty.Response) error {
 		logger.Infow("Outbound Response", "method", r.Request.Method, "url", r.Request.URL, "statusCode", r.StatusCode(), "duration", r.Time())
 		if r.StatusCode() > 299 {
-			logger.Info("Outbound Response", "responseBody", r.Body())
+			logger.Info("Outbound Response", "responseBody", string(r.Body()))
 		}
 		return nil
 	})
