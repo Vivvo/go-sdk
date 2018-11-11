@@ -81,7 +81,7 @@ func (vc *Claim) Sign(privateKey *rsa.PrivateKey, nonce string) (VerifiableClaim
 
 	var proof = Proof{
 		Created: time.Now().Format("2006-01-02T15:04:05-0700"),
-		Creator: claim.Issuer,
+		Creator: fmt.Sprintf("%s#keys-1", claim.Issuer),
 		Nonce:   nonce,
 	}
 	proofHash, err := canonicalizeAndHash(proof)
@@ -126,7 +126,7 @@ func (vc *VerifiableClaim) Verify(types []string, nonce string, resolver Resolve
 	}
 
 	// Find the public key that the claim is using
-	pubKey, err := didDocument.GetPublicKeyById(vc.Claim[PublicKeyClaim].(string))
+	pubKey, err := didDocument.GetPublicKeyById(vc.Proof.Creator)
 	if err != nil {
 		return err
 	}
