@@ -6,8 +6,8 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
+	"github.com/Vivvo/go-sdk/utils"
 	"github.com/pkg/errors"
 	"strings"
 	"time"
@@ -47,15 +47,7 @@ type VerifiableClaim struct {
 	Issuer string                 `json:"issuer"`
 	Issued string                 `json:"issued"`
 	Claim  map[string]interface{} `json:"claim"`
-	Proof  *Proof                 `json:"proof,omitempty"`
-}
-
-type Proof struct {
-	Typ            string `json:"type,omitempty"`
-	Created        string `json:"created,omitempty"`
-	Creator        string `json:"creator,omitempty"`
-	Nonce          string `json:"nonce,omitempty"`
-	SignatureValue string `json:"signatureValue,omitempty"`
+	Proof  *utils.Proof                 `json:"proof,omitempty"`
 }
 
 type SHA256Hasher struct {
@@ -74,17 +66,17 @@ func (vc *Claim) Sign(privateKey *rsa.PrivateKey, nonce string) (VerifiableClaim
 		Claim:  vc.Claim,
 	}
 
-	claimHash, err := canonicalizeAndHash(vc)
+	claimHash, err := utils.CanonicalizeAndHash(vc)
 	if err != nil {
 		return VerifiableClaim{}, nil
 	}
 
-	var proof = Proof{
+	var proof = utils.Proof{
 		Created: time.Now().Format("2006-01-02T15:04:05-0700"),
 		Creator: fmt.Sprintf("%s#keys-1", claim.Issuer),
 		Nonce:   nonce,
 	}
-	proofHash, err := canonicalizeAndHash(proof)
+	proofHash, err := utils.CanonicalizeAndHash(proof)
 
 	h := sha256.New()
 	_, err = h.Write(append(claimHash, proofHash...))
@@ -133,15 +125,15 @@ func (vc *VerifiableClaim) Verify(types []string, nonce string, resolver Resolve
 
 	sig := vc.Proof.SignatureValue
 
-	options := Proof{Created: vc.Proof.Created, Creator: vc.Proof.Creator, Nonce: vc.Proof.Nonce}
+	options := utils.Proof{Created: vc.Proof.Created, Creator: vc.Proof.Creator, Nonce: vc.Proof.Nonce}
 	vc.Proof = nil
 
-	credJson, err := canonicalizeVerifiableClaim(vc)
+	credJson, err := utils.Canonicalize(vc)
 	if err != nil {
 		return err
 	}
 
-	optionsJson, err := canonicalizeVerifiableClaim(options)
+	optionsJson, err := utils.Canonicalize(options)
 	if err != nil {
 		return err
 	}
@@ -179,29 +171,4 @@ func (vc *VerifiableClaim) Verify(types []string, nonce string, resolver Resolve
 	return nil
 }
 
-// Converts struct `o` to a lexicographically sorted json object
-func canonicalizeVerifiableClaim(o interface{}) ([]byte, error) {
-	var credMap map[string]interface{}
-	credJson, err := json.Marshal(o)
-	if err != nil {
-		return nil, err
-	}
-	json.Unmarshal(credJson, &credMap)
-	sortedCred, err := json.Marshal(credMap)
-	if err != nil {
-		return nil, err
-	}
 
-	return sortedCred, nil
-}
-
-func canonicalizeAndHash(o interface{}) ([]byte, error) {
-	canonicalized, err := canonicalizeVerifiableClaim(o)
-	if err != nil {
-		return nil, err
-	}
-
-	h := sha256.New()
-	_, err = h.Write(canonicalized)
-	return h.Sum(nil), nil
-}
