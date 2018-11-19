@@ -29,7 +29,6 @@ const FirstNameClaim = "firstName"
 const LastNameClaim = "lastName"
 const LogoClaim = "logo"
 const NameClaim = "name"
-const PublicKeyClaim = "publicKey"
 const SubjectClaim = "id"
 const TokenClaim = "token"
 
