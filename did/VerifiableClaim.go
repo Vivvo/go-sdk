@@ -30,6 +30,7 @@ const LastNameClaim = "lastName"
 const LogoClaim = "logo"
 const NameClaim = "name"
 const PublicKeyClaim = "publicKey"
+const RequestedCapabilityClaim = "requestedCapability"
 const SubjectClaim = "id"
 const TokenClaim = "token"
 
