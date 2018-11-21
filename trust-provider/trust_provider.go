@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"github.com/Vivvo/go-sdk/did"
 	"github.com/Vivvo/go-sdk/utils"
+	"github.com/google/uuid"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/newrelic/go-agent"
 	"github.com/pkg/errors"
-	"github.com/satori/go.uuid"
 	"golang.org/x/crypto/ssh"
 	"io/ioutil"
 	"log"
@@ -173,7 +173,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 	account, err, token := t.onboarding.OnboardingFunc(s, n, b)
 	if err == nil {
 		if token == "" {
-			token = uuid.Must(uuid.NewV4()).String()
+			token = uuid.New().String()
 		}
 
 		err = t.account.Update(account, token)
@@ -268,7 +268,7 @@ func (t *TrustProvider) generateVerifiableClaim(ac map[string]interface{}, subje
 		ac,
 	}
 
-	return claim.Sign(t.privateKey, uuid.Must(uuid.NewV4()).String())
+	return claim.Sign(t.privateKey, uuid.New().String())
 }
 
 func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {

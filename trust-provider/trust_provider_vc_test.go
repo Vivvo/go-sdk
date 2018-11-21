@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Vivvo/go-sdk/did"
-	"github.com/satori/go.uuid"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/ssh"
 	"io/ioutil"
 	"net/http"
@@ -170,7 +170,7 @@ func buildIAmMeCredential(t *testing.T) did.VerifiableClaim {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	nonce := uuid.Must(uuid.NewV4()).String()
+	nonce := uuid.New().String()
 
 	claims := make(map[string]interface{})
 	claims[did.SubjectClaim] = "did:vvo:12H6btMP6hPy32VXbwKvGE"
@@ -197,7 +197,7 @@ func buildIAmMeCredential(t *testing.T) did.VerifiableClaim {
 
 func TestRulesVerifiableCredential(t *testing.T) {
 
-	validToken := uuid.Must(uuid.NewV4())
+	validToken := uuid.New()
 
 	tests := []struct {
 		Name       string
@@ -249,7 +249,7 @@ func TestRulesVerifiableCredential(t *testing.T) {
 			}
 
 			ac := make(map[string]interface{})
-			ac[did.TokenClaim] = uuid.Must(uuid.NewV4()).String()
+			ac[did.TokenClaim] = uuid.New().String()
 			vc, _ := tp.generateVerifiableClaim(ac, "did:vvo:12H6btMP6hPy32VXbwKvGE", ac[did.TokenClaim].(string), []string{did.VerifiableCredential, did.TokenizedConnectionCredential})
 
 			body := struct {
