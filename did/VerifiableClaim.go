@@ -52,8 +52,8 @@ type VerifiableClaim struct {
 }
 
 type ChallengeResponse struct {
-	VerifiableClaim *VerifiableClaim `json:"challengeResponse"`
-	ObjectCapability *ObjectCapability `json:"capabilities"`
+	VerifiableClaim  *VerifiableClaim `json:"challengeResponse"`
+	ObjectCapability []string           `json:"capabilities"`
 }
 
 type SHA256Hasher struct {
@@ -176,5 +176,3 @@ func (vc *VerifiableClaim) Verify(types []string, nonce string, resolver Resolve
 
 	return nil
 }
-
-
