@@ -336,7 +336,7 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 						ac[k] = v
 					}
 
-					claim, err := t.generateVerifiableClaim(ac, connectionClaim.Claim[did.SubjectClaim].(string), uuid.Must(uuid.NewV4()).String(), rule.Claims)
+					claim, err := t.generateVerifiableClaim(ac, connectionClaim.Claim[did.SubjectClaim].(string), uuid.New().String(), rule.Claims)
 					if err != nil {
 						logger.Error("error", err.Error())
 						utils.SetErrorStatus(err, http.StatusInternalServerError, w)
