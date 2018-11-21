@@ -51,6 +51,11 @@ type VerifiableClaim struct {
 	Proof  *utils.Proof                 `json:"proof,omitempty"`
 }
 
+type ChallengeResponse struct {
+	VerifiableClaim *VerifiableClaim
+	ObjectCapability *ObjectCapability
+}
+
 type SHA256Hasher struct {
 }
 
