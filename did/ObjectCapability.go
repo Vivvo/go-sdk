@@ -55,7 +55,7 @@ func (c *Capability) Sign(privateKey *rsa.PrivateKey) (*ObjectCapability, error)
 func (c *ObjectCapability) Verify(resolver ResolverInterface) error {
 
 	// need to get the resolver to get the person who signed it so we can go to the block chain and get the issuers public key....
-	didDocument, err := resolver.Resolve(c.Proof.Creator)
+	didDocument, err := resolver.Resolve(c.Capability.Creator)
 	if err != nil {
 		return err
 	}
