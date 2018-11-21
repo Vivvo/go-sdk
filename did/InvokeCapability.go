@@ -1,14 +1,7 @@
 package did
 
 import (
-"log"
-"crypto"
-"crypto/rsa"
-"crypto/sha256"
-"encoding/base64"
-"fmt"
-"github.com/Vivvo/go-sdk/utils"
-"time"
+	"github.com/Vivvo/go-sdk/utils"
 )
 
 type InvokeCapability struct {
