@@ -12,7 +12,6 @@ type Capability struct {
 	Id               string              `json:"id"`
 	Name             string              `json:"name"`
 	Description      string              `json:"description"`
-	Logo			 string				 `json:"logo"`
 	ParentCapability *Capability         `json:"parentCapability,omitempty"`
 	Invoker          string              `json:"invoker"`
 	Caveat           []Caveat            `json:"caveat,omitempty"`
