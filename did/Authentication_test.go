@@ -107,7 +107,7 @@ func TestMiddleware(t *testing.T) {
 
 	w := httptest.NewRecorder()
 
-	AuthenticationMiddleware(MockResolver{}, successHandler).ServeHTTP(w,r)
+	AuthenticationMiddleware(MockResolver{}).Middleware(successHandler).ServeHTTP(w, r)
 
 	if w.Code != http.StatusOK {
 		t.Errorf("Expected: %d, Actual: %d", http.StatusOK, w.Code)
@@ -127,14 +127,15 @@ func TestMiddlewareWithPostBody(t *testing.T) {
 		t.Fatal("expected *rsa.PrivateKey")
 	} else {
 		h := sha256.New()
-		h.Write([]byte(fmt.Sprintf("date: %s", r.Header.Get("date"))))
+		h.Write([]byte(fmt.Sprintf("date: %s\n%s", r.Header.Get("date"), "{ \"status\": \"awesomesauce\"}")))
+
 		sig, _ := pk.Sign(rand.Reader, h.Sum(nil), &SHA256Hasher{})
 		r.Header.Set("Authorization", fmt.Sprintf("Signature keyId=\"did:vvo:12H6btMP6hPy32VXbwKvGE#keys-1\",algorithm=\"RsaSignatureAuthentication2018\",headers=\"date\",signature=\"%s\"", base64.URLEncoding.EncodeToString(sig)))
 	}
 
 	w := httptest.NewRecorder()
 
-	AuthenticationMiddleware(MockResolver{}, successHandler).ServeHTTP(w,r)
+	AuthenticationMiddleware(MockResolver{}).Middleware(successHandler).ServeHTTP(w, r)
 
 	if w.Code != http.StatusOK {
 		t.Errorf("Expected: %d, Actual: %d", http.StatusOK, w.Code)
@@ -161,7 +162,7 @@ func TestMiddlewareInvalidSignature(t *testing.T) {
 
 	w := httptest.NewRecorder()
 
-	AuthenticationMiddleware(MockResolver{}, successHandler).ServeHTTP(w,r)
+	AuthenticationMiddleware(MockResolver{}).Middleware(successHandler).ServeHTTP(w, r)
 
 	if w.Code != http.StatusUnauthorized {
 		t.Errorf("Expected: %d, Actual: %d", http.StatusUnauthorized, w.Code)
