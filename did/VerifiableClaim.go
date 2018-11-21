@@ -52,8 +52,8 @@ type VerifiableClaim struct {
 }
 
 type ChallengeResponse struct {
-	VerifiableClaim  *VerifiableClaim `json:"challengeResponse"`
-	ObjectCapability []string           `json:"capabilities"`
+	VerifiableClaim  *VerifiableClaim   `json:"challengeResponse"`
+	ObjectCapability []ObjectCapability `json:"capabilities"`
 }
 
 type SHA256Hasher struct {
