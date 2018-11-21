@@ -48,12 +48,12 @@ type VerifiableClaim struct {
 	Issuer string                 `json:"issuer"`
 	Issued string                 `json:"issued"`
 	Claim  map[string]interface{} `json:"claim"`
-	Proof  *utils.Proof                 `json:"proof,omitempty"`
+	Proof  *utils.Proof           `json:"proof,omitempty"`
 }
 
 type ChallengeResponse struct {
-	VerifiableClaim *VerifiableClaim
-	ObjectCapability *ObjectCapability
+	VerifiableClaim *VerifiableClaim `json:"challengeResponse"`
+	ObjectCapability *ObjectCapability `json:"capabilities"`
 }
 
 type SHA256Hasher struct {
