@@ -11,6 +11,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/newrelic/go-agent"
 	"github.com/pkg/errors"
+	"go.uber.org/zap"
 	"golang.org/x/crypto/ssh"
 	"io/ioutil"
 	"log"
@@ -18,7 +19,6 @@ import (
 	"os"
 	"path/filepath"
 	"time"
-	"go.uber.org/zap"
 )
 
 type Onboarding struct {
@@ -483,7 +483,7 @@ func (d *DefaultAccount) Read(token string) (interface{}, error) {
 
 	for _, record := range records {
 		if record.Token == token {
-			return record.Account, nil
+			return record, nil
 		}
 	}
 

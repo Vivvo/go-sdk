@@ -53,9 +53,11 @@ func (m *MockResolver) Resolve(d string) (*did.Document, error) {
 	return &did.Document{Id: "did:vvo:12H6btMP6hPy32VXbwKvGE", PublicKey: []did.PublicKey{{Id: "did:vvo:12H6btMP6hPy32VXbwKvGE#keys-1", PublicKeyPem: publicKeyPem}}}, nil
 }
 
+var onboardingFuncCalled = false
+var saveFuncCalled = false
+
 func TestOnboardingVerifiableClaim(t *testing.T) {
-	var onboardingFuncCalled = false
-	var saveFuncCalled = false
+
 
 	tests := []struct {
 		name               string
@@ -290,7 +292,7 @@ func TestRulesVerifiableCredential(t *testing.T) {
 			}
 
 			if response.VerifiableClaim.Claim["age"] != float64(25) {
-				t.Fatalf("Expected: %s, Actual: %s", 25, response.VerifiableClaim.Claim["age"])
+				t.Fatalf("Expected: %d, Actual: %s", 25, response.VerifiableClaim.Claim["age"])
 			}
 		})
 	}

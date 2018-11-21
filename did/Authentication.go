@@ -25,7 +25,7 @@ type authorization struct {
 }
 
 const schema = "Signature "
-const didAuth = "didAuth"
+const DidAuth = "didAuth"
 
 var ErrorNotAuthorized = errors.New("not authorized")
 var ErrorMissingAuthorizationHeader = errors.New("missing authorization header")
@@ -85,7 +85,7 @@ func AuthenticationMiddleware(resolver ResolverInterface) mux.MiddlewareFunc {
 				return
 			}
 
-			r = r.WithContext(context.WithValue(r.Context(), didAuth, a.did))
+			r = r.WithContext(context.WithValue(r.Context(), DidAuth, a.did))
 
 			log.Printf("Successfully authenticated did: %s", a.did)
 			next.ServeHTTP(w, r)

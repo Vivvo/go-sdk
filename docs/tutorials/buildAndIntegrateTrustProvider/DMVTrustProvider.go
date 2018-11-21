@@ -5,7 +5,6 @@ import (
 	"github.com/Vivvo/go-sdk/did"
 	"github.com/Vivvo/go-sdk/trust-provider"
 	"github.com/pkg/errors"
-	"github.com/satori/go.uuid"
 	"log"
 	"os"
 	"strings"
@@ -14,7 +13,7 @@ import (
 
 type DMVAccountManager struct{}
 
-func (d *DMVAccountManager) Update(account interface{}, token uuid.UUID) error {
+func (d *DMVAccountManager) Update(account interface{}, token string) error {
 	reader, _ := os.Open("./DMVUsers.csv")
 	r := csv.NewReader(reader)
 	records, _ := r.ReadAll()
@@ -23,7 +22,7 @@ func (d *DMVAccountManager) Update(account interface{}, token uuid.UUID) error {
 	if a, ok := account.(DMVAccount); ok {
 		for _, r := range records[1:] {
 			if strings.Compare(r[0], a.CustomerNumber) == 0 {
-				r[5] = token.String()
+				r[5] = token
 			}
 		}
 
@@ -37,14 +36,14 @@ func (d *DMVAccountManager) Update(account interface{}, token uuid.UUID) error {
 	}
 }
 
-func (d *DMVAccountManager) Read(token uuid.UUID) (interface{}, error) {
+func (d *DMVAccountManager) Read(token string) (interface{}, error) {
 	reader, _ := os.Open("./DMVUsers.csv")
 	defer reader.Close()
 	r := csv.NewReader(reader)
 	records, _ := r.ReadAll()
 
 	for _, r := range records[1:] {
-		if strings.Compare(r[5], token.String()) == 0 {
+		if strings.Compare(r[5], token) == 0 {
 			return DMVAccount{CustomerNumber: r[0], ValidationNumber: r[1], FirstName: r[2], LastName: r[3], BirthDate: r[4], Token: r[5]}, nil
 		}
 	}
@@ -60,7 +59,7 @@ type DMVAccount struct {
 	Token            string `json:"token"`
 }
 
-func onboarding(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error) {
+func onboarding(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error, string) {
 	reader, _ := os.Open("./DMVUsers.csv")
 	defer reader.Close()
 	r := csv.NewReader(reader)
@@ -68,10 +67,10 @@ func onboarding(s map[string]string, n map[string]float64, b map[string]bool) (i
 
 	for _, r := range records[1:] {
 		if strings.Compare(r[0], s["customerNumber"]) == 0 && strings.Compare(r[1], s["validationNumber"]) == 0 && strings.Compare(r[2], s["firstName"]) == 0 && strings.Compare(r[3], s["lastName"]) == 0 {
-			return DMVAccount{CustomerNumber: r[0], ValidationNumber: r[1], FirstName: r[2], LastName: r[3], BirthDate: r[4], Token: r[5]}, nil
+			return DMVAccount{CustomerNumber: r[0], ValidationNumber: r[1], FirstName: r[2], LastName: r[3], BirthDate: r[4], Token: r[5]}, nil, ""
 		}
 	}
-	return nil, errors.New("no match found")
+	return nil, errors.New("no match found"), ""
 }
 
 func is19YearsOld(s map[string]string, n map[string]float64, b map[string]bool, acct interface{}) (bool, error) {
