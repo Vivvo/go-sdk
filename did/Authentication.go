@@ -1,6 +1,7 @@
 package did
 
 import (
+	"context"
 	"crypto"
 	"crypto/rsa"
 	"crypto/sha256"
@@ -24,6 +25,7 @@ type authorization struct {
 }
 
 const schema = "Signature "
+const DidAuth = "didAuth"
 
 var ErrorNotAuthorized = errors.New("not authorized")
 var ErrorMissingAuthorizationHeader = errors.New("missing authorization header")
@@ -31,6 +33,8 @@ var ErrorMissingAuthorizationHeader = errors.New("missing authorization header")
 func AuthenticationMiddleware(resolver ResolverInterface) mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			log.Println("Start up did-auth middleware")
+
 			a, err := parseAuthorizationHeader(r.Header.Get("Authorization"))
 			if err != nil {
 				log.Println(err.Error())
@@ -81,6 +85,9 @@ func AuthenticationMiddleware(resolver ResolverInterface) mux.MiddlewareFunc {
 				return
 			}
 
+			r = r.WithContext(context.WithValue(r.Context(), DidAuth, a.did))
+
+			log.Printf("Successfully authenticated did: %s", a.did)
 			next.ServeHTTP(w, r)
 		})
 	}

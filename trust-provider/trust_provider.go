@@ -11,6 +11,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/newrelic/go-agent"
 	"github.com/pkg/errors"
+	"go.uber.org/zap"
 	"golang.org/x/crypto/ssh"
 	"io/ioutil"
 	"log"
@@ -18,7 +19,6 @@ import (
 	"os"
 	"path/filepath"
 	"time"
-	"go.uber.org/zap"
 )
 
 type Onboarding struct {
@@ -336,7 +336,7 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 						ac[k] = v
 					}
 
-					claim, err := t.generateVerifiableClaim(ac, connectionClaim.Claim[did.SubjectClaim].(string), uuid.Must(uuid.NewV4()).String(), rule.Claims)
+					claim, err := t.generateVerifiableClaim(ac, connectionClaim.Claim[did.SubjectClaim].(string), uuid.New().String(), rule.Claims)
 					if err != nil {
 						logger.Error("error", err.Error())
 						utils.SetErrorStatus(err, http.StatusInternalServerError, w)
@@ -483,7 +483,7 @@ func (d *DefaultAccount) Read(token string) (interface{}, error) {
 
 	for _, record := range records {
 		if record.Token == token {
-			return record.Account, nil
+			return record, nil
 		}
 	}
 

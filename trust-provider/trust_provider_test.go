@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"github.com/Vivvo/go-sdk/utils"
 	"github.com/apex/log"
+	"github.com/google/uuid"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
-	"github.com/satori/go.uuid"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -23,7 +23,7 @@ type MockAccountObj struct {
 
 type MockDevDBRecord struct {
 	Account MockAccountObj `json:"account"`
-	Token   uuid.UUID      `json:"token"`
+	Token   string         `json:"token"`
 }
 
 type MockAccount struct {
@@ -396,7 +396,7 @@ func TestOnboardingCalledWithParams(t *testing.T) {
 
 func TestRules(t *testing.T) {
 
-	validToken := uuid.Must(uuid.NewV4())
+	validToken := uuid.New()
 
 	tests := []struct {
 		Name       string
@@ -549,7 +549,7 @@ func TestSave(t *testing.T) {
 		AccountId: 1234567890,
 	}
 
-	validToken, _ := uuid.NewV4()
+	validToken := uuid.New()
 
 	tests := []struct {
 		name            string
@@ -564,7 +564,7 @@ func TestSave(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := da.Update(tt.account, tt.token)
+			err := da.Update(tt.account, tt.token.String())
 
 			if tt.expectedFailure && err == nil {
 				t.Errorf("Expected an error and didn't recieve one")
@@ -576,14 +576,14 @@ func TestSave(t *testing.T) {
 
 			if !tt.expectedFailure {
 
-				record, _ := da.Read(tt.token)
+				record, _ := da.Read(tt.token.String())
 
 				var a MockDevDBRecord
-				mapstructure.Decode(record, a)
+				mapstructure.Decode(record, &a)
 
 				if record == nil {
 					t.Errorf("No record found")
-				} else if uuid.Equal(tt.token, a.Token) {
+				} else if strings.Compare(tt.token.String(), a.Token) != 0 {
 					t.Errorf("Invalid token, expected: %s, actual; %s", tt.token, a.Token)
 				}
 
@@ -603,9 +603,9 @@ func TestNoDB(t *testing.T) {
 	cleanupTestFile()
 	da := DefaultAccount{}
 
-	uuid, _ := uuid.NewV4()
+	uuid := uuid.New()
 
-	_, err := da.Read(uuid)
+	_, err := da.Read(uuid.String())
 
 	if err == nil {
 		t.Errorf("Expected an error opening the file!")
