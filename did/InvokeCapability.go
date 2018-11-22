@@ -21,7 +21,7 @@ type InvokeProof struct {
 	Creator          string           `json:"creator,omitempty"`
 	SignatureValue   string           `json:"signatureValue,omitempty"`
 	ProofPurpose     string           `json:"proofPurpose,omitempty"`
-	ObjectCapability ObjectCapability `json:"objectCapability",omitempty`
+	ObjectCapability ObjectCapability `json:"objectCapability,omitempty"`
 }
 
 func (i *InvokeCapability) Verify(resolver ResolverInterface) error {
