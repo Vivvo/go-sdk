@@ -22,7 +22,7 @@ func (i *InvokeCapability) Verify(resolver ResolverInterface) error {
 	// need to get the resolver to get the person who signed it so we can go to the block chain and get the issuers public key....
 	didDocument, err := resolver.Resolve(i.ObjectCapability.Capability.Creator)
 	if err != nil {
-		log.Printf("Error looking up did: %s,", err.Error())
+		log.Printf("Error looking up creator did: %s,", err.Error())
 		return err
 	}
 
@@ -35,7 +35,7 @@ func (i *InvokeCapability) Verify(resolver ResolverInterface) error {
 
 	sig := i.Proof.SignatureValue
 
-	options := utils.Proof{Created: i.Proof.Created, Creator: i.Proof.Creator}
+	options := utils.Proof{Typ: i.Proof.Typ, Created: i.Proof.Created, Creator: i.ObjectCapability.Capability.Creator, SignatureValue: i.Proof.SignatureValue, ProofPurpose: i.Proof.ProofPurpose, Capability: i.Proof.Capability}
 	i.ObjectCapability.Proof = nil
 
 	credJson, err := utils.Canonicalize(i)
