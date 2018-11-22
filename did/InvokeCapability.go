@@ -12,7 +12,7 @@ import (
 type InvokeCapability struct {
 	Id          string      `json:"id"`
 	Action      string      `json:"action"`
-	InvokeProof InvokeProof `json:"proof"`
+	InvokeProof *InvokeProof `json:"proof,omitempty"`
 }
 
 type InvokeProof struct {
@@ -32,10 +32,10 @@ func (i *InvokeCapability) Verify(resolver ResolverInterface) error {
 		log.Printf("Error looking up creator did: %s,", err.Error())
 		return err
 	}
-	log.Printf("%+v", didDocument)
+	log.Printf("%+v\n", didDocument)
 
 	// Find the public key that the claim is using
-	pubKey, err := didDocument.GetPublicKeyById(i.InvokeProof.ObjectCapability.Capability.Creator)
+	pubKey, err := didDocument.GetPublicKeyById(i.InvokeProof.Creator)
 	if err != nil {
 		log.Printf("Error finding publicKey by did: %s", err.Error())
 		return err
@@ -43,8 +43,8 @@ func (i *InvokeCapability) Verify(resolver ResolverInterface) error {
 
 	sig := i.InvokeProof.SignatureValue
 
-	options := utils.Proof{Typ: i.InvokeProof.Typ, Created: i.InvokeProof.Created, Creator: i.InvokeProof.ObjectCapability.Capability.Creator, SignatureValue: i.InvokeProof.SignatureValue, ProofPurpose: i.InvokeProof.ProofPurpose, Capability: i.InvokeProof.ObjectCapability.Capability.Id}
-	i.InvokeProof.ObjectCapability.Proof = nil
+	options := InvokeProof{Typ: i.InvokeProof.Typ, Created: i.InvokeProof.Created, Creator: i.InvokeProof.ObjectCapability.Capability.Creator, SignatureValue: i.InvokeProof.SignatureValue, ProofPurpose: i.InvokeProof.ProofPurpose, ObjectCapability: i.InvokeProof.ObjectCapability}
+	i.InvokeProof = nil
 
 	credJson, err := utils.Canonicalize(i)
 	if err != nil {
