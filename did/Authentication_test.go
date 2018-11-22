@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"golang.org/x/crypto/ssh"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -136,6 +137,42 @@ func TestMiddlewareWithPostBody(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	AuthenticationMiddleware(MockResolver{}).Middleware(successHandler).ServeHTTP(w, r)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected: %d, Actual: %d", http.StatusOK, w.Code)
+	}
+}
+
+func TestMiddlewareWithPostBodyDoesNotConsumeBody(t *testing.T) {
+	r := httptest.NewRequest(http.MethodGet, "/api/eeze/v1/users/johnnyutah", strings.NewReader("{ \"status\": \"awesomesauce\"}"))
+	r.Header.Set("date", time.Now().Format(time.RFC3339))
+
+	privateKey, err := ssh.ParseRawPrivateKey([]byte(privateKeyPem))
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	if pk, ok := privateKey.(*rsa.PrivateKey); !ok {
+		t.Fatal("expected *rsa.PrivateKey")
+	} else {
+		h := sha256.New()
+		h.Write([]byte(fmt.Sprintf("date: %s\n%s", r.Header.Get("date"), "{ \"status\": \"awesomesauce\"}")))
+
+		sig, _ := pk.Sign(rand.Reader, h.Sum(nil), &SHA256Hasher{})
+		r.Header.Set("Authorization", fmt.Sprintf("Signature keyId=\"did:vvo:12H6btMP6hPy32VXbwKvGE#keys-1\",algorithm=\"RsaSignatureAuthentication2018\",headers=\"date\",signature=\"%s\"", base64.URLEncoding.EncodeToString(sig)))
+	}
+
+	w := httptest.NewRecorder()
+
+	nextNeedsBody := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := ioutil.ReadAll(r.Body)
+		if string(b) != "{ \"status\": \"awesomesauce\"}" {
+			t.Errorf("Expected: %s, Actual: %s", "{ \"status\": \"awesomesauce\"}", string(b))
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+
+	AuthenticationMiddleware(MockResolver{}).Middleware(nextNeedsBody).ServeHTTP(w, r)
 
 	if w.Code != http.StatusOK {
 		t.Errorf("Expected: %d, Actual: %d", http.StatusOK, w.Code)

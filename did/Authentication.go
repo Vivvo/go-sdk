@@ -1,6 +1,7 @@
 package did
 
 import (
+	"bytes"
 	"context"
 	"crypto"
 	"crypto/rsa"
@@ -72,6 +73,10 @@ func AuthenticationMiddleware(resolver ResolverInterface) mux.MiddlewareFunc {
 				signingString += fmt.Sprintf("%s: %s", header, r.Header.Get(header))
 			}
 			body, err := ioutil.ReadAll(r.Body)
+
+			// Put the body back since downstream middleware will need it!
+			r.Body = ioutil.NopCloser(bytes.NewBuffer(body))
+
 			if len(body) > 0 {
 				signingString += fmt.Sprintf("\n%s", body)
 			}
