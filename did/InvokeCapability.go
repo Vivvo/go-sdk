@@ -40,11 +40,13 @@ func (i *InvokeCapability) Verify(resolver ResolverInterface) error {
 
 	credJson, err := utils.Canonicalize(i)
 	if err != nil {
+		log.Printf("Error conancalizing i: %s", err.Error())
 		return err
 	}
 
 	optionsJson, err := utils.Canonicalize(options)
 	if err != nil {
+		log.Printf("Error conancalizing options: %s", err.Error())
 		return err
 	}
 
@@ -52,12 +54,14 @@ func (i *InvokeCapability) Verify(resolver ResolverInterface) error {
 	h := sha256.New()
 	_, err = h.Write(credJson)
 	if err != nil {
+		log.Printf("Error hashing credJson: %s", err.Error())
 		return err
 	}
 
 	optionsHash := sha256.New()
 	_, err = optionsHash.Write(optionsJson)
 	if err != nil {
+		log.Printf("Error hashing options: %s", err.Error())
 		return err
 	}
 
@@ -65,6 +69,7 @@ func (i *InvokeCapability) Verify(resolver ResolverInterface) error {
 	h = sha256.New()
 	_, err = h.Write(hashString)
 	if err != nil {
+		log.Printf("Error appending the two hashes: %s", err.Error())
 		return err
 	}
 
@@ -75,6 +80,7 @@ func (i *InvokeCapability) Verify(resolver ResolverInterface) error {
 
 	err = rsa.VerifyPKCS1v15(pubKey, crypto.SHA256, h.Sum(nil), decodedSig)
 	if err != nil {
+		log.Printf("Error verifying signiture: %s", err.Error())
 		return err
 	}
 
