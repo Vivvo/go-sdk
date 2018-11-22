@@ -10,17 +10,15 @@ import (
 )
 
 type InvokeCapability struct {
-	Id string `json:"id"`
-	Action string `json:"action"`
-	Proof utils.Proof `json:"proof"`
-	ObjectCapability ObjectCapability `json:"objectCapability"`
+	Id     string            `json:"id"`
+	Action string            `json:"action"`
+	InvokeProof  utils.InvokeProof `json:"proof"`
 }
-
 
 func (i *InvokeCapability) Verify(resolver ResolverInterface) error {
 
 	// need to get the resolver to get the person who signed it so we can go to the block chain and get the issuers public key....
-	didDocument, err := resolver.Resolve(i.ObjectCapability.Capability.Creator)
+	didDocument, err := resolver.Resolve(i.InvokeProof.ObjectCapability.Capability.Creator)
 	if err != nil {
 		log.Printf("Error looking up creator did: %s,", err.Error())
 		return err
@@ -28,16 +26,16 @@ func (i *InvokeCapability) Verify(resolver ResolverInterface) error {
 	log.Printf("%+v", didDocument)
 
 	// Find the public key that the claim is using
-	pubKey, err := didDocument.GetPublicKeyById(i.ObjectCapability.Capability.Creator)
+	pubKey, err := didDocument.GetPublicKeyById(i.InvokeProof.ObjectCapability.Capability.Creator)
 	if err != nil {
 		log.Printf("Error finding publicKey by did: %s", err.Error())
 		return err
 	}
 
-	sig := i.Proof.SignatureValue
+	sig := i.InvokeProof.SignatureValue
 
-	options := utils.Proof{Typ: i.Proof.Typ, Created: i.Proof.Created, Creator: i.ObjectCapability.Capability.Creator, SignatureValue: i.Proof.SignatureValue, ProofPurpose: i.Proof.ProofPurpose, Capability: i.Proof.Capability}
-	i.ObjectCapability.Proof = nil
+	options := utils.Proof{Typ: i.InvokeProof.Typ, Created: i.InvokeProof.Created, Creator: i.InvokeProof.ObjectCapability.Capability.Creator, SignatureValue: i.InvokeProof.SignatureValue, ProofPurpose: i.InvokeProof.ProofPurpose, Capability: i.InvokeProof.ObjectCapability}
+	i.InvokeProof.ObjectCapability.Proof = nil
 
 	credJson, err := utils.Canonicalize(i)
 	if err != nil {
@@ -87,7 +85,6 @@ func (i *InvokeCapability) Verify(resolver ResolverInterface) error {
 
 	return nil
 }
-
 
 //func (i *InvokeCapability) Sign(privateKey *rsa.PrivateKey) (*ObjectCapability, error) {
 //	proof := utils.Proof{
