@@ -50,7 +50,6 @@ func (d *Document) GetPublicKeyById(id string) (*rsa.PublicKey, error) {
 	println("id: %s", id)
 	println("d.PublicKey: %+v", d.PublicKey)
 	for _, v := range d.PublicKey {
-		println("v: %s", v)
 		if strings.Compare(v.Id, id) == 0 {
 			block, _ := pem.Decode([]byte(v.PublicKeyPem))
 			rsaPubKey, err := x509.ParsePKIXPublicKey(block.Bytes)
