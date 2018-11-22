@@ -31,6 +31,8 @@ type Caveat struct {
 
 }
 
+
+
 func (c *Capability) Sign(privateKey *rsa.PrivateKey) (*ObjectCapability, error) {
 	proof := utils.Proof{
 		ProofPurpose: "capabilityDelegation",

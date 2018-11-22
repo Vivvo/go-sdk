@@ -10,9 +10,18 @@ import (
 )
 
 type InvokeCapability struct {
-	Id     string            `json:"id"`
-	Action string            `json:"action"`
-	InvokeProof  utils.InvokeProof `json:"proof"`
+	Id          string      `json:"id"`
+	Action      string      `json:"action"`
+	InvokeProof InvokeProof `json:"proof"`
+}
+
+type InvokeProof struct {
+	Typ              string           `json:"type,omitempty"`
+	Created          string           `json:"created,omitempty"`
+	Creator          string           `json:"creator,omitempty"`
+	SignatureValue   string           `json:"signatureValue,omitempty"`
+	ProofPurpose     string           `json:"proofPurpose,omitempty"`
+	ObjectCapability ObjectCapability `json:"objectCapability",omitempty`
 }
 
 func (i *InvokeCapability) Verify(resolver ResolverInterface) error {
@@ -34,7 +43,7 @@ func (i *InvokeCapability) Verify(resolver ResolverInterface) error {
 
 	sig := i.InvokeProof.SignatureValue
 
-	options := utils.Proof{Typ: i.InvokeProof.Typ, Created: i.InvokeProof.Created, Creator: i.InvokeProof.ObjectCapability.Capability.Creator, SignatureValue: i.InvokeProof.SignatureValue, ProofPurpose: i.InvokeProof.ProofPurpose, Capability: i.InvokeProof.ObjectCapability}
+	options := utils.Proof{Typ: i.InvokeProof.Typ, Created: i.InvokeProof.Created, Creator: i.InvokeProof.ObjectCapability.Capability.Creator, SignatureValue: i.InvokeProof.SignatureValue, ProofPurpose: i.InvokeProof.ProofPurpose, Capability: i.InvokeProof.ObjectCapability.Capability.Id}
 	i.InvokeProof.ObjectCapability.Proof = nil
 
 	credJson, err := utils.Canonicalize(i)
