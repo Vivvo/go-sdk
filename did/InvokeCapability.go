@@ -21,12 +21,14 @@ func (i *InvokeCapability) Verify(resolver ResolverInterface) error {
 	// need to get the resolver to get the person who signed it so we can go to the block chain and get the issuers public key....
 	didDocument, err := resolver.Resolve(i.ObjectCapability.Capability.Creator)
 	if err != nil {
+		log.Printf("Error looking up did: %s,", err.Error())
 		return err
 	}
 
 	// Find the public key that the claim is using
 	pubKey, err := didDocument.GetPublicKeyById(i.Proof.Creator)
 	if err != nil {
+		log.Printf("Error finding publicKey by did: %s", err.Error())
 		return err
 	}
 
