@@ -25,6 +25,7 @@ func (i *InvokeCapability) Verify(resolver ResolverInterface) error {
 		log.Printf("Error looking up creator did: %s,", err.Error())
 		return err
 	}
+	log.Printf("%+v", didDocument)
 
 	// Find the public key that the claim is using
 	pubKey, err := didDocument.GetPublicKeyById(i.ObjectCapability.Capability.Creator)
