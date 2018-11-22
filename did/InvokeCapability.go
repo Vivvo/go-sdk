@@ -27,7 +27,7 @@ func (i *InvokeCapability) Verify(resolver ResolverInterface) error {
 	}
 
 	// Find the public key that the claim is using
-	pubKey, err := didDocument.GetPublicKeyById(i.Proof.Creator)
+	pubKey, err := didDocument.GetPublicKeyById(i.ObjectCapability.Capability.Creator)
 	if err != nil {
 		log.Printf("Error finding publicKey by did: %s", err.Error())
 		return err
