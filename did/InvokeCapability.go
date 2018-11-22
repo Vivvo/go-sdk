@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"github.com/Vivvo/go-sdk/utils"
+	"log"
 )
 
 type InvokeCapability struct {
