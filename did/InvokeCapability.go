@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"github.com/Vivvo/go-sdk/utils"
+	"log"
 	"strings"
 )
 
@@ -28,15 +29,20 @@ type InvokeProof struct {
 func (i *InvokeCapability) VerifyInvocation(resolver ResolverInterface) (map[string][]string, error) {
 	ocapInvoker, capabilities, err := VerifyOCaps(i.InvokeProof.ObjectCapability, resolver)
 	if err != nil {
+		log.Println("Failed to verify ocaps.")
 		return nil, err
 	}
 	if i.InvokeProof.Creator != ocapInvoker {
+		log.Println("Invoker does not match the creator.")
 		return nil, errors.New("incorrect invoker")
 	}
 
 	// TODO: Check actions invoked are granted by the capability and not excluded by any caveats.
-
-	return capabilities, i.verify(resolver)
+	err = i.verify(resolver)
+	if err != nil {
+		log.Println("Failed to verify the invocation.")
+	}
+	return capabilities, err
 }
 
 func VerifyOCaps(ocap ObjectCapability, resolver ResolverInterface) (string, map[string][]string, error) {
@@ -44,6 +50,7 @@ func VerifyOCaps(ocap ObjectCapability, resolver ResolverInterface) (string, map
 	if ocap.Capability.ParentCapability == nil {
 		//FIXME: Need to take in the expected issuer
 		if ocap.Proof.Creator != "did:vvo:5oZzq6u4ZVNxp8YA3YBkgq#keys-1" {
+			log.Println("The base ocap was not issued by Eeze.")
 			return "", nil, errors.New("unexpected issuer")
 		}
 		capabilities = ocap.Capability.Capabilities
@@ -55,12 +62,14 @@ func VerifyOCaps(ocap ObjectCapability, resolver ResolverInterface) (string, map
 			return "", nil, err
 		}
 		if ocap.Proof.Creator != parentInvoker {
+			log.Println("Creator does not match the parent invoker.")
 			return "", nil, errors.New("incorrect invoker")
 		}
 	}
 
 	err := ocap.Verify(resolver)
 	if err != nil {
+		log.Printf("Error verifying ocap: %s", err.Error())
 		return "", nil, err
 	}
 
