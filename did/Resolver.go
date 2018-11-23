@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -49,20 +48,15 @@ type Resolver struct {
 }
 
 func (d *Document) GetPublicKeyById(id string) (*rsa.PublicKey, error) {
-	log.Println("id: %s", id)
-	log.Println("d.PublicKey: %+v", d.PublicKey)
 	for _, v := range d.PublicKey {
 		if strings.Compare(v.Id, id) == 0 {
 			block, _ := pem.Decode([]byte(v.PublicKeyPem))
 			rsaPubKey, err := x509.ParsePKIXPublicKey(block.Bytes)
-			println("block: %s", block)
-			println("rsaPubKey: %s", rsaPubKey)
 			if err != nil {
 				return nil, err
 			}
 
 			if pubKey, ok := rsaPubKey.(*rsa.PublicKey); ok {
-				println("pubKey: %s", pubKey)
 				return pubKey, nil
 			} else {
 				return nil, errors.New("expected *rsa.PublicKey")

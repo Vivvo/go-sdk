@@ -57,15 +57,12 @@ func (c *ObjectCapability) Verify(resolver ResolverInterface) error {
 
 	// FIXME: Utility to do this with some validation!
 	did := strings.Split(c.Capability.Creator, "#")[0]
-	log.Printf("Looking up did: %s", did)
 
 	// need to get the resolver to get the person who signed it so we can go to the block chain and get the issuers public key....
 	didDocument, err := resolver.Resolve(did)
 	if err != nil {
 		return err
 	}
-	log.Printf("Did document: %v", didDocument)
-
 	// Find the public key that the claim is using
 	pubKey, err := didDocument.GetPublicKeyById(c.Proof.Creator)
 	if err != nil {
@@ -78,7 +75,7 @@ func (c *ObjectCapability) Verify(resolver ResolverInterface) error {
 	options := utils.Proof{Created: c.Proof.Created, Creator: c.Proof.Creator, ProofPurpose: c.Proof.ProofPurpose, Capability: c.Proof.Capability}
 	c.Proof = nil
 
-	credJson, err := utils.Canonicalize(c)
+	credJson, err := utils.Canonicalize(c.Capability)
 	if err != nil {
 		return err
 	}
