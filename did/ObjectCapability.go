@@ -69,6 +69,7 @@ func (c *ObjectCapability) Verify(resolver ResolverInterface) error {
 	// Find the public key that the claim is using
 	pubKey, err := didDocument.GetPublicKeyById(c.Proof.Creator)
 	if err != nil {
+		log.Println("Failed to get public key.")
 		return err
 	}
 
@@ -109,6 +110,7 @@ func (c *ObjectCapability) Verify(resolver ResolverInterface) error {
 
 	decodedSig, err := base64.URLEncoding.DecodeString(sig)
 	if err != nil {
+		log.Println("Failed to decode signature.")
 		return err
 	}
 
