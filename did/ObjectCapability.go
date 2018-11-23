@@ -14,8 +14,8 @@ import (
 
 type Capability struct {
 	Id               string              `json:"id"`
-	Name             string              `json:"name"`
-	Description      string              `json:"description"`
+	Name             string              `json:"name,omitempty"`
+	Description      string              `json:"description,omitempty"`
 	ParentCapability *ObjectCapability   `json:"parentCapability,omitempty"`
 	Invoker          string              `json:"invoker"`
 	Caveat           []Caveat            `json:"caveat,omitempty"`
@@ -25,7 +25,7 @@ type Capability struct {
 
 type ObjectCapability struct {
 	Capability *Capability  `json:"capability"`
-	Proof      *utils.Proof `json:"proof"`
+	Proof      *utils.Proof `json:"proof,omitempty"`
 }
 
 type Caveat struct {
