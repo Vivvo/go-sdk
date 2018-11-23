@@ -57,12 +57,14 @@ func (c *ObjectCapability) Verify(resolver ResolverInterface) error {
 
 	// FIXME: Utility to do this with some validation!
 	did := strings.Split(c.Capability.Creator, "#")[0]
+	log.Printf("Looking up did: %s", did)
 
 	// need to get the resolver to get the person who signed it so we can go to the block chain and get the issuers public key....
 	didDocument, err := resolver.Resolve(did)
 	if err != nil {
 		return err
 	}
+	log.Printf("Did document: %v", didDocument)
 
 	// Find the public key that the claim is using
 	pubKey, err := didDocument.GetPublicKeyById(c.Proof.Creator)
