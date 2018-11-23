@@ -108,7 +108,7 @@ func (c *ObjectCapability) Verify(resolver ResolverInterface) error {
 		return err
 	}
 
-	decodedSig, err := base64.URLEncoding.DecodeString(sig)
+	decodedSig, err := base64.StdEncoding.DecodeString(sig)
 	if err != nil {
 		log.Println("Failed to decode signature.")
 		return err
