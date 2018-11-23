@@ -62,11 +62,12 @@ func Sign(o interface{}, proof *Proof, privateKey *rsa.PrivateKey) (interface{},
 		return o, nil, err
 	}
 
-	proof.SignatureValue = base64.StdEncoding.EncodeToString(sig)
+	proof.SignatureValue = base64.URLEncoding.EncodeToString(sig)
 	proof.Typ = "RsaSignature2018"
 
 	return o, proof, nil
 }
+
 //
 //func Verify(o interface{}, types []string, nonce string, resolver ResolverInterface) error {
 //
