@@ -1,13 +1,14 @@
 package did
 
 import (
-	"log"
 	"crypto"
 	"crypto/rsa"
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"github.com/Vivvo/go-sdk/utils"
+	"log"
+	"strings"
 	"time"
 )
 
@@ -15,10 +16,10 @@ type Capability struct {
 	Id               string              `json:"id"`
 	Name             string              `json:"name"`
 	Description      string              `json:"description"`
-	ParentCapability *Capability         `json:"parentCapability,omitempty"`
+	ParentCapability *ObjectCapability   `json:"parentCapability,omitempty"`
 	Invoker          string              `json:"invoker"`
 	Caveat           []Caveat            `json:"caveat,omitempty"`
-	Creator			 string				 `json:"creator"`
+	Creator          string              `json:"creator"`
 	Capabilities     map[string][]string `json:"capabilities"` // key is url to entity, values are action urls
 }
 
@@ -28,17 +29,14 @@ type ObjectCapability struct {
 }
 
 type Caveat struct {
-
 }
-
-
 
 func (c *Capability) Sign(privateKey *rsa.PrivateKey) (*ObjectCapability, error) {
 	proof := utils.Proof{
 		ProofPurpose: "capabilityDelegation",
-		Capability: c.Id,
-		Created: time.Now().Format("2006-01-02T15:04:05-0700"),
-		Creator: fmt.Sprintf("%s#keys-1", c.Creator),
+		Capability:   c.Id,
+		Created:      time.Now().Format("2006-01-02T15:04:05-0700"),
+		Creator:      fmt.Sprintf("%s#keys-1", c.Creator),
 	}
 
 	o, p, err := utils.Sign(c, &proof, privateKey)
@@ -49,15 +47,19 @@ func (c *Capability) Sign(privateKey *rsa.PrivateKey) (*ObjectCapability, error)
 
 	return &ObjectCapability{
 		Capability: o.(*Capability),
-		Proof: p,
+		Proof:      p,
 	}, nil
 }
 
-
 func (c *ObjectCapability) Verify(resolver ResolverInterface) error {
 
+	//TODO: Check a revocation list to make sure the ocap is not revoked!
+
+	// FIXME: Utility to do this with some validation!
+	did := strings.Split(c.Capability.Creator, "#")[0]
+
 	// need to get the resolver to get the person who signed it so we can go to the block chain and get the issuers public key....
-	didDocument, err := resolver.Resolve(c.Capability.Creator)
+	didDocument, err := resolver.Resolve(did)
 	if err != nil {
 		return err
 	}
@@ -70,7 +72,7 @@ func (c *ObjectCapability) Verify(resolver ResolverInterface) error {
 
 	sig := c.Proof.SignatureValue
 
-	options := utils.Proof{Created: c.Proof.Created, Creator: c.Proof.Creator}
+	options := utils.Proof{Created: c.Proof.Created, Creator: c.Proof.Creator, ProofPurpose: c.Proof.ProofPurpose, Capability: c.Proof.Capability}
 	c.Proof = nil
 
 	credJson, err := utils.Canonicalize(c)
@@ -115,4 +117,3 @@ func (c *ObjectCapability) Verify(resolver ResolverInterface) error {
 
 	return nil
 }
-
