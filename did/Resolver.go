@@ -41,6 +41,7 @@ type Document struct {
 
 type ResolverInterface interface {
 	Resolve(string) (*Document, error)
+	Register(*Document) error
 }
 
 type Resolver struct {
@@ -88,4 +89,8 @@ func (d *Resolver) Resolve(did string) (*Document, error) {
 		return nil, err
 	}
 	return &didDocument, nil
+}
+
+func (d *Resolver) Register(ddoc *Document) error {
+	return errors.New("not implemented")
 }

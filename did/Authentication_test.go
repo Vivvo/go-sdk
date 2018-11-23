@@ -58,6 +58,10 @@ func (m MockResolver) Resolve(d string) (*Document, error) {
 	return &Document{Id: "did:vvo:12H6btMP6hPy32VXbwKvGE", PublicKey: []PublicKey{{Id: "did:vvo:12H6btMP6hPy32VXbwKvGE#keys-1", PublicKeyPem: publicKeyPem}}}, nil
 }
 
+func (m MockResolver) Register(*Document) error {
+	return nil
+}
+
 func TestParseAuthorizationHeader(t *testing.T) {
 	authorization, _ := parseAuthorizationHeader(authorizationHeader)
 

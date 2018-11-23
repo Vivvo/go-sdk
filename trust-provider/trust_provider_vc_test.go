@@ -53,11 +53,14 @@ func (m *MockResolver) Resolve(d string) (*did.Document, error) {
 	return &did.Document{Id: "did:vvo:12H6btMP6hPy32VXbwKvGE", PublicKey: []did.PublicKey{{Id: "did:vvo:12H6btMP6hPy32VXbwKvGE#keys-1", PublicKeyPem: publicKeyPem}}}, nil
 }
 
+func (m *MockResolver) Register(*did.Document) error {
+	return nil
+}
+
 var onboardingFuncCalled = false
 var saveFuncCalled = false
 
 func TestOnboardingVerifiableClaim(t *testing.T) {
-
 
 	tests := []struct {
 		name               string
