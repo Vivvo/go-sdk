@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -48,8 +49,8 @@ type Resolver struct {
 }
 
 func (d *Document) GetPublicKeyById(id string) (*rsa.PublicKey, error) {
-	println("id: %s", id)
-	println("d.PublicKey: %+v", d.PublicKey)
+	log.Println("id: %s", id)
+	log.Println("d.PublicKey: %+v", d.PublicKey)
 	for _, v := range d.PublicKey {
 		if strings.Compare(v.Id, id) == 0 {
 			block, _ := pem.Decode([]byte(v.PublicKeyPem))
