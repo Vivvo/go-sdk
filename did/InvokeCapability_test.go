@@ -64,7 +64,7 @@ func TestObjectCapability_Verify(t *testing.T) {
 	invokeCapability := InvokeCapability{}
 	json.Unmarshal([]byte(invocation), &invokeCapability)
 
-	_, err := invokeCapability.VerifyInvocation(&MockOcapResolver{})
+	_, err := invokeCapability.VerifyInvocation("did:vvo:5oZzq6u4ZVNxp8YA3YBkgq#keys-1", &MockOcapResolver{})
 
 	if err != nil {
 		t.Fatalf("Unexepected Error: %s", err.Error())

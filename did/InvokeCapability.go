@@ -26,8 +26,8 @@ type InvokeProof struct {
 	ObjectCapability ObjectCapability `json:"objectCapability,omitempty"`
 }
 
-func (i *InvokeCapability) VerifyInvocation(resolver ResolverInterface) (map[string][]string, error) {
-	ocapInvoker, capabilities, err := VerifyOCaps(i.InvokeProof.ObjectCapability, resolver)
+func (i *InvokeCapability) VerifyInvocation(issuer string, resolver ResolverInterface) (map[string][]string, error) {
+	ocapInvoker, capabilities, err := VerifyOCaps(i.InvokeProof.ObjectCapability, issuer, resolver)
 	if err != nil {
 		log.Println("Failed to verify ocaps.")
 		return nil, err
@@ -45,11 +45,11 @@ func (i *InvokeCapability) VerifyInvocation(resolver ResolverInterface) (map[str
 	return capabilities, err
 }
 
-func VerifyOCaps(ocap ObjectCapability, resolver ResolverInterface) (string, map[string][]string, error) {
+func VerifyOCaps(ocap ObjectCapability, issuer string, resolver ResolverInterface) (string, map[string][]string, error) {
 	var capabilities map[string][]string
 	if ocap.Capability.ParentCapability == nil {
 		//FIXME: Need to take in the expected issuer
-		if ocap.Proof.Creator != "did:vvo:5oZzq6u4ZVNxp8YA3YBkgq#keys-1" {
+		if ocap.Proof.Creator != issuer {
 			log.Println("The base ocap was not issued by Eeze.")
 			return "", nil, errors.New("unexpected issuer")
 		}
@@ -57,7 +57,7 @@ func VerifyOCaps(ocap ObjectCapability, resolver ResolverInterface) (string, map
 	} else {
 		var parentInvoker string
 		var err error
-		parentInvoker, capabilities, err = VerifyOCaps(*ocap.Capability.ParentCapability, resolver)
+		parentInvoker, capabilities, err = VerifyOCaps(*ocap.Capability.ParentCapability, issuer, resolver)
 		if err != nil {
 			return "", nil, err
 		}
