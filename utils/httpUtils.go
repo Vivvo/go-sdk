@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"database/sql"
 	"encoding/json"
 	"io/ioutil"
 	"log"
@@ -20,6 +21,17 @@ func SetErrorStatus(e error, s int, w http.ResponseWriter) {
 	}
 
 	WriteJSON(b, s, w)
+}
+
+func SendError (err error, w http.ResponseWriter) {
+	switch err {
+	case sql.ErrNoRows:
+		SetErrorStatus(err, http.StatusNotFound, w)
+		return
+	default:
+		SetErrorStatus(err, http.StatusInternalServerError, w)
+		return
+	}
 }
 
 func WriteJSON(v interface{}, s int, w http.ResponseWriter) {
