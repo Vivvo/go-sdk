@@ -50,7 +50,7 @@ func VerifyOCaps(ocap ObjectCapability, issuer string, resolver ResolverInterfac
 	if ocap.Capability.ParentCapability == nil {
 		//FIXME: Need to take in the expected issuer
 		if ocap.Proof.Creator != issuer {
-			log.Println("The base ocap was not issued by Eeze.")
+			log.Printf("The base ocap was not issued by [%s].", issuer)
 			return "", nil, errors.New("unexpected issuer")
 		}
 		capabilities = ocap.Capability.Capabilities

@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -51,6 +52,10 @@ func (d *Document) GetPublicKeyById(id string) (*rsa.PublicKey, error) {
 	for _, v := range d.PublicKey {
 		if strings.Compare(v.Id, id) == 0 {
 			block, _ := pem.Decode([]byte(v.PublicKeyPem))
+			if block == nil {
+				log.Printf("[%s]: %s", id, v.PublicKeyPem)
+				return nil, errors.New("unable to decode public key pem")
+			}
 			rsaPubKey, err := x509.ParsePKIXPublicKey(block.Bytes)
 			if err != nil {
 				return nil, err
