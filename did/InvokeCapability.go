@@ -47,17 +47,17 @@ func (i *InvokeCapability) VerifyInvocation(issuer string, resolver ResolverInte
 
 func VerifyOCaps(ocap ObjectCapability, issuer string, resolver ResolverInterface) (string, map[string][]string, error) {
 	var capabilities map[string][]string
-	if ocap.Capability.ParentCapability == nil {
+	if ocap.ParentCapability == nil {
 		//FIXME: Need to take in the expected issuer
 		if ocap.Proof.Creator != issuer {
 			log.Printf("The base ocap was not issued by [%s].", issuer)
 			return "", nil, errors.New("unexpected issuer")
 		}
-		capabilities = ocap.Capability.Capabilities
+		capabilities = ocap.Capabilities
 	} else {
 		var parentInvoker string
 		var err error
-		parentInvoker, capabilities, err = VerifyOCaps(*ocap.Capability.ParentCapability, issuer, resolver)
+		parentInvoker, capabilities, err = VerifyOCaps(*ocap.ParentCapability, issuer, resolver)
 		if err != nil {
 			return "", nil, err
 		}
@@ -73,7 +73,7 @@ func VerifyOCaps(ocap ObjectCapability, issuer string, resolver ResolverInterfac
 		return "", nil, err
 	}
 
-	return ocap.Capability.Invoker, capabilities, nil
+	return ocap.Invoker, capabilities, nil
 }
 
 func (c *InvokeCapability) verify(resolver ResolverInterface) error {

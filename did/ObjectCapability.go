@@ -24,14 +24,32 @@ type Capability struct {
 }
 
 type ObjectCapability struct {
-	Capability *Capability  `json:"capability"`
-	Proof      *utils.Proof `json:"proof,omitempty"`
+	Id               string              `json:"id"`
+	Name             string              `json:"name,omitempty"`
+	Description      string              `json:"description,omitempty"`
+	ParentCapability *ObjectCapability   `json:"parentCapability,omitempty"`
+	Invoker          string              `json:"invoker"`
+	Caveat           []Caveat            `json:"caveat,omitempty"`
+	Creator          string              `json:"creator"`
+	Capabilities     map[string][]string `json:"capabilities"` // key is url to entity, values are action urls
+	Proof      		 *utils.Proof  		 `json:"proof,omitempty"`
 }
 
 type Caveat struct {
 }
 
-func (c *Capability) Sign(privateKey *rsa.PrivateKey) (*ObjectCapability, error) {
+func (c *Capability) Sign(privateKey *rsa.PrivateKey) (ObjectCapability, error) {
+	oCap := ObjectCapability{
+		Id: c.Id,
+		Name: c.Name,
+		Description: c.Description,
+		ParentCapability: c.ParentCapability,
+		Invoker: c.Invoker,
+		Caveat: c.Caveat,
+		Creator: c.Creator,
+		Capabilities: c.Capabilities,
+	}
+
 	proof := utils.Proof{
 		ProofPurpose: "capabilityDelegation",
 		Capability:   c.Id,
@@ -39,24 +57,23 @@ func (c *Capability) Sign(privateKey *rsa.PrivateKey) (*ObjectCapability, error)
 		Creator:      fmt.Sprintf("%s#keys-1", c.Creator),
 	}
 
-	o, p, err := utils.Sign(c, &proof, privateKey)
+	p, err := utils.Sign(oCap, &proof, privateKey)
 	if err != nil {
 		log.Panic(err.Error())
-		return nil, err
+		return ObjectCapability{}, err
 	}
 
-	return &ObjectCapability{
-		Capability: o.(*Capability),
-		Proof:      p,
-	}, nil
+	oCap.Proof = p
+
+	return oCap, nil
 }
 
-func (c *ObjectCapability) Verify(resolver ResolverInterface) error {
+func (o *ObjectCapability) Verify(resolver ResolverInterface) error {
 
 	//TODO: Check a revocation list to make sure the ocap is not revoked!
 
 	// FIXME: Utility to do this with some validation!
-	did := strings.Split(c.Capability.Creator, "#")[0]
+	did := strings.Split(o.Creator, "#")[0]
 
 	// need to get the resolver to get the person who signed it so we can go to the block chain and get the issuers public key....
 	didDocument, err := resolver.Resolve(did)
@@ -64,18 +81,18 @@ func (c *ObjectCapability) Verify(resolver ResolverInterface) error {
 		return err
 	}
 	// Find the public key that the claim is using
-	pubKey, err := didDocument.GetPublicKeyById(c.Proof.Creator)
+	pubKey, err := didDocument.GetPublicKeyById(o.Proof.Creator)
 	if err != nil {
 		log.Println("Failed to get public key.")
 		return err
 	}
 
-	sig := c.Proof.SignatureValue
+	sig := o.Proof.SignatureValue
 
-	options := utils.Proof{Created: c.Proof.Created, Creator: c.Proof.Creator, ProofPurpose: c.Proof.ProofPurpose, Capability: c.Proof.Capability}
-	c.Proof = nil
+	options := utils.Proof{Created: o.Proof.Created, Creator: o.Proof.Creator, ProofPurpose: o.Proof.ProofPurpose, Capability: o.Proof.Capability}
+	o.Proof = nil
 
-	credJson, err := utils.Canonicalize(c.Capability)
+	credJson, err := utils.Canonicalize(o)
 	if err != nil {
 		return err
 	}

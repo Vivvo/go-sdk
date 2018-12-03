@@ -2,13 +2,13 @@ package did
 
 import (
 	"crypto"
-	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"github.com/Vivvo/go-sdk/utils"
 	"github.com/pkg/errors"
+	"log"
 	"strings"
 	"time"
 )
@@ -72,33 +72,19 @@ func (vc *Claim) Sign(privateKey *rsa.PrivateKey, nonce string) (VerifiableClaim
 		Claim:  vc.Claim,
 	}
 
-	claimHash, err := utils.CanonicalizeAndHash(vc)
-	if err != nil {
-		return VerifiableClaim{}, nil
-	}
-
-	var proof = utils.Proof{
+	proof := utils.Proof{
 		Created: time.Now().Format("2006-01-02T15:04:05-0700"),
 		Creator: fmt.Sprintf("%s#keys-1", claim.Issuer),
 		Nonce:   nonce,
 	}
-	proofHash, err := utils.CanonicalizeAndHash(proof)
 
-	h := sha256.New()
-	_, err = h.Write(append(claimHash, proofHash...))
+	p, err := utils.Sign(vc, &proof, privateKey)
 	if err != nil {
+		log.Panic(err.Error())
 		return VerifiableClaim{}, err
 	}
 
-	sig, err := privateKey.Sign(rand.Reader, h.Sum(nil), &SHA256Hasher{})
-	if err != nil {
-		return VerifiableClaim{}, err
-	}
-
-	proof.SignatureValue = base64.URLEncoding.EncodeToString(sig)
-	proof.Typ = "RsaSignature2018"
-
-	claim.Proof = &proof
+	claim.Proof = p
 	return claim, nil
 }
 
