@@ -17,8 +17,7 @@ const invocation = `{
     "signatureValue": "FI68Kt4_dQ5mUzHp87aSON2vaKEpS-GwaQFaNOPblzU-68-UWwr9h4Msg47v4Yfd_eQaUgvKfH3Re1N3f65znVONc61vA_6CRmIoZ7Unc-l8fEeUdLHGFhd65UIY-1mSft-USWTKSmPZpeL4DHsxOdNLLu6_IluExT2XakIUTjgHkl1Ajdspl1dKqUdNUEXhlG6vcHgNx0LSeKV8DFMj3sgAWtEXDroWpwh1EYG9fGzKN81AhodLfNSiet_PTiYFGUGkNVPPSGgC8-FXowlaVD20Azb19piPHKcW7HV9sKogz2l1ud8viyUpD1Ri8JegxnptFs42tnX_oFHFHUH9Uw==",
     "proofPurpose": "capabilityDelegation",
     "objectCapability": {
-      "capability": {
-        "id": "69b73a8a-8efc-4f0b-bc00-e089eb292cb5",
+		"id": "69b73a8a-8efc-4f0b-bc00-e089eb292cb5",
         "name": "Manage kjhgfd",
         "description": "Manage Eeze domain",
         "invoker": "did:vvo:AVgg8xz2s3222UMfJtjCFR#keys-1",
@@ -27,8 +26,7 @@ const invocation = `{
           "https://c1dev.vivvo.com/eeze/domains/did:vvo:6jLNypk5da7r52fsihyUra/entities/self": [
             "manage"
           ]
-        }
-      },
+		},
       "proof": {
         "type": "RsaSignature2018",
         "created": "2018-11-23T20:03:16+0000",
