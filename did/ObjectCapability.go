@@ -72,12 +72,14 @@ func (o *ObjectCapability) Verify(resolver ResolverInterface) error {
 
 	//TODO: Check a revocation list to make sure the ocap is not revoked!
 
+	fmt.Println("creator: %s",o.Creator)
 	// FIXME: Utility to do this with some validation!
 	did := strings.Split(o.Creator, "#")[0]
 
 	// need to get the resolver to get the person who signed it so we can go to the block chain and get the issuers public key....
 	didDocument, err := resolver.Resolve(did)
 	if err != nil {
+		log.Println("Error resolving:", err.Error())
 		return err
 	}
 	// Find the public key that the claim is using
@@ -119,6 +121,7 @@ func (o *ObjectCapability) Verify(resolver ResolverInterface) error {
 	h = sha256.New()
 	_, err = h.Write(hashString)
 	if err != nil {
+		log.Println("Failed to hash.")
 		return err
 	}
 
@@ -130,6 +133,7 @@ func (o *ObjectCapability) Verify(resolver ResolverInterface) error {
 
 	err = rsa.VerifyPKCS1v15(pubKey, crypto.SHA256, h.Sum(nil), decodedSig)
 	if err != nil {
+		log.Println("Failed to verify sig:", err.Error())
 		return err
 	}
 
