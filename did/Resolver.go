@@ -25,6 +25,15 @@ type Authentication struct {
 }
 
 type PublicKey struct {
+	Id                 string             `json:"id"`
+	T                  string             `json:"type"`
+	Owner              string             `json:"owner"`
+	PublicKeyPem       string             `json:"publicKeyPem"`
+	Ed25519KeyExchange Ed25519KeyExchange `json:"ed25519KeyExchange"`
+	PublicKeyBase58    string             `json:"publicKeyBase58"`
+}
+
+type Ed25519KeyExchange struct {
 	Id              string `json:"id"`
 	T               string `json:"type"`
 	Owner           string `json:"owner"`
