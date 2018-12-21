@@ -61,6 +61,7 @@ type DefaultDBRecord struct {
 }
 
 const DefaultCsvFilePath = "./db.json"
+const DefaultWalletId  = "wallet.db"
 
 // Account interface should be implemented and passed in when creating a TrustProvider.
 type Account interface {
@@ -143,6 +144,26 @@ func (t *TrustProvider) parseParameters(body interface{}, params []Parameter, r 
 	}
 
 	return strs, nums, bools, nil
+}
+
+func(t *TrustProvider) registerWithDid(w http.ResponseWriter, r *http.Request) {
+	logger := utils.Logger(r.Context())
+
+	var body interface{}
+	err := utils.ReadBody(&body, r)
+	if err != nil {
+		logger.Errorf("Problem unmarshalling onboarding request body", "error", err.Error())
+		utils.SetErrorStatus(err, http.StatusBadRequest, w)
+		return
+	}
+	fmt.Print(body)
+
+	// Decrpyt the body -> double ratchet...
+	// parse out the parameters
+	// update account
+	// verify the claim
+	// send the token back to id1
+	// send a push notificaiton with back to the phone with encrypted message
 }
 
 func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
@@ -385,6 +406,7 @@ func New(onboarding Onboarding, rules []Rule, account Account, resolver did.Reso
 	}
 
 	t.router.HandleFunc("/api/register", t.register).Methods("POST")
+	t.router.HandleFunc("/api/did/register", t.registerWithDid).Methods("POST")
 
 	for _, rule := range rules {
 		t.router.HandleFunc(fmt.Sprintf("/api/%s/{token}", rule.Name), t.handleRule(rule)).Methods("POST")
