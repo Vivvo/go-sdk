@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/Vivvo/go-sdk/did"
 	"github.com/Vivvo/go-sdk/utils"
+	"github.com/Vivvo/go-wallet"
 	"github.com/google/uuid"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -29,7 +30,7 @@ type Onboarding struct {
 type ParameterType int
 
 const (
-	ParameterTypeBool    ParameterType = iota
+	ParameterTypeBool ParameterType = iota
 	ParameterTypeFloat64
 	ParameterTypeString
 )
@@ -55,13 +56,17 @@ type trustProviderResponse struct {
 	VerifiableClaim    *did.VerifiableClaim `json:"verifiableClaim,omitempty"`
 }
 
+type DidDocResponse struct {
+	DidDocument did.Document `json:"didDocument"`
+}
+
 type DefaultDBRecord struct {
 	Account interface{} `json:"account"`
 	Token   string      `json:"token"`
 }
 
 const DefaultCsvFilePath = "./db.json"
-const DefaultWalletId  = "wallet.db"
+const DefaultWalletId = "wallet.db"
 
 // Account interface should be implemented and passed in when creating a TrustProvider.
 type Account interface {
@@ -146,7 +151,7 @@ func (t *TrustProvider) parseParameters(body interface{}, params []Parameter, r 
 	return strs, nums, bools, nil
 }
 
-func(t *TrustProvider) registerWithDid(w http.ResponseWriter, r *http.Request) {
+func (t *TrustProvider) registerWithDid(w http.ResponseWriter, r *http.Request) {
 	logger := utils.Logger(r.Context())
 
 	var body interface{}
@@ -163,7 +168,29 @@ func(t *TrustProvider) registerWithDid(w http.ResponseWriter, r *http.Request) {
 	// update account
 	// verify the claim
 	// send the token back to id1
-	// send a push notificaiton with back to the phone with encrypted message
+	// send a push notificaiton back to the phone with encrypted message
+}
+
+func (t *TrustProvider) getDidDoc(w http.ResponseWriter, r *http.Request) {
+	logger := utils.Logger(r.Context())
+	vars := mux.Vars(r)
+	id := vars["id"]
+
+	wallet, err := wallet.Open([]byte(os.Getenv("MASTER_KEY")), DefaultWalletId)
+	if err != nil {
+		logger.Errorf("error opening the wallet:", err.Error())
+		utils.WriteJSON(err, http.StatusInternalServerError, w)
+	}
+
+	ddoc, err := wallet.SGIDidDoc().Read(id)
+	if err != nil {
+		logger.Errorf("error retrieving the did document:", err.Error())
+	}
+
+	var d did.Document
+	json.Unmarshal([]byte(ddoc), &d)
+	utils.WriteJSON(d, http.StatusCreated, w)
+
 }
 
 func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
@@ -406,6 +433,7 @@ func New(onboarding Onboarding, rules []Rule, account Account, resolver did.Reso
 	}
 
 	t.router.HandleFunc("/api/register", t.register).Methods("POST")
+	t.router.HandleFunc("/api/did/{id}", t.getDidDoc).Methods("GET")
 	t.router.HandleFunc("/api/did/register", t.registerWithDid).Methods("POST")
 
 	for _, rule := range rules {
