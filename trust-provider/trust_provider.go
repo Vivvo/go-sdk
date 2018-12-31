@@ -7,6 +7,7 @@ import (
 	"github.com/Vivvo/go-sdk/did"
 	"github.com/Vivvo/go-sdk/utils"
 	"github.com/Vivvo/go-wallet"
+	"github.com/btcsuite/btcutil/base58"
 	"github.com/google/uuid"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -56,13 +57,28 @@ type trustProviderResponse struct {
 	VerifiableClaim    *did.VerifiableClaim `json:"verifiableClaim,omitempty"`
 }
 
-type DidDocResponse struct {
-	DidDocument did.Document `json:"didDocument"`
+type ConnectionResponse struct {
+	VerifiableClaim did.VerifiableClaim `json:"verifiableClaim"`
 }
 
 type DefaultDBRecord struct {
 	Account interface{} `json:"account"`
 	Token   string      `json:"token"`
+}
+
+type RatchetedPayload struct {
+	Sender  string `json:"sender"`
+	Dhs     string `json:"dhs"`
+	Pn      int  `json:"pn"`
+	Ns      int  `json:"ns"`
+	Payload string `json:"payload"`
+}
+
+type Message struct {
+	Type           string `json:"type"`
+	Payload        string `json:"payload"`
+	Subject        string `json:"subject,omitempty"`
+	KeyExchangeKey string `json:"keyExchangeKey,omitempty"`
 }
 
 const DefaultCsvFilePath = "./db.json"
@@ -151,6 +167,161 @@ func (t *TrustProvider) parseParameters(body interface{}, params []Parameter, r 
 	return strs, nums, bools, nil
 }
 
+// TODO: Should only ever return "internal error" not actual error
+func (t *TrustProvider) initiateContact(w http.ResponseWriter, r *http.Request) {
+	logger := utils.Logger(r.Context())
+
+	walletFactory, err := wallet.Open([]byte(os.Getenv("MASTER_KEY")), DefaultWalletId)
+	messaging := walletFactory.Messaging()
+
+	var body = Message{}
+	err = utils.ReadBody(&body, r)
+	if err != nil {
+		logger.Errorf("Problem unmarshalling onboarding request body", "error", err.Error())
+		utils.SetErrorStatus(err, http.StatusBadRequest, w)
+		return
+	}
+
+	ourDid := os.Getenv("DID")
+	pairwiseDoc, err := t.createPairwiseDid(walletFactory)
+	if err != nil {
+		utils.SendError(err, w)
+		return
+	}
+
+	err = messaging.InitDoubleRatchetWithWellKnownPublicKey(ourDid, pairwiseDoc.Id, body.KeyExchangeKey)
+	if err != nil {
+		utils.SendError(err, w)
+		return
+	}
+
+	ratchetPayload := wallet.RatchetPayload{}
+	err = json.Unmarshal([]byte(body.Payload), &ratchetPayload)
+	payload, err := messaging.RatchetDecrypt(pairwiseDoc.Id, &ratchetPayload)
+	if err != nil {
+		utils.SendError(err, w)
+		return
+	}
+
+
+	vc := did.VerifiableClaim{}
+	err = json.Unmarshal([]byte(payload), &vc)
+	if err != nil {
+		utils.SendError(err, w)
+		return
+	}
+
+	ddoc := vc.Claim["ddoc"]
+	marshalledDDoc, err := json.Marshal(ddoc)
+	if err != nil {
+		utils.SendError(err, w)
+		return
+	}
+
+	var d did.Document
+	err = json.Unmarshal(marshalledDDoc, &d)
+	if err != nil {
+		utils.SendError(err, w)
+		return
+	}
+
+	id := d.Id
+
+	//TODO:: Verify the signature before storing the pairwise did...
+	err = walletFactory.SGIPairwiseDids().Create(d.Id, id, nil) // store the pairwise did here
+	if err != nil {
+		utils.SendError(err, w)
+		return
+	}
+
+	// build VC response
+
+	nonce := vc.Proof.Nonce
+
+	claim := did.Claim{
+		Id:     ourDid,
+		Issuer: ourDid,
+		Issued: time.Now().Format("2006-01-02"),
+		Type:   []string{did.VerifiableCredential, did.IAmMeCredential},
+		Claim:  map[string]interface{}{"ddoc": pairwiseDoc},
+	}
+
+	claimDocument := did.VerifiableClaim{
+		Id:     ourDid,
+		Type:   []string{"VerifiableCredential", did.IAmMeCredential},
+		Issued: time.Now().Format("2006-01-20"),
+		Issuer: ourDid,
+		Claim:  claim.Claim,
+	}
+
+	claimDocumentHash, err := utils.CanonicalizeAndHash(claimDocument)
+	if err != nil {
+		utils.SendError(err, w)
+		return
+	}
+
+	claimOptions := utils.Proof{
+		Created: time.Now().Format("2006-01-02T15:04:05-0700"),
+		Creator: fmt.Sprintf("%s#keys-1", ourDid),
+		Nonce:   nonce,
+	}
+
+	claimOptionsHash, err := utils.CanonicalizeAndHash(claimOptions)
+	if err != nil {
+		utils.SendError(err, w)
+		return
+	}
+
+	rVcSig, err := walletFactory.Crypto().RS256Signature(ourDid, append(claimDocumentHash, claimOptionsHash...))
+	if err != nil {
+		log.Println("error with sig:", err.Error())
+		utils.SendError(err, w)
+		return
+	}
+
+	claimDocument.Proof = &utils.Proof{
+		Typ:            "RsaSignature2018",
+		Created:        claimOptions.Created,
+		Creator:        claimOptions.Creator,
+		Nonce:          nonce,
+		SignatureValue: rVcSig,
+	}
+
+	claimDocumentJson, err := json.Marshal(claimDocument)
+	if err != nil {
+		utils.SendError(err, w)
+		return
+	}
+
+	rp, err := messaging.RatchetEncrypt(pairwiseDoc.Id, string(claimDocumentJson))
+	if err != nil {
+		utils.SendError(err, w)
+		return
+	}
+
+	ratchetPayloadDto := RatchetedPayload{
+		Sender:  ourDid,
+		Dhs:     rp.DHs,
+		Pn:      rp.PN,
+		Ns:      rp.Ns,
+		Payload: rp.Payload,
+	}
+
+	rpJson, err:= json.Marshal(ratchetPayloadDto)
+	if err != nil {
+		utils.SendError(err, w)
+		return
+	}
+
+	res := Message{
+		Type:"sgi-onboarding",
+		Subject: ourDid,
+		Payload: string(rpJson),
+	}
+
+	utils.WriteJSON(res, http.StatusOK, w)
+}
+
 func (t *TrustProvider) registerWithDid(w http.ResponseWriter, r *http.Request) {
 	logger := utils.Logger(r.Context())
 
@@ -163,7 +334,12 @@ func (t *TrustProvider) registerWithDid(w http.ResponseWriter, r *http.Request) 
 	}
 	fmt.Print(body)
 
-	// Decrpyt the body -> double ratchet...
+	/* Decrpyt the body -> double ratchet...*/
+
+	//payload, err := wallet.Messaging.RatchetDecrypt(cont, rp)
+
+	/* Parse send the payload ot the register func() */
+	//t.register(w, r) <- this method will handle the onboarding with SGI
 	// parse out the parameters
 	// update account
 	// verify the claim
@@ -171,25 +347,89 @@ func (t *TrustProvider) registerWithDid(w http.ResponseWriter, r *http.Request) 
 	// send a push notificaiton back to the phone with encrypted message
 }
 
+//TODO: Clean up, Move to the did folder maybe?
+func (t *TrustProvider) createPairwiseDid(w *wallet.Wallet) (*did.Document, error) {
+	u, _ := uuid.New().MarshalBinary()
+	pairwiseDid := "did:vvo:" + base58.Encode(u)
+
+	document, err := t.generateDidDocument(pairwiseDid, w)
+	if err != nil {
+		return nil, err
+	}
+
+	return document, nil
+}
+
+func (t *TrustProvider) generateDidDocument(id string, w *wallet.Wallet) (*did.Document, error) {
+	doc := did.Document{}
+	doc.Context = "https://w3id.org/did/v1"
+	doc.Id = id
+
+	rsaPublicKey, err := w.Crypto().GenerateRSAKey("RsaVerificationKey2018", id)
+	if err != nil {
+		return nil, err
+	}
+
+	ed25519PublicKey, err := w.Crypto().GenerateEd25519Key("Ed25519KeyExchange2018", id)
+	if err != nil {
+		return nil, err
+	}
+
+	pubKey := did.PublicKey{
+		Owner:        id,
+		Id:           fmt.Sprintf("%s#keys-1", id),
+		T:            "RsaVerificationKey2018",
+		PublicKeyPem: rsaPublicKey,
+	}
+
+	pubKey2 := did.PublicKey{
+		Owner:           id,
+		Id:              fmt.Sprintf("%s#keys-2", id),
+		T:               "Ed25519KeyExchange2018",
+		PublicKeyBase58: ed25519PublicKey,
+	}
+
+	doc.PublicKey = []did.PublicKey{pubKey, pubKey2}
+
+	auth := did.Authentication{}
+	auth.PublicKey = pubKey.Id
+	auth.T = "RsaSignatureAuthentication2018"
+	doc.Authentication = []did.Authentication{auth}
+
+	docJson, err := json.Marshal(doc)
+	if err != nil {
+		return nil, err
+	}
+
+	err = w.Dids().Create(doc.Id, string(docJson), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return &doc, err
+}
+
 func (t *TrustProvider) getDidDoc(w http.ResponseWriter, r *http.Request) {
 	logger := utils.Logger(r.Context())
 	vars := mux.Vars(r)
 	id := vars["id"]
 
-	wallet, err := wallet.Open([]byte(os.Getenv("MASTER_KEY")), DefaultWalletId)
+	walletFactory, err := wallet.Open([]byte(os.Getenv("MASTER_KEY")), DefaultWalletId)
 	if err != nil {
 		logger.Errorf("error opening the wallet:", err.Error())
 		utils.WriteJSON(err, http.StatusInternalServerError, w)
+		return
 	}
 
-	ddoc, err := wallet.SGIDidDoc().Read(id)
+	ddoc, err := walletFactory.SGIDidDoc().Read(id)
 	if err != nil {
 		logger.Errorf("error retrieving the did document:", err.Error())
+		return
 	}
 
 	var d did.Document
 	json.Unmarshal([]byte(ddoc), &d)
-	utils.WriteJSON(d, http.StatusCreated, w)
+	utils.WriteJSON(d, http.StatusOK, w)
 
 }
 
@@ -434,6 +674,7 @@ func New(onboarding Onboarding, rules []Rule, account Account, resolver did.Reso
 
 	t.router.HandleFunc("/api/register", t.register).Methods("POST")
 	t.router.HandleFunc("/api/did/{id}", t.getDidDoc).Methods("GET")
+	t.router.HandleFunc("/api/did/invite", t.initiateContact).Methods("POST")
 	t.router.HandleFunc("/api/did/register", t.registerWithDid).Methods("POST")
 
 	for _, rule := range rules {
