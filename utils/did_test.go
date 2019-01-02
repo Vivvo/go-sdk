@@ -39,15 +39,3 @@ func TestClientIdToDid(t *testing.T) {
 		t.Fatalf("Expected: %s, Actual: %s", clientId, res)
 	}
 }
-
-func TestStripKeysFromDid(t *testing.T) {
-	testArray := []string{"did:vvo:5oZzq6u4ZVNxp8YA3YBkgq"}
-
-	for _, testDid := range testArray {
-		res, err := stripKeysFromDid(testDid)
-		if err != nil {
-			t.Fatalf("Unexpected Error: %s", err.Error())
-		}
-		println(res)
-	}
-}

@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/Vivvo/go-sdk/utils"
+	"github.com/Vivvo/go-wallet"
 	"github.com/pkg/errors"
 	"log"
 	"strings"
@@ -85,6 +86,41 @@ func (vc *Claim) Sign(privateKey *rsa.PrivateKey, nonce string) (VerifiableClaim
 	}
 
 	claim.Proof = p
+	return claim, nil
+}
+
+func (vc *Claim) WalletSign(w *wallet.Wallet, id string, nonce string) (VerifiableClaim, error) {
+	claim := VerifiableClaim{
+		Id:     vc.Id,
+		Type:   vc.Type,
+		Issuer: vc.Issuer,
+		Issued: vc.Issued,
+		Claim:  vc.Claim,
+	}
+
+	proof := utils.Proof{
+		Created: time.Now().Format("2006-01-02T15:04:05-0700"),
+		Creator: fmt.Sprintf("%s#keys-1", claim.Issuer),
+		Nonce:   nonce,
+	}
+
+	claimHash, err := utils.CanonicalizeAndHash(claim)
+	if err != nil {
+		return VerifiableClaim{}, err
+	}
+
+	proofHash, err := utils.CanonicalizeAndHash(proof)
+
+	sig, err := w.Crypto().RS256Signature(id, append(claimHash, proofHash...))
+	if err != nil {
+		log.Println(err.Error())
+		return VerifiableClaim{}, err
+	}
+
+	proof.SignatureValue = sig
+	proof.Typ = "RsaSignature2018"
+
+	claim.Proof = &proof
 	return claim, nil
 }
 

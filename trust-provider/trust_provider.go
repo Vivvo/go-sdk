@@ -1,7 +1,6 @@
 package trustprovider
 
 import (
-	"crypto/rsa"
 	"encoding/json"
 	"fmt"
 	"github.com/Vivvo/go-sdk/did"
@@ -14,7 +13,6 @@ import (
 	"github.com/newrelic/go-agent"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
-	"golang.org/x/crypto/ssh"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -50,11 +48,11 @@ type Rule struct {
 }
 
 type trustProviderResponse struct {
-	Status             bool                 `json:"value"`
-	Message            string               `json:"message,omitempty"`
-	OnBoardingRequired bool                 `json:"onBoardingRequired"`
-	Token              string               `json:"token,omitempty"`
-	VerifiableClaim    *did.VerifiableClaim `json:"verifiableClaim,omitempty"`
+	Status             bool                   `json:"value"`
+	Message            string                 `json:"message,omitempty"`
+	OnBoardingRequired bool                   `json:"onBoardingRequired"`
+	Token              string                 `json:"token,omitempty"`
+	VerifiableClaim    *wallet.RatchetPayload `json:"verifiableClaim,omitempty"`
 }
 
 type ConnectionResponse struct {
@@ -64,21 +62,6 @@ type ConnectionResponse struct {
 type DefaultDBRecord struct {
 	Account interface{} `json:"account"`
 	Token   string      `json:"token"`
-}
-
-type RatchetedPayload struct {
-	Sender  string `json:"sender"`
-	Dhs     string `json:"dhs"`
-	Pn      int  `json:"pn"`
-	Ns      int  `json:"ns"`
-	Payload string `json:"payload"`
-}
-
-type Message struct {
-	Type           string `json:"type"`
-	Payload        string `json:"payload"`
-	Subject        string `json:"subject,omitempty"`
-	KeyExchangeKey string `json:"keyExchangeKey,omitempty"`
 }
 
 const DefaultCsvFilePath = "./db.json"
@@ -113,9 +96,8 @@ type TrustProvider struct {
 	router     *mux.Router
 	account    Account
 	port       string
-	did        string
-	privateKey *rsa.PrivateKey
 	resolver   did.ResolverInterface
+	wallet     *wallet.Wallet
 }
 
 func (t *TrustProvider) parseParameters(body interface{}, params []Parameter, r *http.Request) (map[string]string, map[string]float64, map[string]bool, error) {
@@ -165,186 +147,6 @@ func (t *TrustProvider) parseParameters(body interface{}, params []Parameter, r 
 	}
 
 	return strs, nums, bools, nil
-}
-
-// TODO: Should only ever return "internal error" not actual error
-func (t *TrustProvider) initiateContact(w http.ResponseWriter, r *http.Request) {
-	logger := utils.Logger(r.Context())
-
-	walletFactory, err := wallet.Open([]byte(os.Getenv("MASTER_KEY")), DefaultWalletId)
-	messaging := walletFactory.Messaging()
-
-	var body = Message{}
-	err = utils.ReadBody(&body, r)
-	if err != nil {
-		logger.Errorf("Problem unmarshalling onboarding request body", "error", err.Error())
-		utils.SetErrorStatus(err, http.StatusBadRequest, w)
-		return
-	}
-
-	ourDid := os.Getenv("DID")
-	pairwiseDoc, err := t.createPairwiseDid(walletFactory)
-	if err != nil {
-		utils.SendError(err, w)
-		return
-	}
-
-	err = messaging.InitDoubleRatchetWithWellKnownPublicKey(ourDid, pairwiseDoc.Id, body.KeyExchangeKey)
-	if err != nil {
-		utils.SendError(err, w)
-		return
-	}
-
-	ratchetPayload := wallet.RatchetPayload{}
-	err = json.Unmarshal([]byte(body.Payload), &ratchetPayload)
-	payload, err := messaging.RatchetDecrypt(pairwiseDoc.Id, &ratchetPayload)
-	if err != nil {
-		utils.SendError(err, w)
-		return
-	}
-
-
-	vc := did.VerifiableClaim{}
-	err = json.Unmarshal([]byte(payload), &vc)
-	if err != nil {
-		utils.SendError(err, w)
-		return
-	}
-
-	ddoc := vc.Claim["ddoc"]
-	marshalledDDoc, err := json.Marshal(ddoc)
-	if err != nil {
-		utils.SendError(err, w)
-		return
-	}
-
-	var d did.Document
-	err = json.Unmarshal(marshalledDDoc, &d)
-	if err != nil {
-		utils.SendError(err, w)
-		return
-	}
-
-	id := d.Id
-
-	//TODO:: Verify the signature before storing the pairwise did...
-	err = walletFactory.SGIPairwiseDids().Create(d.Id, id, nil) // store the pairwise did here
-	if err != nil {
-		utils.SendError(err, w)
-		return
-	}
-
-	// build VC response
-
-	nonce := vc.Proof.Nonce
-
-	claim := did.Claim{
-		Id:     ourDid,
-		Issuer: ourDid,
-		Issued: time.Now().Format("2006-01-02"),
-		Type:   []string{did.VerifiableCredential, did.IAmMeCredential},
-		Claim:  map[string]interface{}{"ddoc": pairwiseDoc},
-	}
-
-	claimDocument := did.VerifiableClaim{
-		Id:     ourDid,
-		Type:   []string{"VerifiableCredential", did.IAmMeCredential},
-		Issued: time.Now().Format("2006-01-20"),
-		Issuer: ourDid,
-		Claim:  claim.Claim,
-	}
-
-	claimDocumentHash, err := utils.CanonicalizeAndHash(claimDocument)
-	if err != nil {
-		utils.SendError(err, w)
-		return
-	}
-
-	claimOptions := utils.Proof{
-		Created: time.Now().Format("2006-01-02T15:04:05-0700"),
-		Creator: fmt.Sprintf("%s#keys-1", ourDid),
-		Nonce:   nonce,
-	}
-
-	claimOptionsHash, err := utils.CanonicalizeAndHash(claimOptions)
-	if err != nil {
-		utils.SendError(err, w)
-		return
-	}
-
-	rVcSig, err := walletFactory.Crypto().RS256Signature(ourDid, append(claimDocumentHash, claimOptionsHash...))
-	if err != nil {
-		log.Println("error with sig:", err.Error())
-		utils.SendError(err, w)
-		return
-	}
-
-	claimDocument.Proof = &utils.Proof{
-		Typ:            "RsaSignature2018",
-		Created:        claimOptions.Created,
-		Creator:        claimOptions.Creator,
-		Nonce:          nonce,
-		SignatureValue: rVcSig,
-	}
-
-	claimDocumentJson, err := json.Marshal(claimDocument)
-	if err != nil {
-		utils.SendError(err, w)
-		return
-	}
-
-	rp, err := messaging.RatchetEncrypt(pairwiseDoc.Id, string(claimDocumentJson))
-	if err != nil {
-		utils.SendError(err, w)
-		return
-	}
-
-	ratchetPayloadDto := RatchetedPayload{
-		Sender:  ourDid,
-		Dhs:     rp.DHs,
-		Pn:      rp.PN,
-		Ns:      rp.Ns,
-		Payload: rp.Payload,
-	}
-
-	rpJson, err:= json.Marshal(ratchetPayloadDto)
-	if err != nil {
-		utils.SendError(err, w)
-		return
-	}
-
-	res := Message{
-		Type:"sgi-onboarding",
-		Subject: ourDid,
-		Payload: string(rpJson),
-	}
-
-	utils.WriteJSON(res, http.StatusOK, w)
-}
-
-func (t *TrustProvider) registerWithDid(w http.ResponseWriter, r *http.Request) {
-	logger := utils.Logger(r.Context())
-
-	var body interface{}
-	err := utils.ReadBody(&body, r)
-	if err != nil {
-		logger.Errorf("Problem unmarshalling onboarding request body", "error", err.Error())
-		utils.SetErrorStatus(err, http.StatusBadRequest, w)
-		return
-	}
-	fmt.Print(body)
-
-	/* Decrpyt the body -> double ratchet...*/
-
-	//payload, err := wallet.Messaging.RatchetDecrypt(cont, rp)
-
-	/* Parse send the payload ot the register func() */
-	//t.register(w, r) <- this method will handle the onboarding with SGI
-	// parse out the parameters
-	// update account
-	// verify the claim
-	// send the token back to id1
-	// send a push notificaiton back to the phone with encrypted message
 }
 
 //TODO: Clean up, Move to the did folder maybe?
@@ -414,14 +216,14 @@ func (t *TrustProvider) getDidDoc(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
 
-	walletFactory, err := wallet.Open([]byte(os.Getenv("MASTER_KEY")), DefaultWalletId)
+	wa, err := wallet.Open([]byte(os.Getenv("MASTER_KEY")), DefaultWalletId)
 	if err != nil {
 		logger.Errorf("error opening the wallet:", err.Error())
 		utils.WriteJSON(err, http.StatusInternalServerError, w)
 		return
 	}
 
-	ddoc, err := walletFactory.SGIDidDoc().Read(id)
+	ddoc, err := wa.Dids().Read(id)
 	if err != nil {
 		logger.Errorf("error retrieving the did document:", err.Error())
 		return
@@ -443,6 +245,65 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 		logger.Errorf("Problem unmarshalling onboarding request body", "error", err.Error())
 		utils.SetErrorStatus(err, http.StatusBadRequest, w)
 		return
+	}
+
+	var iAmMeCredential *did.VerifiableClaim
+	var pairwiseDoc *did.Document
+
+	if b, ok := body.(map[string]interface{}); ok {
+		if b["sender"] != nil && b["dhs"] != nil && b["pn"] != nil && b["ns"] != nil && b["payload"] != nil {
+			// Must be an encrypted payload!
+			logger := utils.Logger(r.Context())
+
+			walletFactory, err := wallet.Open([]byte(os.Getenv("MASTER_KEY")), DefaultWalletId)
+			messaging := walletFactory.Messaging()
+
+			var ratchetPayload = wallet.RatchetPayload{}
+			err = utils.ReadBody(&ratchetPayload, r)
+			if err != nil {
+				logger.Errorf("Problem unmarshalling onboarding request ratchetPayload", "error", err.Error())
+				utils.SetErrorStatus(err, http.StatusBadRequest, w)
+				return
+			}
+
+			ourDid := os.Getenv("DID")
+			pairwiseDoc, err = t.createPairwiseDid(walletFactory)
+			if err != nil {
+				utils.SendError(err, w)
+				return
+			}
+
+			err = messaging.InitDoubleRatchetWithWellKnownPublicKey(ourDid, pairwiseDoc.Id, ratchetPayload.InitializationKey)
+			if err != nil {
+				utils.SendError(err, w)
+				return
+			}
+
+			payload, err := messaging.RatchetDecrypt(pairwiseDoc.Id, &ratchetPayload)
+			if err != nil {
+				utils.SendError(err, w)
+				return
+			}
+			err = json.Unmarshal([]byte(payload), &body)
+			if err != nil {
+				utils.SendError(err, w)
+				return
+			}
+
+			var ve []string
+			iAmMeCredential, ve = t.parseVerifiableCredential(body, []string{did.VerifiableCredential, did.IAmMeCredential}, logger)
+			if len(ve) > 0 {
+				e, err := json.Marshal(ve)
+				if err == nil {
+					err = errors.New(string(e))
+				}
+				logger.Errorf("Problem verifying the Verifiable Credential", "error", ve)
+				utils.SetErrorStatus(err, http.StatusBadRequest, w)
+				return
+			}
+
+			body = iAmMeCredential.Claim
+		}
 	}
 
 	s, n, b, err := t.parseParameters(body, t.onboarding.Parameters, r)
@@ -470,34 +331,32 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 			res := trustProviderResponse{Status: false, OnBoardingRequired: true}
 			utils.WriteJSON(res, http.StatusInternalServerError, w)
 		} else {
-			var vc *did.VerifiableClaim
-			if t.didIsConfigured() {
+			var vc *wallet.RatchetPayload
 
-				iAmMeCredential, ve := t.parseVerifiableCredential(body, "iAmMeCredential", []string{did.VerifiableCredential, did.IAmMeCredential}, logger)
-				if len(ve) > 0 {
-					e, err := json.Marshal(ve)
-					if err == nil {
-						err = errors.New(string(e))
-					}
-					logger.Errorf("Problem verifying the Verifiable Credential", "error", ve)
-					utils.SetErrorStatus(err, http.StatusBadRequest, w)
+			if iAmMeCredential != nil {
+				subject := iAmMeCredential.Claim[did.SubjectClaim].(string)
+
+				ac := make(map[string]interface{})
+				ac[did.TokenClaim] = token
+
+				claim, _ := t.generateVerifiableClaim(ac, subject, token, []string{did.VerifiableCredential, did.TokenizedConnectionCredential})
+				if err != nil {
+					logger.Errorf("Problem generating a verifiable credential response", "error", err.Error())
+					utils.SetErrorStatus(err, http.StatusInternalServerError, w)
 					return
 				}
 
-				if iAmMeCredential != nil {
-					subject := iAmMeCredential.Claim[did.SubjectClaim].(string)
+				c, _ := json.Marshal(claim)
 
-					ac := make(map[string]interface{})
-					ac[did.TokenClaim] = token
-
-					claim, _ := t.generateVerifiableClaim(ac, subject, token, []string{did.VerifiableCredential, did.TokenizedConnectionCredential})
-					if err != nil {
-						logger.Errorf("Problem generating a verifiable credential response", "error", err.Error())
-						utils.SetErrorStatus(err, http.StatusInternalServerError, w)
-						return
-					}
-					vc = &claim
+				rp, err := t.wallet.Messaging().RatchetEncrypt(pairwiseDoc.Id, string(c))
+				if err != nil {
+					utils.SendError(err, w)
+					return
 				}
+
+				rp.Sender = os.Getenv("DID")
+
+				vc = rp
 			}
 
 			res := trustProviderResponse{Status: true, OnBoardingRequired: false, Token: token, VerifiableClaim: vc}
@@ -510,53 +369,47 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (t *TrustProvider) parseVerifiableCredential(body interface{}, attributeName string, types []string, logger *zap.SugaredLogger) (*did.VerifiableClaim, []string) {
+func (t *TrustProvider) parseVerifiableCredential(body interface{}, types []string, logger *zap.SugaredLogger) (*did.VerifiableClaim, []string) {
 	var iAmMeCredential *did.VerifiableClaim
 	var ve []string
 	logger.Infow("Checking for Verifiable Credential...")
-	if b, ok := body.(map[string]interface{}); ok && b[attributeName] != nil {
-		vc, err := json.Marshal(b[attributeName])
+	vc, err := json.Marshal(body)
+	if err != nil {
+		ve = append(ve, fmt.Sprintf("Unable to unmarshal Verifiable Credential."))
+	} else {
+		var cred did.VerifiableClaim
+		err = json.Unmarshal(vc, &cred)
 		if err != nil {
 			ve = append(ve, fmt.Sprintf("Unable to unmarshal Verifiable Credential."))
 		} else {
-			var cred did.VerifiableClaim
-			err = json.Unmarshal(vc, &cred)
-			if err != nil {
-				ve = append(ve, fmt.Sprintf("Unable to unmarshal Verifiable Credential."))
-			} else {
-				iAmMeCredential = &cred
+			iAmMeCredential = &cred
 
-				err = cred.Verify(types, cred.Proof.Nonce, t.resolver)
-				if err != nil {
-					log.Println(err.Error())
-					ve = append(ve, fmt.Sprintf("Unable to verify Verifiable Credential."))
-				}
+			err = cred.Verify(types, cred.Proof.Nonce, t.resolver)
+			if err != nil {
+				log.Println(err.Error())
+				ve = append(ve, fmt.Sprintf("Unable to verify Verifiable Credential."))
 			}
 		}
-	} else {
-		logger.Infow("Verifiable Credential not found.")
 	}
+
 	return iAmMeCredential, ve
 }
 
-func (t *TrustProvider) didIsConfigured() bool {
-	return t.did != ""
-}
-
-func (t *TrustProvider) generateVerifiableClaim(ac map[string]interface{}, subject string, id string, types []string) (did.VerifiableClaim, error) {
+func (t *TrustProvider) generateVerifiableClaim(ac map[string]interface{}, subject string, token string, types []string) (did.VerifiableClaim, error) {
+	id := os.Getenv("DID")
 
 	ac[did.SubjectClaim] = subject
-	ac[did.PublicKeyClaim] = fmt.Sprintf("%s#keys-1", t.did)
+	ac[did.PublicKeyClaim] = fmt.Sprintf("%s#keys-1", token)
 
 	var claim = did.Claim{
-		id,
-		types,
-		t.did,
-		time.Now().Format("2006-01-02"),
-		ac,
+		Id:     id,
+		Type:   types,
+		Issuer: id,
+		Issued: time.Now().Format("2006-01-02"),
+		Claim:  ac,
 	}
 
-	return claim.Sign(t.privateKey, uuid.New().String())
+	return claim.WalletSign(t.wallet, id, uuid.New().String())
 }
 
 func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
@@ -597,43 +450,42 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 		}
 
 		if status {
-			var vc *did.VerifiableClaim
-			if t.didIsConfigured() {
-				connectionClaim, ve := t.parseVerifiableCredential(body, "verifiableClaim", []string{did.VerifiableCredential, did.TokenizedConnectionCredential}, logger)
-				if len(ve) > 0 {
-					e, err := json.Marshal(ve)
-					if err == nil {
-						err = errors.New(string(e))
-					}
-
-					logger.Errorf("Problem verifying Verifiable Credential", "error", err.Error())
-
-					utils.SetErrorStatus(err, http.StatusBadRequest, w)
-					return
-				}
-
-				if connectionClaim != nil {
-					ac := make(map[string]interface{})
-					for k, v := range s {
-						ac[k] = v
-					}
-					for k, v := range n {
-						ac[k] = v
-					}
-					for k, v := range b {
-						ac[k] = v
-					}
-
-					claim, err := t.generateVerifiableClaim(ac, connectionClaim.Claim[did.SubjectClaim].(string), uuid.New().String(), rule.Claims)
-					if err != nil {
-						logger.Error("error", err.Error())
-						utils.SetErrorStatus(err, http.StatusInternalServerError, w)
-						return
-					}
-					vc = &claim
-				}
-			}
-			utils.WriteJSON(trustProviderResponse{Status: status, VerifiableClaim: vc}, http.StatusOK, w)
+			//var vc *did.VerifiableClaim
+			//connectionClaim, ve := t.parseVerifiableCredential(body, []string{did.VerifiableCredential, did.TokenizedConnectionCredential}, logger)
+			//if len(ve) > 0 {
+			//	e, err := json.Marshal(ve)
+			//	if err == nil {
+			//		err = errors.New(string(e))
+			//	}
+			//
+			//	logger.Errorf("Problem verifying Verifiable Credential", "error", err.Error())
+			//
+			//	utils.SetErrorStatus(err, http.StatusBadRequest, w)
+			//	return
+			//}
+			//
+			//if connectionClaim != nil {
+			//	ac := make(map[string]interface{})
+			//	for k, v := range s {
+			//		ac[k] = v
+			//	}
+			//	for k, v := range n {
+			//		ac[k] = v
+			//	}
+			//	for k, v := range b {
+			//		ac[k] = v
+			//	}
+			//
+			//	claim, err := t.generateVerifiableClaim(ac, connectionClaim.Claim[did.SubjectClaim].(string), uuid.New().String(), rule.Claims)
+			//	if err != nil {
+			//		logger.Error("error", err.Error())
+			//		utils.SetErrorStatus(err, http.StatusInternalServerError, w)
+			//		return
+			//	}
+			//	vc = &claim
+			//}
+			//utils.WriteJSON(trustProviderResponse{Status: status, VerifiableClaim: vc}, http.StatusOK, w)
+			utils.WriteJSON(trustProviderResponse{Status: status}, http.StatusOK, w)
 		} else {
 			utils.WriteJSON(trustProviderResponse{Status: status}, http.StatusOK, w)
 		}
@@ -641,6 +493,11 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 }
 
 func applyNewRelic(pattern string, handler http.Handler) (string, http.Handler) {
+	if os.Getenv("NEW_RELIC_APP_NAME") == "" || os.Getenv("NEW_RELIC_LICENSE_KEY") == "" {
+		log.Println("New Relic not configured...")
+		return pattern, handler
+	}
+
 	newRelicConfig := newrelic.NewConfig(os.Getenv("NEW_RELIC_APP_NAME"), os.Getenv("NEW_RELIC_LICENSE_KEY"))
 	app, err := newrelic.NewApplication(newRelicConfig)
 	if err != nil {
@@ -658,24 +515,11 @@ func applyNewRelic(pattern string, handler http.Handler) (string, http.Handler) 
 func New(onboarding Onboarding, rules []Rule, account Account, resolver did.ResolverInterface) TrustProvider {
 	t := TrustProvider{onboarding: onboarding, rules: rules, account: account, router: mux.NewRouter(), resolver: resolver}
 
-	t.did = os.Getenv("DID")
-	if t.did != "" {
-		privateKeyPem := os.Getenv("PRIVATE_KEY_PEM")
-		privateKey, err := ssh.ParseRawPrivateKey([]byte(privateKeyPem))
-		if err != nil {
-			panic(err.Error())
-		}
-		if pk, ok := privateKey.(*rsa.PrivateKey); ok {
-			t.privateKey = pk
-		} else {
-			panic("expected RSA private key")
-		}
+	if os.Getenv("DID") != "" {
+		t.initAdapterDid()
 	}
 
 	t.router.HandleFunc("/api/register", t.register).Methods("POST")
-	t.router.HandleFunc("/api/did/{id}", t.getDidDoc).Methods("GET")
-	t.router.HandleFunc("/api/did/invite", t.initiateContact).Methods("POST")
-	t.router.HandleFunc("/api/did/register", t.registerWithDid).Methods("POST")
 
 	for _, rule := range rules {
 		t.router.HandleFunc(fmt.Sprintf("/api/%s/{token}", rule.Name), t.handleRule(rule)).Methods("POST")
@@ -689,6 +533,71 @@ func New(onboarding Onboarding, rules []Rule, account Account, resolver did.Reso
 		t.port = "3000"
 	}
 	return t
+}
+
+func (t *TrustProvider) initAdapterDid() (error) {
+	id := os.Getenv("DID")
+	if id == "" {
+		log.Fatalf("Missing environment variable DID")
+	}
+	masterKey := os.Getenv("MASTER_KEY")
+
+	if w, err := wallet.Open([]byte(masterKey), "wallet.db"); err == nil {
+		t.wallet = w
+
+		d, _ := w.Dids().Read(id)
+		if err != nil {
+			fmt.Println("error opening wallet:", err.Error())
+			return err
+		}
+		if len(d) > 0 {
+			fmt.Println("SGI DID Doc already exist")
+			return nil
+		}
+	}
+
+	w, err := wallet.Create([]byte(masterKey), DefaultWalletId)
+	if err != nil {
+		fmt.Println("error opening wallet: ", err.Error())
+		return err
+	}
+
+	t.wallet = w
+
+	rsaPublicKey, err := w.Crypto().GenerateRSAKey("RsaVerificationKey2018", id)
+	if err != nil {
+		return err
+	}
+
+	ed25519PublicKey, err := w.Crypto().GenerateEd25519Key("Ed25519KeyExchange2018", id)
+	if err != nil {
+		return err
+	}
+
+	doc := &did.Document{
+		Id:             id,
+		PublicKey:      []did.PublicKey{{Owner: id, Id: fmt.Sprintf("%s#keys-1", id), PublicKeyPem: rsaPublicKey, T: "RsaVerificationKey2018"}, {Owner: id, Id: fmt.Sprintf("%s#keys-2", id), T: "Ed25519KeyExchange2018", PublicKeyBase58: ed25519PublicKey}},
+		Authentication: []did.Authentication{{T: "RsaVerificationKey2018", PublicKey: fmt.Sprintf("%s#keys-1", id)}},
+		Context:        "https://w3id.org/did/v1",
+	}
+
+	docJson, err := json.Marshal(doc)
+	if err != nil {
+		return errors.New("error marshalling ddoc")
+	}
+
+	err = w.Dids().Create(id, string(docJson), nil)
+	if err != nil {
+		fmt.Println("error storing the did doc:", err.Error())
+	}
+
+	log.Println("Adapter DID document created.")
+
+	t.resolver.Register(doc)
+
+	return nil
+
+	//TODO: Check eeze service to see if the ddoc has been published!
 }
 
 func (t *TrustProvider) ListenAndServe() error {

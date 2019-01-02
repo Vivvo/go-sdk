@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strings"
 )
 
 type ErrorDto struct {
@@ -23,7 +24,7 @@ func SetErrorStatus(e error, s int, w http.ResponseWriter) {
 	WriteJSON(b, s, w)
 }
 
-func SendError (err error, w http.ResponseWriter) {
+func SendError(err error, w http.ResponseWriter) {
 	switch err {
 	case sql.ErrNoRows:
 		SetErrorStatus(err, http.StatusNotFound, w)
@@ -50,6 +51,8 @@ func WriteJSON(v interface{}, s int, w http.ResponseWriter) {
 
 func ReadBody(v interface{}, r *http.Request) error {
 	b, err := ioutil.ReadAll(r.Body)
+
+	r.Body = ioutil.NopCloser(strings.NewReader(string(b)))
 
 	if len(b) == 0 {
 		return nil
