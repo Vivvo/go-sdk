@@ -593,7 +593,10 @@ func (t *TrustProvider) initAdapterDid() (error) {
 
 	log.Println("Adapter DID document created.")
 
-	t.resolver.Register(doc)
+	err = t.resolver.Register(doc)
+	if err != nil {
+		fmt.Println("error registering the did doc:", err.Error())
+	}
 
 	return nil
 
