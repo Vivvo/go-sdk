@@ -612,6 +612,13 @@ func (t *TrustProvider) initAdapterDid() (error) {
 	}
 	masterKey := os.Getenv("MASTER_KEY")
 
+	//TODO: Check eeze service to see if the ddoc has been published!
+	_, err := t.resolver.Resolve(id)
+	if err == nil {
+		log.Println("DID already published")
+		return nil
+	}
+
 	if w, err := wallet.Open([]byte(masterKey), "wallet.db"); err == nil {
 		t.wallet = w
 
@@ -621,7 +628,7 @@ func (t *TrustProvider) initAdapterDid() (error) {
 			return err
 		}
 		if len(d) > 0 {
-			fmt.Println("SGI DID Doc already exist")
+			fmt.Println("Adapter DID doc already exist")
 			return nil
 		}
 	}
@@ -661,16 +668,15 @@ func (t *TrustProvider) initAdapterDid() (error) {
 		fmt.Println("error storing the did doc:", err.Error())
 	}
 
-	log.Println("Adapter DID document created.")
-
 	err = t.resolver.Register(doc)
 	if err != nil {
 		fmt.Println("error registering the did doc:", err.Error())
 	}
 
+	log.Println("Adapter DID document created.")
+
 	return nil
 
-	//TODO: Check eeze service to see if the ddoc has been published!
 }
 
 func (t *TrustProvider) ListenAndServe() error {

@@ -3,12 +3,10 @@ package did
 import (
 	"crypto/rsa"
 	"crypto/x509"
-	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
 	"github.com/go-resty/resty"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -74,21 +72,21 @@ func (d *Document) GetPublicKeyById(id string) (*rsa.PublicKey, error) {
 
 func (d *Resolver) Resolve(did string) (*Document, error) {
 	// Get user DID from blockchain
-	response, err := (&http.Client{}).Get(os.Getenv("MOCK_BLOCKCHAIN_URL") + did)
+
+	var didDocument = Document{}
+
+	resp, err := resty.New().R().
+		SetResult(&didDocument).
+		Get(fmt.Sprintf("%s/api/v1/did/%s", os.Getenv("MOCK_BLOCKCHAIN_URL"), did))
+
 	if err != nil {
 		return nil, err
 	}
 
-	body, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		return nil, err
+	if resp.StatusCode() != http.StatusOK {
+		return nil, errors.New(resp.Status())
 	}
 
-	var didDocument Document
-	err = json.Unmarshal(body, &didDocument)
-	if err != nil {
-		return nil, err
-	}
 	return &didDocument, nil
 }
 
