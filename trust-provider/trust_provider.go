@@ -265,6 +265,15 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 
 			var ratchetPayload = wallet.RatchetPayload{}
 			err = utils.ReadBody(&ratchetPayload, r)
+
+			//FIXME: Just for debugging!
+			log.Println(ratchetPayload.InitializationKey)
+			log.Println(ratchetPayload.Sender)
+			log.Println(ratchetPayload.DHs)
+			log.Println(ratchetPayload.Ns)
+			log.Println(ratchetPayload.PN)
+			log.Println(ratchetPayload.Payload)
+
 			if err != nil {
 				logger.Errorf("Problem unmarshalling onboarding request ratchetPayload", "error", err.Error())
 				utils.SetErrorStatus(err, http.StatusBadRequest, w)
