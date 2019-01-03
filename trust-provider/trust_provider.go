@@ -251,7 +251,12 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 	var pairwiseDoc *did.Document
 
 	if b, ok := body.(map[string]interface{}); ok {
-		if b["sender"] != nil && b["dhs"] != nil && b["pn"] != nil && b["ns"] != nil && b["payload"] != nil {
+
+		//FIXME: Don't leave this here!
+		j, _ := json.Marshal(b)
+		log.Println(string(j))
+
+		if b["sender"] != nil && b["dhs"] != nil && b["pn"] != nil && b["ns"] != nil && b["payload"] != nil && b["initializationKey"] != nil {
 			// Must be an encrypted payload!
 			logger := utils.Logger(r.Context())
 
