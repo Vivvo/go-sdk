@@ -641,12 +641,12 @@ func (t *TrustProvider) initAdapterDid() (error) {
 
 	t.wallet = w
 
-	rsaPublicKey, err := w.Crypto().GenerateRSAKey("RsaVerificationKey2018", id)
+	rsaPublicKey, err := t.wallet.Crypto().GenerateRSAKey("RsaVerificationKey2018", id)
 	if err != nil {
 		return err
 	}
 
-	ed25519PublicKey, err := w.Crypto().GenerateEd25519Key("Ed25519KeyExchange2018", id)
+	ed25519PublicKey, err := t.wallet.Crypto().GenerateEd25519Key("Ed25519KeyExchange2018", id)
 	if err != nil {
 		return err
 	}
