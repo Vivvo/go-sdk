@@ -268,8 +268,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 			// Must be an encrypted payload!
 			logger := utils.Logger(r.Context())
 
-			walletFactory, err := wallet.Open([]byte(os.Getenv("MASTER_KEY")), DefaultWalletId)
-			messaging := walletFactory.Messaging()
+			messaging := t.wallet.Messaging()
 
 			var ratchetPayload = wallet.RatchetPayload{}
 			err = utils.ReadBody(&ratchetPayload, r)
@@ -289,7 +288,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 			}
 
 			ourDid := os.Getenv("DID")
-			pairwiseDoc, err = t.createPairwiseDid(walletFactory)
+			pairwiseDoc, err = t.createPairwiseDid(t.wallet)
 			if err != nil {
 				utils.SendError(err, w)
 				return
@@ -619,7 +618,7 @@ func (t *TrustProvider) initAdapterDid() (error) {
 		return nil
 	}
 
-	if w, err := wallet.Open([]byte(masterKey), "wallet.db"); err == nil {
+	if w, err := wallet.Open([]byte(masterKey), DefaultWalletId); err == nil {
 		t.wallet = w
 
 		d, _ := w.Dids().Read(id)
