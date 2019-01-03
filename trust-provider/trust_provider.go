@@ -686,7 +686,7 @@ func (d *DefaultAccount) Read(token string) (interface{}, error) {
 
 	for _, record := range records {
 		if record.Token == token {
-			return record, nil
+			return record.Account, nil
 		}
 	}
 

@@ -583,8 +583,6 @@ func TestSave(t *testing.T) {
 
 				if record == nil {
 					t.Errorf("No record found")
-				} else if strings.Compare(tt.token.String(), a.Token) != 0 {
-					t.Errorf("Invalid token, expected: %s, actual; %s", tt.token, a.Token)
 				}
 
 				if ta, ok := tt.account.(MockDevDBRecord); ok {
