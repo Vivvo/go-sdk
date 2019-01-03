@@ -48,11 +48,10 @@ type Rule struct {
 }
 
 type SubscribedObject struct {
-	Name       string
-	Parameters []Parameter
-	SubscribedObjectFunc   func(s map[string]string, n map[string]float64, b map[string]bool, acct interface{}) (bool, error)
+	Name                 string
+	Parameters           []Parameter
+	SubscribedObjectFunc func(s map[string]string, n map[string]float64, b map[string]bool, acct interface{}) (bool, error)
 }
-
 
 type trustProviderResponse struct {
 	Status             bool                   `json:"value"`
@@ -98,14 +97,14 @@ type Account interface {
 // The rules endpoints will follow this pattern:
 //     /api/{Rule.Name}/{token}
 type TrustProvider struct {
-	onboarding Onboarding
-	rules      []Rule
-	subscribedObject	[]SubscribedObject
-	router     *mux.Router
-	account    Account
-	port       string
-	resolver   did.ResolverInterface
-	wallet     *wallet.Wallet
+	onboarding       Onboarding
+	rules            []Rule
+	subscribedObject []SubscribedObject
+	router           *mux.Router
+	account          Account
+	port             string
+	resolver         did.ResolverInterface
+	wallet           *wallet.Wallet
 }
 
 func (t *TrustProvider) parseParameters(body interface{}, params []Parameter, r *http.Request) (map[string]string, map[string]float64, map[string]bool, error) {
@@ -259,11 +258,6 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 	var pairwiseDoc *did.Document
 
 	if b, ok := body.(map[string]interface{}); ok {
-
-		//FIXME: Don't leave this here!
-		j, _ := json.Marshal(b)
-		log.Println(string(j))
-
 		if b["sender"] != nil && b["dhs"] != nil && b["pn"] != nil && b["ns"] != nil && b["payload"] != nil && b["initializationKey"] != nil {
 			// Must be an encrypted payload!
 			logger := utils.Logger(r.Context())
@@ -272,14 +266,6 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 
 			var ratchetPayload = wallet.RatchetPayload{}
 			err = utils.ReadBody(&ratchetPayload, r)
-
-			//FIXME: Just for debugging!
-			log.Println(ratchetPayload.InitializationKey)
-			log.Println(ratchetPayload.Sender)
-			log.Println(ratchetPayload.DHs)
-			log.Println(ratchetPayload.Ns)
-			log.Println(ratchetPayload.PN)
-			log.Println(ratchetPayload.Payload)
 
 			if err != nil {
 				logger.Errorf("Problem unmarshalling onboarding request ratchetPayload", "error", err.Error())
@@ -403,6 +389,8 @@ func (t *TrustProvider) parseVerifiableCredential(body interface{}, types []stri
 		if err != nil {
 			ve = append(ve, fmt.Sprintf("Unable to unmarshal Verifiable Credential."))
 		} else {
+			t.wallet.Dids().Create(cred.Claim[did.SubjectClaim].(string), cred.Claim["ddoc"].(string), nil)
+
 			iAmMeCredential = &cred
 
 			err = cred.Verify(types, cred.Proof.Nonce, t.resolver)
@@ -549,7 +537,6 @@ func (t *TrustProvider) handleSubscribedObject(subscribedObject SubscribedObject
 			return
 		}
 
-
 		utils.WriteJSON(trustProviderResponse{Status: status}, http.StatusOK, w)
 
 	})
@@ -573,6 +560,27 @@ func applyNewRelic(pattern string, handler http.Handler) (string, http.Handler) 
 	return pattern, handler
 }
 
+type WalletResolver struct {
+	resolver did.ResolverInterface
+	wallet   *wallet.Wallet
+}
+
+func (wr *WalletResolver) Resolve(id string) (*did.Document, error) {
+	j, err := wr.wallet.Dids().Read(id)
+	if err != nil || j == "" {
+		return wr.resolver.Resolve(id)
+	}
+
+	var ddoc = did.Document{}
+	err = json.Unmarshal([]byte(j), &ddoc)
+
+	return &ddoc, err
+}
+
+func (wr *WalletResolver) Register(ddoc *did.Document) error {
+	return wr.resolver.Register(ddoc)
+}
+
 // Create a new TrustProvider. Based on the onboarding, rules and account objects you pass in
 // this will bootstrap an http server with onboarding and rules endpoints exposed.
 func New(onboarding Onboarding, rules []Rule, subscribedObjects []SubscribedObject, account Account, resolver did.ResolverInterface) TrustProvider {
@@ -591,8 +599,6 @@ func New(onboarding Onboarding, rules []Rule, subscribedObjects []SubscribedObje
 	for _, rule := range rules {
 		t.router.HandleFunc(fmt.Sprintf("/api/%s/{token}", rule.Name), t.handleRule(rule)).Methods("POST")
 	}
-
-
 
 	http.Handle(applyNewRelic("/", handlers.LoggingHandler(os.Stdout, utils.CorrelationIdMiddleware(t.router))))
 
@@ -620,6 +626,8 @@ func (t *TrustProvider) initAdapterDid() (error) {
 
 	if w, err := wallet.Open([]byte(masterKey), DefaultWalletId); err == nil {
 		t.wallet = w
+		wr := WalletResolver{resolver: t.resolver, wallet: t.wallet}
+		t.resolver = &wr
 
 		d, _ := w.Dids().Read(id)
 		if err != nil {
@@ -639,6 +647,8 @@ func (t *TrustProvider) initAdapterDid() (error) {
 	}
 
 	t.wallet = w
+	wr := WalletResolver{resolver: t.resolver, wallet: t.wallet}
+	t.resolver = &wr
 
 	rsaPublicKey, err := t.wallet.Crypto().GenerateRSAKey("RsaVerificationKey2018", id)
 	if err != nil {

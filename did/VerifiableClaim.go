@@ -124,7 +124,7 @@ func (vc *Claim) WalletSign(w *wallet.Wallet, id string, nonce string) (Verifiab
 	return claim, nil
 }
 
-func (vc *VerifiableClaim) Verify(types []string, nonce string, resolver ResolverInterface) error {
+func (vc *VerifiableClaim)  Verify(types []string, nonce string, resolver ResolverInterface) error {
 
 	if nonce != "" && strings.Compare(nonce, vc.Proof.Nonce) != 0 {
 		return errors.New("invalid nonce")
