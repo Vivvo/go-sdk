@@ -32,7 +32,7 @@ type ObjectCapability struct {
 	Caveat           []Caveat            `json:"caveat,omitempty"`
 	Creator          string              `json:"creator"`
 	Capabilities     map[string][]string `json:"capabilities"` // key is url to entity, values are action urls
-	Proof      		 *utils.Proof  		 `json:"proof,omitempty"`
+	Proof            *utils.Proof        `json:"proof,omitempty"`
 }
 
 type Caveat struct {
@@ -40,14 +40,14 @@ type Caveat struct {
 
 func (c *Capability) Sign(privateKey *rsa.PrivateKey) (ObjectCapability, error) {
 	oCap := ObjectCapability{
-		Id: c.Id,
-		Name: c.Name,
-		Description: c.Description,
+		Id:               c.Id,
+		Name:             c.Name,
+		Description:      c.Description,
 		ParentCapability: c.ParentCapability,
-		Invoker: c.Invoker,
-		Caveat: c.Caveat,
-		Creator: c.Creator,
-		Capabilities: c.Capabilities,
+		Invoker:          c.Invoker,
+		Caveat:           c.Caveat,
+		Creator:          c.Creator,
+		Capabilities:     c.Capabilities,
 	}
 
 	proof := utils.Proof{
@@ -72,7 +72,7 @@ func (o *ObjectCapability) Verify(resolver ResolverInterface) error {
 
 	//TODO: Check a revocation list to make sure the ocap is not revoked!
 
-	fmt.Println("creator: %s",o.Creator)
+	fmt.Printf("creator: %s", o.Creator)
 	// FIXME: Utility to do this with some validation!
 	did := strings.Split(o.Creator, "#")[0]
 

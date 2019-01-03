@@ -113,7 +113,7 @@ func TestOnboarding(t *testing.T) {
 				return nil
 			})
 
-			tp := New(onboarding, nil, &mockAccount, &MockResolver{})
+			tp := New(onboarding, nil, nil, &mockAccount, &MockResolver{})
 
 			executeRequest := func(req *http.Request) *httptest.ResponseRecorder {
 				rr := httptest.NewRecorder()
@@ -174,7 +174,7 @@ func TestOnboardingFuncNotConfigured(t *testing.T) {
 		OnboardingFunc: nil,
 	}
 
-	tp := New(onboarding, nil, nil, &MockResolver{})
+	tp := New(onboarding, nil, nil, nil, &MockResolver{})
 
 	executeRequest := func(req *http.Request) *httptest.ResponseRecorder {
 		rr := httptest.NewRecorder()
@@ -219,7 +219,7 @@ func _TestSaveFuncNotConfigured(t *testing.T) {
 		},
 	}
 
-	tp := New(onboarding, nil, nil, &MockResolver{})
+	tp := New(onboarding, nil, nil, nil, &MockResolver{})
 
 	executeRequest := func(req *http.Request) *httptest.ResponseRecorder {
 		rr := httptest.NewRecorder()
@@ -274,7 +274,7 @@ func TestSaveFuncConfigured(t *testing.T) {
 		return nil
 	})
 
-	tp := New(onboarding, nil, &mockAccount, &MockResolver{})
+	tp := New(onboarding, nil, nil, &mockAccount, &MockResolver{})
 
 	executeRequest := func(req *http.Request) *httptest.ResponseRecorder {
 		rr := httptest.NewRecorder()
@@ -323,7 +323,7 @@ func TestParameters(t *testing.T) {
 			mockAccount := MockAccount{}
 			mockAccount.SetUpdateFunc(func(account interface{}, token string) error { return nil })
 
-			tp := New(onboarding, nil, &mockAccount, &MockResolver{})
+			tp := New(onboarding, nil, nil, &mockAccount, &MockResolver{})
 
 			executeRequest := func(req *http.Request) *httptest.ResponseRecorder {
 				rr := httptest.NewRecorder()
@@ -380,7 +380,7 @@ func TestOnboardingCalledWithParams(t *testing.T) {
 	mockAccount := MockAccount{}
 	mockAccount.SetUpdateFunc(func(account interface{}, token string) error { return nil })
 
-	tp := New(onboarding, nil, &mockAccount, &MockResolver{})
+	tp := New(onboarding, nil, nil, &mockAccount, &MockResolver{})
 
 	executeRequest := func(req *http.Request) *httptest.ResponseRecorder {
 		rr := httptest.NewRecorder()
@@ -500,7 +500,7 @@ func TestRules(t *testing.T) {
 				return MockAccountObj{AccountId: 1234567890, Age: 30}, nil
 			})
 
-			tp := New(onboarding, tt.Rules, &mockAccount, &MockResolver{})
+			tp := New(onboarding, tt.Rules, nil, &mockAccount, &MockResolver{})
 
 			executeRequest := func(req *http.Request) *httptest.ResponseRecorder {
 				rr := httptest.NewRecorder()
@@ -583,8 +583,6 @@ func TestSave(t *testing.T) {
 
 				if record == nil {
 					t.Errorf("No record found")
-				} else if strings.Compare(tt.token.String(), a.Token) != 0 {
-					t.Errorf("Invalid token, expected: %s, actual; %s", tt.token, a.Token)
 				}
 
 				if ta, ok := tt.account.(MockDevDBRecord); ok {

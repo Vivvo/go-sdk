@@ -7,6 +7,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"github.com/go-resty/resty"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -25,11 +26,11 @@ type Authentication struct {
 }
 
 type PublicKey struct {
-	Id                 string             `json:"id"`
-	T                  string             `json:"type"`
-	Owner              string             `json:"owner"`
-	PublicKeyPem       string             `json:"publicKeyPem"`
-	PublicKeyBase58    string             `json:"publicKeyBase58"`
+	Id              string `json:"id"`
+	T               string `json:"type"`
+	Owner           string `json:"owner"`
+	PublicKeyPem    string `json:"publicKeyPem"`
+	PublicKeyBase58 string `json:"publicKeyBase58"`
 }
 
 type Document struct {
@@ -92,5 +93,20 @@ func (d *Resolver) Resolve(did string) (*Document, error) {
 }
 
 func (d *Resolver) Register(ddoc *Document) error {
-	return errors.New("not implemented")
+
+	var body = struct {
+		DidDocument *Document `json:"didDocument"`
+	}{ddoc}
+
+	_, err := resty.New().
+		R().
+		SetBody(&body).
+		Post(fmt.Sprintf("%s/api/v1/did", os.Getenv("MOCK_BLOCKCHAIN_URL")))
+
+	if err != nil {
+		log.Println(err.Error())
+		return err
+	}
+
+	return nil
 }
