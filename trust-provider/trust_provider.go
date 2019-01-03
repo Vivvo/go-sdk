@@ -48,10 +48,17 @@ type Rule struct {
 	Claims     []string
 }
 
+type SubscribedObject struct {
+	Name       string
+	Parameters []Parameter
+	SubscribedObjectFunc   func(s map[string]string, n map[string]float64, b map[string]bool, acct interface{}) (bool, error)
+}
+
+
 type trustProviderResponse struct {
 	Status             bool                 `json:"value"`
 	Message            string               `json:"message,omitempty"`
-	OnBoardingRequired bool                 `json:"onBoardingRequired"`
+	OnBoardingRequired bool                 `json:"onBoardingRequired,omitempty"`
 	Token              string               `json:"token,omitempty"`
 	VerifiableClaim    *did.VerifiableClaim `json:"verifiableClaim,omitempty"`
 }
@@ -92,14 +99,15 @@ type Account interface {
 // The rules endpoints will follow this pattern:
 //     /api/{Rule.Name}/{token}
 type TrustProvider struct {
-	onboarding Onboarding
-	rules      []Rule
-	router     *mux.Router
-	account    Account
-	port       string
-	did        string
-	privateKey *rsa.PrivateKey
-	resolver   did.ResolverInterface
+	onboarding 			Onboarding
+	rules      			[]Rule
+	subscribedObject	[]SubscribedObject
+	router     			*mux.Router
+	account    			Account
+	port       			string
+	did        			string
+	privateKey 			*rsa.PrivateKey
+	resolver   			did.ResolverInterface
 }
 
 func (t *TrustProvider) parseParameters(body interface{}, params []Parameter, r *http.Request) (map[string]string, map[string]float64, map[string]bool, error) {
@@ -218,6 +226,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 		utils.SetErrorStatus(err, http.StatusInternalServerError, w)
 		return
 	}
+
 	account, err, token := t.onboarding.OnboardingFunc(s, n, b)
 	if err == nil {
 		if token == "" {
@@ -400,6 +409,48 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 	})
 }
 
+func (t *TrustProvider) handleSubscribedObject(subscribedObject SubscribedObject) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		logger := utils.Logger(r.Context())
+
+		var body interface{}
+		err := utils.ReadBody(&body, r)
+		if err != nil {
+			logger.Error("error", err.Error())
+			utils.SetErrorStatus(err, http.StatusBadRequest, w)
+			return
+		}
+		s, n, b, err := t.parseParameters(body, subscribedObject.Parameters, r)
+		if err != nil {
+			logger.Error("error", err.Error())
+			utils.SetErrorStatus(err, http.StatusBadRequest, w)
+			return
+		}
+
+		vars := mux.Vars(r)
+		token := vars["token"]
+
+		acct, err := t.account.Read(token)
+		if err != nil {
+			logger.Error("error", err.Error())
+			utils.SetErrorStatus(err, http.StatusBadRequest, w)
+			return
+		}
+
+		status, err := subscribedObject.SubscribedObjectFunc(s, n, b, acct)
+		if err != nil {
+			logger.Error("error", err.Error())
+			utils.SetErrorStatus(err, http.StatusServiceUnavailable, w)
+			return
+		}
+
+
+		utils.WriteJSON(trustProviderResponse{Status: status}, http.StatusOK, w)
+
+	})
+}
+
 func applyNewRelic(pattern string, handler http.Handler) (string, http.Handler) {
 	newRelicConfig := newrelic.NewConfig(os.Getenv("NEW_RELIC_APP_NAME"), os.Getenv("NEW_RELIC_LICENSE_KEY"))
 	app, err := newrelic.NewApplication(newRelicConfig)
@@ -415,8 +466,8 @@ func applyNewRelic(pattern string, handler http.Handler) (string, http.Handler) 
 
 // Create a new TrustProvider. Based on the onboarding, rules and account objects you pass in
 // this will bootstrap an http server with onboarding and rules endpoints exposed.
-func New(onboarding Onboarding, rules []Rule, account Account, resolver did.ResolverInterface) TrustProvider {
-	t := TrustProvider{onboarding: onboarding, rules: rules, account: account, router: mux.NewRouter(), resolver: resolver}
+func New(onboarding Onboarding, rules []Rule, subscribedObjects []SubscribedObject, account Account, resolver did.ResolverInterface) TrustProvider {
+	t := TrustProvider{onboarding: onboarding, rules: rules, subscribedObject: subscribedObjects, account: account, router: mux.NewRouter(), resolver: resolver}
 
 	t.did = os.Getenv("DID")
 	if t.did != "" {
@@ -436,9 +487,15 @@ func New(onboarding Onboarding, rules []Rule, account Account, resolver did.Reso
 	t.router.HandleFunc("/api/did/{id}", t.getDidDoc).Methods("GET")
 	t.router.HandleFunc("/api/did/register", t.registerWithDid).Methods("POST")
 
+	for _, subscribedObject := range subscribedObjects {
+		t.router.HandleFunc(fmt.Sprintf("/api/subscriber/%s/{token}", subscribedObject.Name), t.handleSubscribedObject(subscribedObject)).Methods("POST")
+	}
+
 	for _, rule := range rules {
 		t.router.HandleFunc(fmt.Sprintf("/api/%s/{token}", rule.Name), t.handleRule(rule)).Methods("POST")
 	}
+
+
 
 	http.Handle(applyNewRelic("/", handlers.LoggingHandler(os.Stdout, utils.CorrelationIdMiddleware(t.router))))
 
