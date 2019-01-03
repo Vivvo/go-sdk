@@ -101,7 +101,7 @@ func (d *Resolver) Register(ddoc *Document) error {
 	_, err := resty.New().
 		R().
 		SetBody(&body).
-		Post(fmt.Sprintf("%s/api/v1/did", os.Getenv("EEZE_SERVICE_BASE_URL")))
+		Post(fmt.Sprintf("%s/api/v1/did", os.Getenv("MOCK_BLOCKCHAIN_URL")))
 
 	if err != nil {
 		log.Println(err.Error())
