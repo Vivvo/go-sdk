@@ -13,6 +13,7 @@ import (
 	"github.com/newrelic/go-agent"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
+	"gopkg.in/resty.v1"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -339,7 +340,6 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 			utils.WriteJSON(res, http.StatusInternalServerError, w)
 		} else {
 			var vc *wallet.RatchetPayload
-
 			if iAmMeCredential != nil {
 				subject := iAmMeCredential.Claim[did.SubjectClaim].(string)
 
@@ -364,6 +364,8 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 				rp.Sender = os.Getenv("DID")
 
 				vc = rp
+
+				t.RespondToPhone(subject, vc)
 			}
 
 			res := trustProviderResponse{Status: true, OnBoardingRequired: false, Token: token, VerifiableClaim: vc}
@@ -374,6 +376,31 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 		utils.WriteJSON(res, http.StatusOK, w)
 	}
 
+}
+
+func (t *TrustProvider) RespondToPhone(subject string, vc *wallet.RatchetPayload) error {
+	d, err := t.wallet.Dids().Read(subject)
+	if err != nil {
+		log.Println("error reading contacts ddoc from wallet", err.Error())
+		return err
+	}
+
+	var ddoc did.Document
+	err = json.Unmarshal([]byte(d), &ddoc)
+	if err != nil {
+		log.Println("error unmarshalling", err.Error())
+		return err
+	}
+
+	//TODO: This feels a little hacky...(using the [0] index...)
+	url := ddoc.Service[0].ServiceEndpoint
+
+	_, err = resty.New().
+		R().
+		SetBody(vc).
+		Post(url)
+
+	return err
 }
 
 func (t *TrustProvider) parseVerifiableCredential(body interface{}, types []string, logger *zap.SugaredLogger) (*did.VerifiableClaim, []string) {
