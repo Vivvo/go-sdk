@@ -131,7 +131,6 @@ func TestOnboardingVerifiableClaim(t *testing.T) {
 			})
 
 			os.Setenv("DID", "did:vvo:12H6btMP6hPy32VXbwKvGE")
-			os.Setenv("PRIVATE_KEY_PEM", privateKeyPem)
 
 			resolver := NewMockResolver()
 
@@ -319,7 +318,6 @@ func buildIAmMeCredential(w *wallet.Wallet, ddoc *did.Document) did.VerifiableCl
 //			})
 //
 //			os.Setenv("DID", "did:vvo:12H6btMP6hPy32VXbwKvGE")
-//			os.Setenv("PRIVATE_KEY_PEM", privateKeyPem)
 //
 //			tp := New(onboarding, tt.Rules, &mockAccount, &MockResolver{})
 //

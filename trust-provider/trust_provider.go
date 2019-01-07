@@ -505,7 +505,7 @@ func (t *TrustProvider) generateVerifiableClaim(c map[string]interface{}, subjec
 	c[did.PublicKeyClaim] = fmt.Sprintf("%s#keys-1", token)
 
 	var claim = did.Claim{
-		Id:     id,
+		Id:     uuid.New().String(),
 		Type:   types,
 		Issuer: id,
 		Issued: time.Now().Format("2006-01-02"),
