@@ -71,7 +71,6 @@ func (d *Document) GetPublicKeyById(id string) (*rsa.PublicKey, error) {
 }
 
 func (d *Resolver) Resolve(did string) (*Document, error) {
-	// Get user DID from blockchain
 
 	var didDocument = Document{}
 
@@ -94,7 +93,7 @@ func (d *Resolver) Register(ddoc *Document) error {
 
 	var body = struct {
 		DidDocument *Document `json:"didDocument"`
-	}{ddoc}
+	}{DidDocument: ddoc}
 
 	_, err := resty.New().
 		R().

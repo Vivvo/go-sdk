@@ -224,30 +224,6 @@ func (t *TrustProvider) generateDidDocument(id string, w *wallet.Wallet) (*did.D
 	return &doc, err
 }
 
-func (t *TrustProvider) getDidDoc(w http.ResponseWriter, r *http.Request) {
-	logger := utils.Logger(r.Context())
-	vars := mux.Vars(r)
-	id := vars["id"]
-
-	wa, err := wallet.Open([]byte(os.Getenv("MASTER_KEY")), DefaultWalletId)
-	if err != nil {
-		logger.Errorf("error opening the wallet:", err.Error())
-		utils.WriteJSON(err, http.StatusInternalServerError, w)
-		return
-	}
-
-	ddoc, err := wa.Dids().Read(id)
-	if err != nil {
-		logger.Errorf("error retrieving the did document:", err.Error())
-		return
-	}
-
-	var d did.Document
-	json.Unmarshal([]byte(ddoc), &d)
-	utils.WriteJSON(d, http.StatusOK, w)
-
-}
-
 func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 
 	logger := utils.Logger(r.Context())
@@ -343,6 +319,54 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			res := trustProviderResponse{Status: false, OnBoardingRequired: true}
 			utils.WriteJSON(res, http.StatusInternalServerError, w)
+		} else if s["did"] != "" {
+
+			var vcEncrypted *wallet.RatchetPayload
+
+			messaging := t.wallet.Messaging()
+
+			contactDoc, err := t.resolver.Resolve(s["did"])
+			if err != nil {
+				res := trustProviderResponse{Status: false, OnBoardingRequired: true}
+				utils.WriteJSON(res, http.StatusBadRequest, w)
+			}
+
+			ac := make(map[string]interface{})
+			ac[did.TokenClaim] = token
+
+			vc, _ := t.generateVerifiableClaim(ac, s["did"], token, []string{did.VerifiableCredential, did.TokenizedConnectionCredential})
+			if err != nil {
+				logger.Errorf("Problem generating a verifiable credential response", "error", err.Error())
+				utils.SetErrorStatus(err, http.StatusInternalServerError, w)
+				return
+			}
+
+			pairwiseDoc, err := t.createPairwiseDid(t.wallet)
+			if err != nil {
+				utils.SendError(err, w)
+				return
+			}
+
+			err = messaging.InitDoubleRatchet(pairwiseDoc.Id, contactDoc.PublicKey[1].PublicKeyBase58)
+			if err != nil {
+				utils.SendError(err, w)
+				return
+			}
+
+			c, _ := json.Marshal(vc)
+			vcEncrypted, err = t.wallet.Messaging().RatchetEncrypt(pairwiseDoc.Id, string(c))
+			if err != nil {
+				utils.SendError(err, w)
+				return
+			}
+
+			vcEncrypted.Sender = os.Getenv("DID")
+
+			t.pushNotification(s["did"], vcEncrypted)
+
+			res := trustProviderResponse{Status: true, OnBoardingRequired: false, Token: token}
+			utils.WriteJSON(res, http.StatusCreated, w)
+
 		} else {
 			var vc *wallet.RatchetPayload
 			if iAmMeCredential != nil {
@@ -370,7 +394,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 
 				vc = rp
 
-				t.RespondToPhone(subject, vc)
+				t.pushNotification(subject, vc)
 			}
 
 			res := trustProviderResponse{Status: true, OnBoardingRequired: false, Token: token, VerifiableClaim: vc}
@@ -383,7 +407,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (t *TrustProvider) RespondToPhone(subject string, vc *wallet.RatchetPayload) error {
+func (t *TrustProvider) pushNotification(subject string, vc *wallet.RatchetPayload) error {
 	d, err := t.wallet.Dids().Read(subject)
 	if err != nil {
 		log.Println("error reading contacts ddoc from wallet", err.Error())
@@ -397,13 +421,14 @@ func (t *TrustProvider) RespondToPhone(subject string, vc *wallet.RatchetPayload
 		return err
 	}
 
-	//TODO: This feels a little hacky...(using the [0] index...)
-	url := ddoc.Service[0].ServiceEndpoint
-
-	_, err = resty.New().
-		R().
-		SetBody(vc).
-		Post(url)
+	for _, s := range ddoc.Service {
+		if s.T == "AgentService" {
+			_, err = resty.New().
+				R().
+				SetBody(vc).
+				Post(s.ServiceEndpoint)
+		}
+	}
 
 	return err
 }
@@ -688,7 +713,6 @@ func (t *TrustProvider) initAdapterDid() (error) {
 	}
 	masterKey := os.Getenv("MASTER_KEY")
 
-	//TODO: Check eeze service to see if the ddoc has been published!
 	_, err := t.resolver.Resolve(id)
 	if err == nil {
 		log.Println("DID already published")

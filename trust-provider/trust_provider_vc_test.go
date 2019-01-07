@@ -8,6 +8,7 @@ import (
 	"github.com/Vivvo/go-sdk/utils"
 	"github.com/Vivvo/go-wallet"
 	"github.com/google/uuid"
+	"github.com/pkg/errors"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -58,6 +59,9 @@ func NewMockResolver() MockResolver {
 }
 
 func (m *MockResolver) Resolve(d string) (*did.Document, error) {
+	if m.dids[d] == nil {
+		return nil, errors.New("not found")
+	}
 	return m.dids[d], nil
 }
 
@@ -130,7 +134,7 @@ func TestOnboardingVerifiableClaim(t *testing.T) {
 
 			resolver := NewMockResolver()
 
-			tp := New(onboarding, nil, nil, &mockAccount, &resolver)
+			tp := New(onboarding, nil, nil, nil, &mockAccount, &resolver)
 
 			executeRequest := func(req *http.Request) *httptest.ResponseRecorder {
 				rr := httptest.NewRecorder()
@@ -143,7 +147,7 @@ func TestOnboardingVerifiableClaim(t *testing.T) {
 
 			ddoc := GenerateDidDocument(w, &resolver)
 
-			vc := buildIAmMeCredential(w, ddoc.Id)
+			vc := buildIAmMeCredential(w, ddoc)
 			b, err := json.Marshal(vc)
 			if err != nil {
 				t.Fatal(err.Error())
@@ -222,6 +226,7 @@ func GenerateDidDocument(w *wallet.Wallet, resolver did.ResolverInterface) (*did
 		},
 		Authentication: []did.Authentication{{T: wallet.TypeRsaVerificationKey2018, PublicKey: fmt.Sprintf("%s#keys-1", id)}},
 		Context:        "https://w3id.org/did/v1",
+		Service:        []did.Service{{ServiceEndpoint: "http://example.com", T: "AgentService"}},
 	}
 
 	s, _ := json.Marshal(didDocument)
@@ -245,20 +250,24 @@ func newWallet(t *testing.T) (*wallet.Wallet, []byte) {
 	return w, masterKey
 }
 
-func buildIAmMeCredential(w *wallet.Wallet, id string) did.VerifiableClaim {
+func buildIAmMeCredential(w *wallet.Wallet, ddoc *did.Document) did.VerifiableClaim {
 	claims := make(map[string]interface{})
-	claims[did.SubjectClaim] = id
-	claims[did.PublicKeyClaim] = fmt.Sprintf("%s#keys-1", id)
+	claims[did.SubjectClaim] = ddoc.Id
+	claims[did.PublicKeyClaim] = fmt.Sprintf("%s#keys-1", ddoc.Id)
+
+	b, _ := json.Marshal(ddoc)
+
+	claims["ddoc"] = string(b)
 
 	var claim = did.Claim{
-		Id:     id,
+		Id:     ddoc.Id,
 		Type:   []string{did.VerifiableCredential, did.IAmMeCredential},
-		Issuer: id,
+		Issuer: ddoc.Id,
 		Issued: time.Now().Format("2006-01-02"),
 		Claim:  claims,
 	}
 
-	vc, _ := claim.WalletSign(w, id, uuid.New().String())
+	vc, _ := claim.WalletSign(w, ddoc.Id, uuid.New().String())
 	return vc
 }
 
