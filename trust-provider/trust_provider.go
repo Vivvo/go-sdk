@@ -22,8 +22,17 @@ import (
 	"time"
 )
 
+// Parameters:
+//     An array of required/optional parameters that the onboarding function will have access to. Validation will automatically
+//     be applied based on how the parameters are configured.
+// Claims:
+//    The types of the verifiable credential that will be issued when onboarding succeeds.
+// OnboardingFunc:
+//    This function should execute the required business logic to ensure that the person onboarding is tied to
+//    and account in your system. The interface{} that is returned from here should be your implementation of an account.
 type Onboarding struct {
 	Parameters     []Parameter
+	Claims         []string
 	OnboardingFunc func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error, string)
 }
 
@@ -236,7 +245,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var iAmMeCredential *did.VerifiableClaim
+	var onboardingVC *did.VerifiableClaim
 	var pairwiseDoc *did.Document
 
 	if b, ok := body.(map[string]interface{}); ok {
@@ -280,7 +289,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 			}
 
 			var ve []string
-			iAmMeCredential, ve = t.parseVerifiableCredential(body, []string{did.VerifiableCredential, did.IAmMeCredential}, logger)
+			onboardingVC, ve = t.parseVerifiableCredential(body, logger)
 			if len(ve) > 0 {
 				e, err := json.Marshal(ve)
 				if err == nil {
@@ -291,7 +300,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			body = iAmMeCredential.Claim
+			body = onboardingVC.Claim
 		}
 	}
 
@@ -308,102 +317,106 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 		utils.SetErrorStatus(err, http.StatusInternalServerError, w)
 		return
 	}
+
 	account, err, token := t.onboarding.OnboardingFunc(s, n, b)
-	if err == nil {
-		if token == "" {
-			token = uuid.New().String()
-		}
-
-		err = t.account.Update(account, token)
-
-		if err != nil {
-			res := trustProviderResponse{Status: false, OnBoardingRequired: true}
-			utils.WriteJSON(res, http.StatusInternalServerError, w)
-		} else if s["did"] != "" {
-
-			var vcEncrypted *wallet.RatchetPayload
-
-			messaging := t.wallet.Messaging()
-
-			contactDoc, err := t.resolver.Resolve(s["did"])
-			if err != nil {
-				res := trustProviderResponse{Status: false, OnBoardingRequired: true}
-				utils.WriteJSON(res, http.StatusBadRequest, w)
-			}
-
-			ac := make(map[string]interface{})
-			ac[did.TokenClaim] = token
-
-			vc, _ := t.generateVerifiableClaim(ac, s["did"], token, []string{did.VerifiableCredential, did.TokenizedConnectionCredential})
-			if err != nil {
-				logger.Errorf("Problem generating a verifiable credential response", "error", err.Error())
-				utils.SetErrorStatus(err, http.StatusInternalServerError, w)
-				return
-			}
-
-			pairwiseDoc, err := t.createPairwiseDid(t.wallet)
-			if err != nil {
-				utils.SendError(err, w)
-				return
-			}
-
-			err = messaging.InitDoubleRatchet(pairwiseDoc.Id, contactDoc.PublicKey[1].PublicKeyBase58)
-			if err != nil {
-				utils.SendError(err, w)
-				return
-			}
-
-			c, _ := json.Marshal(vc)
-			vcEncrypted, err = t.wallet.Messaging().RatchetEncrypt(pairwiseDoc.Id, string(c))
-			if err != nil {
-				utils.SendError(err, w)
-				return
-			}
-
-			vcEncrypted.Sender = os.Getenv("DID")
-
-			t.pushNotification(s["did"], vcEncrypted)
-
-			res := trustProviderResponse{Status: true, OnBoardingRequired: false, Token: token}
-			utils.WriteJSON(res, http.StatusCreated, w)
-
-		} else {
-			var vc *wallet.RatchetPayload
-			if iAmMeCredential != nil {
-				subject := iAmMeCredential.Claim[did.SubjectClaim].(string)
-
-				ac := make(map[string]interface{})
-				ac[did.TokenClaim] = token
-
-				claim, _ := t.generateVerifiableClaim(ac, subject, token, []string{did.VerifiableCredential, did.TokenizedConnectionCredential})
-				if err != nil {
-					logger.Errorf("Problem generating a verifiable credential response", "error", err.Error())
-					utils.SetErrorStatus(err, http.StatusInternalServerError, w)
-					return
-				}
-
-				c, _ := json.Marshal(claim)
-
-				rp, err := t.wallet.Messaging().RatchetEncrypt(pairwiseDoc.Id, string(c))
-				if err != nil {
-					utils.SendError(err, w)
-					return
-				}
-
-				rp.Sender = os.Getenv("DID")
-
-				vc = rp
-
-				t.pushNotification(subject, vc)
-			}
-
-			res := trustProviderResponse{Status: true, OnBoardingRequired: false, Token: token, VerifiableClaim: vc}
-			utils.WriteJSON(res, http.StatusCreated, w)
-		}
-	} else {
+	if err != nil {
 		res := trustProviderResponse{Status: false, OnBoardingRequired: true, Message: err.Error()}
 		utils.WriteJSON(res, http.StatusOK, w)
+		return
 	}
+
+	if token == "" {
+		token = uuid.New().String()
+	}
+
+	err = t.account.Update(account, token)
+
+	if err != nil {
+		res := trustProviderResponse{Status: false, OnBoardingRequired: true}
+		utils.WriteJSON(res, http.StatusInternalServerError, w)
+		return
+	}
+
+	if s["did"] != "" {
+		// Initialize the double ratchet encryption...
+
+		messaging := t.wallet.Messaging()
+
+		contactDoc, err := t.resolver.Resolve(s["did"])
+		if err != nil {
+			res := trustProviderResponse{Status: false, OnBoardingRequired: true}
+			utils.WriteJSON(res, http.StatusBadRequest, w)
+		}
+
+		pairwiseDoc, err := t.createPairwiseDid(t.wallet)
+		if err != nil {
+			utils.SendError(err, w)
+			return
+		}
+
+		var contactPubkey string
+		for _, k := range contactDoc.PublicKey {
+			if k.T == wallet.TypeEd25519KeyExchange2018 {
+				contactPubkey = k.PublicKeyBase58
+			}
+		}
+
+		if contactPubkey == "" {
+			utils.SendError(errors.New("no ed25519 exchange key found"), w)
+			return
+		}
+
+		err = messaging.InitDoubleRatchet(pairwiseDoc.Id, contactPubkey)
+		if err != nil {
+			utils.SendError(err, w)
+			return
+		}
+	}
+
+	var vc *wallet.RatchetPayload
+	if onboardingVC != nil || s["did"] != "" && len(t.onboarding.Claims) > 0 {
+		var subject string
+		if s["did"] != "" {
+			subject = s["did"]
+		} else {
+			subject = onboardingVC.Claim[did.SubjectClaim].(string)
+		}
+
+		c := make(map[string]interface{})
+		acctJson, _ := json.Marshal(account)
+		json.Unmarshal(acctJson, c)
+
+		claim, _ := t.generateVerifiableClaim(c, subject, token, t.onboarding.Claims)
+		if err != nil {
+			logger.Errorf("Problem generating a verifiable credential response", "error", err.Error())
+			utils.SetErrorStatus(err, http.StatusInternalServerError, w)
+			return
+		}
+
+		claimJson, _ := json.Marshal(claim)
+
+		message := struct {
+			Type    string `json:"type"`
+			Payload string `json:"payload"`
+		}{Type: "credential", Payload: string(claimJson)}
+
+		m, _ := json.Marshal(message)
+
+		rp, err := t.wallet.Messaging().RatchetEncrypt(pairwiseDoc.Id, string(m))
+		if err != nil {
+			utils.SendError(err, w)
+			return
+		}
+
+		rp.Sender = os.Getenv("DID")
+
+		vc = rp
+
+		t.pushNotification(subject, vc)
+	}
+
+	res := trustProviderResponse{Status: true, OnBoardingRequired: false, Token: token, VerifiableClaim: vc}
+	utils.WriteJSON(res, http.StatusCreated, w)
 
 }
 
@@ -433,46 +446,68 @@ func (t *TrustProvider) pushNotification(subject string, vc *wallet.RatchetPaylo
 	return err
 }
 
-func (t *TrustProvider) parseVerifiableCredential(body interface{}, types []string, logger *zap.SugaredLogger) (*did.VerifiableClaim, []string) {
-	var iAmMeCredential *did.VerifiableClaim
+func (t *TrustProvider) parseVerifiableCredential(body interface{}, logger *zap.SugaredLogger) (*did.VerifiableClaim, []string) {
+	var vc *did.VerifiableClaim
 	var ve []string
 	logger.Infow("Checking for Verifiable Credential...")
-	vc, err := json.Marshal(body)
+	vcJson, err := json.Marshal(body)
 	if err != nil {
 		ve = append(ve, fmt.Sprintf("Unable to unmarshal Verifiable Credential."))
-	} else {
-		var cred did.VerifiableClaim
-		err = json.Unmarshal(vc, &cred)
-		if err != nil {
-			ve = append(ve, fmt.Sprintf("Unable to unmarshal Verifiable Credential."))
-		} else {
-			t.wallet.Dids().Create(cred.Claim[did.SubjectClaim].(string), cred.Claim["ddoc"].(string), nil)
-
-			iAmMeCredential = &cred
-
-			err = cred.Verify(types, cred.Proof.Nonce, t.resolver)
-			if err != nil {
-				log.Println(err.Error())
-				ve = append(ve, fmt.Sprintf("Unable to verify Verifiable Credential."))
-			}
-		}
+		return nil, ve
+	}
+	var cred did.VerifiableClaim
+	err = json.Unmarshal(vcJson, &cred)
+	if err != nil {
+		ve = append(ve, fmt.Sprintf("Unable to unmarshal Verifiable Credential."))
+		return nil, ve
 	}
 
-	return iAmMeCredential, ve
+	vc = &cred
+
+	err = cred.Verify([]string{did.VerifiableCredential}, cred.Proof.Nonce, t.resolver)
+	if err != nil {
+		log.Println(err.Error())
+		ve = append(ve, fmt.Sprintf("Unable to verify Verifiable Credential."))
+		return nil, ve
+	}
+
+	// If this is an IAmMeCredential and includes their did document, then this must be a pairwise did that was not
+	// registered with the Eeze service. Toss that bad boy in our wallet!
+	if arrayContains(cred.Type, did.IAmMeCredential) && cred.Claim["ddoc"] != nil {
+		t.wallet.Dids().Create(cred.Claim[did.SubjectClaim].(string), cred.Claim["ddoc"].(string), nil)
+	}
+
+	if !arrayContains(cred.Type, did.IAmMeCredential) {
+		//TODO:  only accept verifiable credentials from issuers we trust!
+	}
+
+	return vc, ve
 }
 
-func (t *TrustProvider) generateVerifiableClaim(ac map[string]interface{}, subject string, token string, types []string) (did.VerifiableClaim, error) {
+func arrayContains(iterable interface{}, obj interface{}) bool {
+	if it, ok := iterable.([]interface{}); ok {
+		for _, i := range it {
+			if i == obj {
+				return true
+			}
+		}
+		return false
+	}
+	return false
+}
+
+func (t *TrustProvider) generateVerifiableClaim(c map[string]interface{}, subject string, token string, types []string) (did.VerifiableClaim, error) {
 	id := os.Getenv("DID")
 
-	ac[did.SubjectClaim] = subject
-	ac[did.PublicKeyClaim] = fmt.Sprintf("%s#keys-1", token)
+	c[did.SubjectClaim] = subject
+	c[did.PublicKeyClaim] = fmt.Sprintf("%s#keys-1", token)
 
 	var claim = did.Claim{
 		Id:     id,
 		Type:   types,
 		Issuer: id,
 		Issued: time.Now().Format("2006-01-02"),
-		Claim:  ac,
+		Claim:  c,
 	}
 
 	return claim.WalletSign(t.wallet, id, uuid.New().String())

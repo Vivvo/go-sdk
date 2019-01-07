@@ -380,7 +380,7 @@ func TestOnboardingCalledWithParams(t *testing.T) {
 	mockAccount := MockAccount{}
 	mockAccount.SetUpdateFunc(func(account interface{}, token string) error { return nil })
 
-	tp := New(onboarding, nil, nil, nil,&mockAccount, &MockResolver{})
+	tp := New(onboarding, nil, nil, nil, &mockAccount, &MockResolver{})
 
 	executeRequest := func(req *http.Request) *httptest.ResponseRecorder {
 		rr := httptest.NewRecorder()
@@ -500,7 +500,7 @@ func TestRules(t *testing.T) {
 				return MockAccountObj{AccountId: 1234567890, Age: 30}, nil
 			})
 
-			tp := New(onboarding, tt.Rules, nil,nil, &mockAccount, &MockResolver{})
+			tp := New(onboarding, tt.Rules, nil, nil, &mockAccount, &MockResolver{})
 
 			executeRequest := func(req *http.Request) *httptest.ResponseRecorder {
 				rr := httptest.NewRecorder()
