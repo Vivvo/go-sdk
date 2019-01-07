@@ -134,7 +134,7 @@ func TestOnboardingVerifiableClaim(t *testing.T) {
 
 			executeRequest := func(req *http.Request) *httptest.ResponseRecorder {
 				rr := httptest.NewRecorder()
-				tp.router.ServeHTTP(rr, req)
+				tp.Router.ServeHTTP(rr, req)
 
 				return rr
 			}
@@ -311,7 +311,7 @@ func buildIAmMeCredential(w *wallet.Wallet, id string) did.VerifiableClaim {
 //
 //			executeRequest := func(req *http.Request) *httptest.ResponseRecorder {
 //				rr := httptest.NewRecorder()
-//				tp.router.ServeHTTP(rr, req)
+//				tp.Router.ServeHTTP(rr, req)
 //				return rr
 //			}
 //

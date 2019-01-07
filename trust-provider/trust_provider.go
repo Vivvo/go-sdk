@@ -7,13 +7,13 @@ import (
 	"github.com/Vivvo/go-sdk/utils"
 	"github.com/Vivvo/go-wallet"
 	"github.com/btcsuite/btcutil/base58"
+	"github.com/go-resty/resty"
 	"github.com/google/uuid"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/newrelic/go-agent"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
-	"gopkg.in/resty.v1"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -46,6 +46,11 @@ type Rule struct {
 	Parameters []Parameter
 	RuleFunc   func(s map[string]string, n map[string]float64, b map[string]bool, acct interface{}) (bool, error)
 	Claims     []string
+}
+
+type Data struct {
+	Name     string
+	DataFunc func(acct interface{}) (interface{}, error)
 }
 
 type SubscribedObject struct {
@@ -101,7 +106,7 @@ type TrustProvider struct {
 	onboarding       Onboarding
 	rules            []Rule
 	subscribedObject []SubscribedObject
-	router           *mux.Router
+	Router           *mux.Router
 	account          Account
 	port             string
 	resolver         did.ResolverInterface
@@ -448,6 +453,41 @@ func (t *TrustProvider) generateVerifiableClaim(ac map[string]interface{}, subje
 	return claim.WalletSign(t.wallet, id, uuid.New().String())
 }
 
+func (t *TrustProvider) handleData(data Data) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		logger := utils.Logger(r.Context())
+
+		var body interface{}
+		err := utils.ReadBody(&body, r)
+		if err != nil {
+			logger.Error("error", err.Error())
+			utils.SetErrorStatus(err, http.StatusBadRequest, w)
+			return
+		}
+
+		vars := mux.Vars(r)
+		token := vars["token"]
+
+		acct, err := t.account.Read(token)
+		if err != nil {
+			logger.Error("error", err.Error())
+			utils.SetErrorStatus(err, http.StatusBadRequest, w)
+			return
+		}
+
+		resp, err := data.DataFunc(acct)
+		if err != nil {
+			logger.Error("error", err.Error())
+			utils.SetErrorStatus(err, http.StatusServiceUnavailable, w)
+			return
+		}
+
+		utils.WriteJSON(resp, http.StatusOK, w)
+
+	})
+}
+
 func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
@@ -610,24 +650,28 @@ func (wr *WalletResolver) Register(ddoc *did.Document) error {
 
 // Create a new TrustProvider. Based on the onboarding, rules and account objects you pass in
 // this will bootstrap an http server with onboarding and rules endpoints exposed.
-func New(onboarding Onboarding, rules []Rule, subscribedObjects []SubscribedObject, account Account, resolver did.ResolverInterface) TrustProvider {
-	t := TrustProvider{onboarding: onboarding, rules: rules, subscribedObject: subscribedObjects, account: account, router: mux.NewRouter(), resolver: resolver}
+func New(onboarding Onboarding, rules []Rule, subscribedObjects []SubscribedObject, data []Data, account Account, resolver did.ResolverInterface) TrustProvider {
+	t := TrustProvider{onboarding: onboarding, rules: rules, subscribedObject: subscribedObjects, account: account, Router: mux.NewRouter(), resolver: resolver}
 
 	if os.Getenv("DID") != "" {
 		t.initAdapterDid()
 	}
 
-	t.router.HandleFunc("/api/register", t.register).Methods("POST")
+	t.Router.HandleFunc("/api/register", t.register).Methods("POST")
 
-	for _, subscribedObject := range subscribedObjects {
-		t.router.HandleFunc(fmt.Sprintf("/api/subscriber/%s/{token}", subscribedObject.Name), t.handleSubscribedObject(subscribedObject)).Methods("POST")
+	for _, s := range subscribedObjects {
+		t.Router.HandleFunc(fmt.Sprintf("/api/subscriber/%s/{token}", s.Name), t.handleSubscribedObject(s)).Methods("POST")
 	}
 
-	for _, rule := range rules {
-		t.router.HandleFunc(fmt.Sprintf("/api/%s/{token}", rule.Name), t.handleRule(rule)).Methods("POST")
+	for _, r := range rules {
+		t.Router.HandleFunc(fmt.Sprintf("/api/%s/{token}", r.Name), t.handleRule(r)).Methods("POST")
 	}
 
-	http.Handle(applyNewRelic("/", handlers.LoggingHandler(os.Stdout, utils.CorrelationIdMiddleware(t.router))))
+	for _, d := range data {
+		t.Router.HandleFunc(fmt.Sprintf("/api/%s/{token}", d.Name), t.handleData(d)).Methods("POST")
+	}
+
+	http.Handle(applyNewRelic("/", handlers.LoggingHandler(os.Stdout, utils.CorrelationIdMiddleware(t.Router))))
 
 	const TrustProviderPortKey = "TRUST_PROVIDER_PORT"
 	t.port = os.Getenv(TrustProviderPortKey)

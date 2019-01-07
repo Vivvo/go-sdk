@@ -117,7 +117,7 @@ func TestOnboarding(t *testing.T) {
 
 			executeRequest := func(req *http.Request) *httptest.ResponseRecorder {
 				rr := httptest.NewRecorder()
-				tp.router.ServeHTTP(rr, req)
+				tp.Router.ServeHTTP(rr, req)
 
 				return rr
 			}
@@ -178,7 +178,7 @@ func TestOnboardingFuncNotConfigured(t *testing.T) {
 
 	executeRequest := func(req *http.Request) *httptest.ResponseRecorder {
 		rr := httptest.NewRecorder()
-		tp.router.ServeHTTP(rr, req)
+		tp.Router.ServeHTTP(rr, req)
 
 		return rr
 	}
@@ -223,7 +223,7 @@ func _TestSaveFuncNotConfigured(t *testing.T) {
 
 	executeRequest := func(req *http.Request) *httptest.ResponseRecorder {
 		rr := httptest.NewRecorder()
-		tp.router.ServeHTTP(rr, req)
+		tp.Router.ServeHTTP(rr, req)
 
 		return rr
 	}
@@ -278,7 +278,7 @@ func TestSaveFuncConfigured(t *testing.T) {
 
 	executeRequest := func(req *http.Request) *httptest.ResponseRecorder {
 		rr := httptest.NewRecorder()
-		tp.router.ServeHTTP(rr, req)
+		tp.Router.ServeHTTP(rr, req)
 
 		return rr
 	}
@@ -327,7 +327,7 @@ func TestParameters(t *testing.T) {
 
 			executeRequest := func(req *http.Request) *httptest.ResponseRecorder {
 				rr := httptest.NewRecorder()
-				tp.router.ServeHTTP(rr, req)
+				tp.Router.ServeHTTP(rr, req)
 				return rr
 			}
 
@@ -384,7 +384,7 @@ func TestOnboardingCalledWithParams(t *testing.T) {
 
 	executeRequest := func(req *http.Request) *httptest.ResponseRecorder {
 		rr := httptest.NewRecorder()
-		tp.router.ServeHTTP(rr, req)
+		tp.Router.ServeHTTP(rr, req)
 		return rr
 	}
 
@@ -504,7 +504,7 @@ func TestRules(t *testing.T) {
 
 			executeRequest := func(req *http.Request) *httptest.ResponseRecorder {
 				rr := httptest.NewRecorder()
-				tp.router.ServeHTTP(rr, req)
+				tp.Router.ServeHTTP(rr, req)
 				return rr
 			}
 
