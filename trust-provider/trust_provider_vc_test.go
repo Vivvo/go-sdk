@@ -109,6 +109,7 @@ func TestOnboardingVerifiableClaim(t *testing.T) {
 			onboarding := Onboarding{
 				Parameters:     []Parameter{},
 				OnboardingFunc: tt.onboardingFunc,
+				Claims:         []string{did.ProofOfAgeCredential},
 			}
 
 			mockAccount := MockAccount{}
@@ -193,10 +194,14 @@ func TestOnboardingVerifiableClaim(t *testing.T) {
 			}
 
 			str, _ := w.Messaging().RatchetDecrypt(ddoc.Id, response.VerifiableClaim)
-			var vcResponse = did.VerifiableClaim{}
-			json.Unmarshal([]byte(str), &vcResponse)
 
-			err = vcResponse.Verify([]string{did.VerifiableCredential, did.TokenizedConnectionCredential}, vcResponse.Proof.Nonce, &resolver)
+			var messageDto = MessageDto{}
+			json.Unmarshal([]byte(str), &messageDto)
+
+			var vcResponse = did.VerifiableClaim{}
+			json.Unmarshal([]byte(messageDto.Payload), &vcResponse)
+
+			err = vcResponse.Verify([]string{did.VerifiableCredential, did.ProofOfAgeCredential}, vcResponse.Proof.Nonce, &resolver)
 			if err != nil {
 				t.Fatal(err.Error())
 			}

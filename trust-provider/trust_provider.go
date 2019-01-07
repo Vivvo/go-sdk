@@ -85,6 +85,11 @@ type DefaultDBRecord struct {
 	Token   string      `json:"token"`
 }
 
+type MessageDto struct {
+	Type    string `json:"type"`
+	Payload string `json:"payload"`
+}
+
 const DefaultCsvFilePath = "./db.json"
 const DefaultWalletId = "wallet.db"
 
@@ -386,7 +391,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 		acctJson, _ := json.Marshal(account)
 		json.Unmarshal(acctJson, c)
 
-		claim, _ := t.generateVerifiableClaim(c, subject, token, t.onboarding.Claims)
+		claim, _ := t.generateVerifiableClaim(c, subject, token, append([]string{did.VerifiableCredential}, t.onboarding.Claims...))
 		if err != nil {
 			logger.Errorf("Problem generating a verifiable credential response", "error", err.Error())
 			utils.SetErrorStatus(err, http.StatusInternalServerError, w)
@@ -395,10 +400,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 
 		claimJson, _ := json.Marshal(claim)
 
-		message := struct {
-			Type    string `json:"type"`
-			Payload string `json:"payload"`
-		}{Type: "credential", Payload: string(claimJson)}
+		message := MessageDto{Type: "credential", Payload: string(claimJson)}
 
 		m, _ := json.Marshal(message)
 
