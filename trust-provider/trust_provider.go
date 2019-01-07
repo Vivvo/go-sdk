@@ -651,26 +651,31 @@ func (t *TrustProvider) initAdapterDid() (error) {
 		return nil
 	}
 
-	if w, err := wallet.Open([]byte(masterKey), DefaultWalletId); err == nil {
-		t.wallet = w
-		wr := WalletResolver{resolver: t.resolver, wallet: t.wallet}
-		t.resolver = &wr
-
-		d, _ := w.Dids().Read(id)
+	var w *wallet.Wallet
+	if _, err := os.Stat(DefaultWalletId); os.IsNotExist(err) {
+		w, err = wallet.Create([]byte(masterKey), DefaultWalletId)
 		if err != nil {
-			fmt.Println("error opening wallet:", err.Error())
+			fmt.Println("error opening wallet: ", err.Error())
 			return err
 		}
-		if len(d) > 0 {
-			fmt.Println("Adapter DID doc already exist")
-			return nil
-		}
-	}
+	} else {
+		if w, err = wallet.Open([]byte(masterKey), DefaultWalletId); err == nil {
+			t.wallet = w
+			wr := WalletResolver{resolver: t.resolver, wallet: t.wallet}
+			t.resolver = &wr
 
-	w, err := wallet.Create([]byte(masterKey), DefaultWalletId)
-	if err != nil {
-		fmt.Println("error opening wallet: ", err.Error())
-		return err
+			d, _ := w.Dids().Read(id)
+			if err != nil {
+				fmt.Println("error opening wallet:", err.Error())
+				return err
+			}
+			if len(d) > 0 {
+				fmt.Println("Adapter DID doc already exist")
+				return nil
+			}
+		} else {
+			log.Fatalf("Unable to open the wallet!")
+		}
 	}
 
 	t.wallet = w
