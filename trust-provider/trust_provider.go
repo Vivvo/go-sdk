@@ -389,7 +389,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 
 		c := make(map[string]interface{})
 		acctJson, _ := json.Marshal(account)
-		json.Unmarshal(acctJson, c)
+		json.Unmarshal(acctJson, &c)
 
 		claim, _ := t.generateVerifiableClaim(c, subject, token, append([]string{did.VerifiableCredential}, t.onboarding.Claims...))
 		if err != nil {
