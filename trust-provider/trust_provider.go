@@ -468,7 +468,7 @@ func (t *TrustProvider) parseVerifiableCredential(body interface{}, logger *zap.
 
 	// If this is an IAmMeCredential and includes their did document, then this must be a pairwise did that was not
 	// registered with the Eeze service. Toss that bad boy in our wallet!
-	if arrayContains(cred.Type, did.IAmMeCredential) && cred.Claim["ddoc"] != nil {
+	if containsType(cred.Type, did.IAmMeCredential) {
 		t.wallet.Dids().Create(cred.Claim[did.SubjectClaim].(string), cred.Claim["ddoc"].(string), nil)
 	}
 
@@ -479,21 +479,18 @@ func (t *TrustProvider) parseVerifiableCredential(body interface{}, logger *zap.
 		return nil, ve
 	}
 
-	if !arrayContains(cred.Type, did.IAmMeCredential) {
+	if !containsType(cred.Type, did.IAmMeCredential) {
 		//TODO:  only accept verifiable credentials from issuers we trust!
 	}
 
 	return vc, ve
 }
 
-func arrayContains(iterable interface{}, obj interface{}) bool {
-	if it, ok := iterable.([]interface{}); ok {
-		for _, i := range it {
-			if i == obj {
-				return true
-			}
+func containsType(types []string, t string) bool {
+	for _, i := range types {
+		if i == t {
+			return true
 		}
-		return false
 	}
 	return false
 }

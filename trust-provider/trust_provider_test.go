@@ -3,6 +3,7 @@ package trustprovider
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/Vivvo/go-sdk/did"
 	"github.com/Vivvo/go-sdk/utils"
 	"github.com/apex/log"
 	"github.com/google/uuid"
@@ -611,4 +612,11 @@ func TestNoDB(t *testing.T) {
 		t.Errorf("Expected: %s, got: %s", "error opening file", err)
 	}
 
+}
+
+func TestContainsType(t *testing.T) {
+	res := containsType([]string{did.VerifiableCredential, did.IAmMeCredential}, did.IAmMeCredential)
+	if !res {
+		t.Fatalf("Expected: %v, Actual: %v", true, res)
+	}
 }
