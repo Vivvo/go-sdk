@@ -379,7 +379,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var vc *wallet.RatchetPayload
-	if onboardingVC != nil || s["did"] != "" && len(t.onboarding.Claims) > 0 {
+	if (onboardingVC != nil || s["did"] != "") && len(t.onboarding.Claims) > 0 {
 		var subject string
 		if s["did"] != "" {
 			subject = s["did"]
