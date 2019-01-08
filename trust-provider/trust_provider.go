@@ -466,17 +466,17 @@ func (t *TrustProvider) parseVerifiableCredential(body interface{}, logger *zap.
 
 	vc = &cred
 
+	// If this is an IAmMeCredential and includes their did document, then this must be a pairwise did that was not
+	// registered with the Eeze service. Toss that bad boy in our wallet!
+	if arrayContains(cred.Type, did.IAmMeCredential) && cred.Claim["ddoc"] != nil {
+		t.wallet.Dids().Create(cred.Claim[did.SubjectClaim].(string), cred.Claim["ddoc"].(string), nil)
+	}
+
 	err = cred.Verify([]string{did.VerifiableCredential}, cred.Proof.Nonce, t.resolver)
 	if err != nil {
 		log.Println(err.Error())
 		ve = append(ve, fmt.Sprintf("Unable to verify Verifiable Credential."))
 		return nil, ve
-	}
-
-	// If this is an IAmMeCredential and includes their did document, then this must be a pairwise did that was not
-	// registered with the Eeze service. Toss that bad boy in our wallet!
-	if arrayContains(cred.Type, did.IAmMeCredential) && cred.Claim["ddoc"] != nil {
-		t.wallet.Dids().Create(cred.Claim[did.SubjectClaim].(string), cred.Claim["ddoc"].(string), nil)
 	}
 
 	if !arrayContains(cred.Type, did.IAmMeCredential) {
