@@ -423,21 +423,15 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 }
 
 func (t *TrustProvider) pushNotification(subject string, vc *wallet.RatchetPayload) error {
-	d, err := t.wallet.Dids().Read(subject)
+	ddoc, err := t.resolver.Resolve(subject)
 	if err != nil {
-		log.Println("error reading contacts ddoc from wallet", err.Error())
-		return err
-	}
-
-	var ddoc did.Document
-	err = json.Unmarshal([]byte(d), &ddoc)
-	if err != nil {
-		log.Println("error unmarshalling", err.Error())
+		log.Println(err.Error())
 		return err
 	}
 
 	for _, s := range ddoc.Service {
 		if s.T == "AgentService" {
+			log.Printf("Sending verifiable credential to messaging endpoint: %s", s.ServiceEndpoint)
 			_, err = resty.New().
 				R().
 				SetBody(vc).
