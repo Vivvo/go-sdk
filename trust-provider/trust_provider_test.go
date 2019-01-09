@@ -54,7 +54,7 @@ func TestOnboarding(t *testing.T) {
 
 	tests := []struct {
 		name               string
-		onboardingFunc     func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error, string)
+		onboardingFunc     func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}) (interface{}, error, string)
 		saveFuncCalled     bool
 		statusCode         int
 		onboardingStatus   bool
@@ -62,7 +62,7 @@ func TestOnboarding(t *testing.T) {
 		token              bool
 	}{
 		{"Test Successful Onboarding",
-			func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error, string) {
+			func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}) (interface{}, error, string) {
 				onboardingFuncCalled = true
 				return MockAccountObj{AccountId: 1}, nil, ""
 			},
@@ -73,7 +73,7 @@ func TestOnboarding(t *testing.T) {
 			true,
 		},
 		{"Test Failed Onboarding",
-			func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error, string) {
+			func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}) (interface{}, error, string) {
 				onboardingFuncCalled = true
 				return nil, errors.New("Error!!"), ""
 			},
@@ -215,7 +215,7 @@ func _TestSaveFuncNotConfigured(t *testing.T) {
 
 	onboarding := Onboarding{
 		Parameters: []Parameter{},
-		OnboardingFunc: func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error, string) {
+		OnboardingFunc: func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}) (interface{}, error, string) {
 			return MockAccountObj{AccountId: 1}, nil, ""
 		},
 	}
@@ -262,7 +262,7 @@ func TestSaveFuncConfigured(t *testing.T) {
 
 	onboarding := Onboarding{
 		Parameters: []Parameter{},
-		OnboardingFunc: func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error, string) {
+		OnboardingFunc: func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}) (interface{}, error, string) {
 			return MockAccountObj{AccountId: 100}, nil, ""
 		},
 	}
@@ -316,7 +316,7 @@ func TestParameters(t *testing.T) {
 
 			onboarding := Onboarding{
 				Parameters: tt.parameters,
-				OnboardingFunc: func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error, string) {
+				OnboardingFunc: func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}) (interface{}, error, string) {
 					return MockAccountObj{AccountId: 1}, nil, ""
 				},
 			}
@@ -353,7 +353,7 @@ func TestOnboardingCalledWithParams(t *testing.T) {
 			{Name: "lastName", Type: ParameterTypeString, Required: true},
 			{Name: "biometrics", Type: ParameterTypeBool, Required: true},
 		},
-		OnboardingFunc: func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error, string) {
+		OnboardingFunc: func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}) (interface{}, error, string) {
 
 			if s["firstName"] != "Johnny" {
 				t.Errorf("Expected: %s, Actual: %s", "Johnny", s["firstName"])
@@ -410,7 +410,7 @@ func TestRules(t *testing.T) {
 	}{
 		{
 			Name: "alwayspasses",
-			Rules: []Rule{{Name: "alwayspasses", Parameters: []Parameter{}, RuleFunc: func(s map[string]string, n map[string]float64, b map[string]bool, acct interface{}) (bool, error) {
+			Rules: []Rule{{Name: "alwayspasses", Parameters: []Parameter{}, RuleFunc: func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}, acct interface{}) (bool, error) {
 				return true, nil
 			}}},
 			Body:       "",
@@ -421,7 +421,7 @@ func TestRules(t *testing.T) {
 		},
 		{
 			Name: "alwaysfails",
-			Rules: []Rule{{Name: "alwaysfails", Parameters: []Parameter{}, RuleFunc: func(s map[string]string, n map[string]float64, b map[string]bool, acct interface{}) (bool, error) {
+			Rules: []Rule{{Name: "alwaysfails", Parameters: []Parameter{}, RuleFunc: func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}, acct interface{}) (bool, error) {
 				return false, nil
 			}}},
 			Body:       "",
@@ -432,7 +432,7 @@ func TestRules(t *testing.T) {
 		},
 		{
 			Name: "throwsanerror",
-			Rules: []Rule{{Name: "throwsanerror", Parameters: []Parameter{}, RuleFunc: func(s map[string]string, n map[string]float64, b map[string]bool, acct interface{}) (bool, error) {
+			Rules: []Rule{{Name: "throwsanerror", Parameters: []Parameter{}, RuleFunc: func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}, acct interface{}) (bool, error) {
 				return false, errors.New("WHAT HAVE YOU DONE?")
 			}}},
 			Body:       "",
@@ -444,7 +444,7 @@ func TestRules(t *testing.T) {
 		{
 			Name: "passeswithcorrectparam",
 			Rules: []Rule{{Name: "passeswithcorrectparam", Parameters: []Parameter{{Name: "age", Required: true, Type: ParameterTypeFloat64}},
-				RuleFunc: func(s map[string]string, n map[string]float64, b map[string]bool, acct interface{}) (bool, error) {
+				RuleFunc: func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}, acct interface{}) (bool, error) {
 					return n["age"] < 24, nil
 				}}},
 			Body:       "{\"age\": 19}",
@@ -456,7 +456,7 @@ func TestRules(t *testing.T) {
 		{
 			Name: "failswithincorrectparam",
 			Rules: []Rule{{Name: "failswithincorrectparam", Parameters: []Parameter{{Name: "age", Required: true, Type: ParameterTypeFloat64}},
-				RuleFunc: func(s map[string]string, n map[string]float64, b map[string]bool, acct interface{}) (bool, error) {
+				RuleFunc: func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}, acct interface{}) (bool, error) {
 					return n["age"] > 24, nil
 				}}},
 			Body:       "{\"age\": 19}",
@@ -468,7 +468,7 @@ func TestRules(t *testing.T) {
 		{
 			Name: "needsaccountobject",
 			Rules: []Rule{{Name: "needsaccountobject", Parameters: []Parameter{{Name: "age", Required: true, Type: ParameterTypeFloat64}},
-				RuleFunc: func(s map[string]string, n map[string]float64, b map[string]bool, acct interface{}) (bool, error) {
+				RuleFunc: func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}, acct interface{}) (bool, error) {
 					if a, ok := acct.(MockAccountObj); ok {
 						return n["age"] <= a.Age, nil
 
@@ -490,7 +490,7 @@ func TestRules(t *testing.T) {
 
 			onboarding := Onboarding{
 				Parameters: []Parameter{},
-				OnboardingFunc: func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error, string) {
+				OnboardingFunc: func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}) (interface{}, error, string) {
 					return MockAccountObj{AccountId: 1}, nil, ""
 				},
 			}

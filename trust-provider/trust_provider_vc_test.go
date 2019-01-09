@@ -77,7 +77,7 @@ func TestOnboardingVerifiableClaim(t *testing.T) {
 
 	tests := []struct {
 		name               string
-		onboardingFunc     func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error, string)
+		onboardingFunc     func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}) (interface{}, error, string)
 		saveFuncCalled     bool
 		statusCode         int
 		onboardingStatus   bool
@@ -85,7 +85,7 @@ func TestOnboardingVerifiableClaim(t *testing.T) {
 		token              bool
 	}{
 		{"Test Successful Onboarding",
-			func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error, string) {
+			func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}) (interface{}, error, string) {
 				onboardingFuncCalled = true
 				return MockAccountObj{AccountId: 1}, nil, ""
 			},
@@ -290,7 +290,7 @@ func buildIAmMeCredential(w *wallet.Wallet, ddoc *did.Document) did.VerifiableCl
 //	}{
 //		{
 //			Name: "alwayspasses",
-//			Rules: []Rule{{Claims: []string{did.VerifiableCredential, did.ProofOfAgeCredential}, Name: "alwayspasses", Parameters: []Parameter{{Name: "age", Type: ParameterTypeFloat64, Required: true}}, RuleFunc: func(s map[string]string, n map[string]float64, b map[string]bool, acct interface{}) (bool, error) {
+//			Rules: []Rule{{Claims: []string{did.VerifiableCredential, did.ProofOfAgeCredential}, Name: "alwayspasses", Parameters: []Parameter{{Name: "age", Type: ParameterTypeFloat64, Required: true}}, RuleFunc: func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}, acct interface{}) (bool, error) {
 //				return true, nil
 //			}}},
 //			StatusCode: http.StatusOK,
@@ -306,7 +306,7 @@ func buildIAmMeCredential(w *wallet.Wallet, ddoc *did.Document) did.VerifiableCl
 //
 //			onboarding := Onboarding{
 //				Parameters: []Parameter{},
-//				OnboardingFunc: func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error, string) {
+//				OnboardingFunc: func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}) (interface{}, error, string) {
 //					return MockAccountObj{AccountId: 1}, nil, ""
 //				},
 //			}

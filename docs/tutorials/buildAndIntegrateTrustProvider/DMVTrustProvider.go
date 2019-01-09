@@ -59,7 +59,7 @@ type DMVAccount struct {
 	Token            string `json:"token"`
 }
 
-func onboarding(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error, string) {
+func onboarding(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}) (interface{}, error, string) {
 	reader, _ := os.Open("./DMVUsers.csv")
 	defer reader.Close()
 	r := csv.NewReader(reader)
@@ -73,7 +73,7 @@ func onboarding(s map[string]string, n map[string]float64, b map[string]bool) (i
 	return nil, errors.New("no match found"), ""
 }
 
-func is19YearsOld(s map[string]string, n map[string]float64, b map[string]bool, acct interface{}) (bool, error) {
+func is19YearsOld(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}, acct interface{}) (bool, error) {
 	if a, ok := acct.(DMVAccount); ok {
 		birthDate, err := time.Parse("2006-01-20", a.BirthDate)
 		if err != nil {

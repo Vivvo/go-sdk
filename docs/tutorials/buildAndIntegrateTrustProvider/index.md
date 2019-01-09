@@ -58,7 +58,7 @@ type DMVAccount struct {
 	Token            string `json:"token"`
 }
 
-func onboarding(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error) {
+func onboarding(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}) (interface{}, error) {
 	reader, _ := os.Open("./DMVUsers.csv")
 	defer reader.Close()
 	r := csv.NewReader(reader)
@@ -168,7 +168,7 @@ rules := []trustprovider.Rule{
 Rules can have parameters just like the onboarding function, however for our purposes, we won't need to take in any parameters. If we had defined any parameters, they would be parsed, validated and passed in to the rule function as well. The signature of the rule function must match the one the rule object expects (see [godoc](https://godoc.org/github.com/Vivvo/go-sdk/trust-provider#Rule)).
 
 ```
-func is19YearsOld(s map[string]string, n map[string]float64, b map[string]bool, acct interface{}) (bool, error) {
+func is19YearsOld(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}, acct interface{}) (bool, error) {
 	if a, ok := acct.(DMVAccount); ok {
 		birthDate, err := time.Parse("2006-01-20", a.BirthDate)
 		if err != nil {

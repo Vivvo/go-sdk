@@ -33,7 +33,7 @@ import (
 type Onboarding struct {
 	Parameters     []Parameter
 	Claims         []string
-	OnboardingFunc func(s map[string]string, n map[string]float64, b map[string]bool) (interface{}, error, string)
+	OnboardingFunc func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}) (interface{}, error, string)
 }
 
 type ParameterType int
@@ -42,6 +42,7 @@ const (
 	ParameterTypeBool ParameterType = iota
 	ParameterTypeFloat64
 	ParameterTypeString
+	ParameterTypeInterface
 )
 
 type Parameter struct {
@@ -53,7 +54,7 @@ type Parameter struct {
 type Rule struct {
 	Name       string
 	Parameters []Parameter
-	RuleFunc   func(s map[string]string, n map[string]float64, b map[string]bool, acct interface{}) (bool, error)
+	RuleFunc   func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}, acct interface{}) (bool, error)
 	Claims     []string
 }
 
@@ -65,7 +66,7 @@ type Data struct {
 type SubscribedObject struct {
 	Name                 string
 	Parameters           []Parameter
-	SubscribedObjectFunc func(s map[string]string, n map[string]float64, b map[string]bool, acct interface{}) (bool, error)
+	SubscribedObjectFunc func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}, acct interface{}) (bool, error)
 }
 
 type trustProviderResponse struct {
@@ -127,12 +128,13 @@ type TrustProvider struct {
 	wallet           *wallet.Wallet
 }
 
-func (t *TrustProvider) parseParameters(body interface{}, params []Parameter, r *http.Request) (map[string]string, map[string]float64, map[string]bool, error) {
+func (t *TrustProvider) parseParameters(body interface{}, params []Parameter, r *http.Request) (map[string]string, map[string]float64, map[string]bool, map[string]interface{}, error) {
 	var ve []string
 
 	strs := make(map[string]string, 0)
 	nums := make(map[string]float64, 0)
 	bools := make(map[string]bool, 0)
+	inters := make(map[string]interface{}, 0)
 
 	for _, p := range params {
 		if p.Required {
@@ -161,6 +163,12 @@ func (t *TrustProvider) parseParameters(body interface{}, params []Parameter, r 
 				} else {
 					ve = append(ve, fmt.Sprintf("Parameter %s must be a boolean.", p.Name))
 				}
+			case ParameterTypeInterface:
+				if i, ok := params[p.Name].(interface{}); ok {
+					inters[p.Name] = i
+				} else {
+					ve = append(ve, fmt.Sprintf("Parameter %s must be an array.", p.Name))
+				}
 			}
 		}
 	}
@@ -170,10 +178,10 @@ func (t *TrustProvider) parseParameters(body interface{}, params []Parameter, r 
 		if err == nil {
 			err = errors.New(string(e))
 		}
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
-	return strs, nums, bools, nil
+	return strs, nums, bools, inters, nil
 }
 
 //TODO: Clean up, Move to the did folder maybe?
@@ -309,7 +317,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	s, n, b, err := t.parseParameters(body, t.onboarding.Parameters, r)
+	s, n, b, arrs, err := t.parseParameters(body, t.onboarding.Parameters, r)
 	if err != nil {
 		logger.Errorf("Problem parsing onboarding request parameters", "error", err.Error())
 		utils.SetErrorStatus(err, http.StatusBadRequest, w)
@@ -323,7 +331,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	account, err, token := t.onboarding.OnboardingFunc(s, n, b)
+	account, err, token := t.onboarding.OnboardingFunc(s, n, b, arrs)
 	if err != nil {
 		res := trustProviderResponse{Status: false, OnBoardingRequired: true, Message: err.Error()}
 		utils.WriteJSON(res, http.StatusOK, w)
@@ -554,7 +562,7 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 			return
 		}
 
-		s, n, b, err := t.parseParameters(body, rule.Parameters, r)
+		s, n, b, a, err := t.parseParameters(body, rule.Parameters, r)
 		if err != nil {
 			logger.Error("error", err.Error())
 			utils.SetErrorStatus(err, http.StatusBadRequest, w)
@@ -571,7 +579,7 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 			return
 		}
 
-		status, err := rule.RuleFunc(s, n, b, acct)
+		status, err := rule.RuleFunc(s, n, b, a, acct)
 		if err != nil {
 			logger.Error("error", err.Error())
 			utils.SetErrorStatus(err, http.StatusServiceUnavailable, w)
@@ -633,7 +641,7 @@ func (t *TrustProvider) handleSubscribedObject(subscribedObject SubscribedObject
 			utils.SetErrorStatus(err, http.StatusBadRequest, w)
 			return
 		}
-		s, n, b, err := t.parseParameters(body, subscribedObject.Parameters, r)
+		s, n, b, a, err := t.parseParameters(body, subscribedObject.Parameters, r)
 		if err != nil {
 			logger.Error("error", err.Error())
 			utils.SetErrorStatus(err, http.StatusBadRequest, w)
@@ -650,7 +658,7 @@ func (t *TrustProvider) handleSubscribedObject(subscribedObject SubscribedObject
 			return
 		}
 
-		status, err := subscribedObject.SubscribedObjectFunc(s, n, b, acct)
+		status, err := subscribedObject.SubscribedObjectFunc(s, n, b, a, acct)
 		if err != nil {
 			logger.Error("error", err.Error())
 			utils.SetErrorStatus(err, http.StatusServiceUnavailable, w)
