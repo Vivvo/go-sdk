@@ -727,10 +727,8 @@ func New(onboarding Onboarding, rules []Rule, subscribedObjects []SubscribedObje
 	}
 
 	for _, d := range data {
-		t.Router.HandleFunc(fmt.Sprintf("/api/%s/{token}", d.Name), t.handleData(d)).Methods("POST")
+		t.Router.HandleFunc(fmt.Sprintf("/api/%s/{token}", d.Name), t.handleData(d)).Methods("GET")
 	}
-
-	http.Handle(applyNewRelic("/", handlers.LoggingHandler(os.Stdout, utils.CorrelationIdMiddleware(t.Router))))
 
 	const TrustProviderPortKey = "TRUST_PROVIDER_PORT"
 	t.port = os.Getenv(TrustProviderPortKey)
@@ -823,6 +821,8 @@ func (t *TrustProvider) initAdapterDid() (error) {
 }
 
 func (t *TrustProvider) ListenAndServe() error {
+	http.Handle(applyNewRelic("/", handlers.LoggingHandler(os.Stdout, utils.CorrelationIdMiddleware(t.Router))))
+
 	log.Printf("Listening on port: %s", t.port)
 	return http.ListenAndServe(":"+t.port, nil)
 }
