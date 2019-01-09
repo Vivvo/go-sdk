@@ -353,7 +353,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 			utils.WriteJSON(res, http.StatusBadRequest, w)
 		}
 
-		pairwiseDoc, err := t.createPairwiseDid(t.wallet)
+		pairwiseDoc, err = t.createPairwiseDid(t.wallet)
 		if err != nil {
 			utils.SendError(err, w)
 			return
