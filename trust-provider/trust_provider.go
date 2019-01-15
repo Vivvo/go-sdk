@@ -747,17 +747,6 @@ func (t *TrustProvider) initAdapterDid() (error) {
 	}
 	masterKey := os.Getenv("MASTER_KEY")
 
-	_, err := t.resolver.Resolve(id)
-	if err == nil {
-		log.Println("DID already published")
-
-		if os.Getenv("PRIVATE_KEY") != "" {
-			err = t.wallet.Add(wallet.TypeRsaVerificationKey2018, os.Getenv("DID"), os.Getenv("PRIVATE_KEY"), nil)
-		}
-
-		return nil
-	}
-
 	var w *wallet.Wallet
 	if _, err := os.Stat(DefaultWalletId); os.IsNotExist(err) {
 		w, err = wallet.Create([]byte(masterKey), DefaultWalletId)
@@ -788,6 +777,17 @@ func (t *TrustProvider) initAdapterDid() (error) {
 	t.wallet = w
 	wr := WalletResolver{resolver: t.resolver, wallet: t.wallet}
 	t.resolver = &wr
+
+	_, err := t.resolver.Resolve(id)
+	if err == nil {
+		log.Println("DID already published")
+
+		if os.Getenv("PRIVATE_KEY") != "" {
+			err = t.wallet.Add(wallet.TypeRsaVerificationKey2018, os.Getenv("DID"), os.Getenv("PRIVATE_KEY"), nil)
+		}
+
+		return nil
+	}
 
 	rsaPublicKey, err := t.wallet.Crypto().GenerateRSAKey("RsaVerificationKey2018", id)
 	if err != nil {
