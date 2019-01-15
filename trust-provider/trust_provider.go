@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -783,7 +784,12 @@ func (t *TrustProvider) initAdapterDid() (error) {
 		log.Println("DID already published")
 
 		if os.Getenv("PRIVATE_KEY") != "" {
-			err = t.wallet.Add(wallet.TypeRsaVerificationKey2018, os.Getenv("DID"), os.Getenv("PRIVATE_KEY"), nil)
+			log.Println("Adding private key to wallet from env variable.")
+			pk := strings.Replace(os.Getenv("PRIVATE_KEY"), "\\n", "\n", -1)
+			err = t.wallet.Add(wallet.TypeRsaVerificationKey2018, os.Getenv("DID"), pk, nil)
+			if err != nil {
+				log.Println(err.Error())
+			}
 		}
 
 		return nil
