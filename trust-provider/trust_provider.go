@@ -750,6 +750,11 @@ func (t *TrustProvider) initAdapterDid() (error) {
 	_, err := t.resolver.Resolve(id)
 	if err == nil {
 		log.Println("DID already published")
+
+		if os.Getenv("PRIVATE_KEY") != "" {
+			err = t.wallet.Add(wallet.TypeRsaVerificationKey2018, os.Getenv("DID"), os.Getenv("PRIVATE_KEY"), nil)
+		}
+
 		return nil
 	}
 
@@ -911,7 +916,7 @@ func (d *DefaultAccount) Read(token string) (interface{}, error) {
 		}
 	}
 
-	return nil, err
+	return nil, errors.New("not found")
 }
 
 func createDevDB() error {
