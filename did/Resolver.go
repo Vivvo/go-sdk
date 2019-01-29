@@ -3,11 +3,9 @@ package did
 import (
 	"crypto/rsa"
 	"crypto/x509"
-	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"github.com/Vivvo/go-wallet"
 	"github.com/go-resty/resty"
 	"log"
 	"net/http"
@@ -16,7 +14,6 @@ import (
 )
 
 type Service struct {
-	Id              string `json:"id,omitempty"`
 	T               string `json:"type"`
 	ServiceEndpoint string `json:"serviceEndpoint"`
 }
@@ -47,12 +44,6 @@ type ResolverInterface interface {
 	Register(*Document) error
 }
 
-type MobileResolverInterface interface {
-	Resolve(string) (*Document, error)
-	Register(string, string, *Document) error
-	GenerateDidDocument(string, *wallet.Wallet) (Document, error)
-	ProvisionMessagingEndpoint(*string) (string, error)
-}
 type Resolver struct {
 }
 
@@ -98,12 +89,11 @@ func (d *Resolver) Resolve(did string) (*Document, error) {
 	return &didDocument, nil
 }
 
-func (d *Resolver) Register(parent string, pairwiseDid string, ddoc *Document) error {
+func (d *Resolver) Register(ddoc *Document) error {
+
 	var body = struct {
-		Parent      string    `json:"parent,omitempty"`
-		PairwiseDid string    `json:"pairwiseDid,omitempty"`
 		DidDocument *Document `json:"didDocument"`
-	}{Parent: parent, PairwiseDid: pairwiseDid, DidDocument: ddoc}
+	}{DidDocument: ddoc}
 
 	_, err := resty.New().
 		R().
@@ -116,53 +106,4 @@ func (d *Resolver) Register(parent string, pairwiseDid string, ddoc *Document) e
 	}
 
 	return nil
-}
-
-func (d *Resolver) GenerateDidDocument(id string, w *wallet.Wallet) (*Document, error) {
-	var doc Document
-	doc.Context = "https://w3id.org/did/v1"
-	doc.Id = id
-
-	rsaPublicKey, err := w.Crypto().GenerateRSAKey("RsaVerificationKey2018", id)
-	if err != nil {
-		return nil, err
-	}
-
-	ed25519PublicKey, err := w.Crypto().GenerateEd25519Key("Ed25519KeyExchange2018", id)
-	if err != nil {
-		return nil, err
-	}
-
-	pubKey := PublicKey{
-		Owner:        id,
-		Id:           fmt.Sprintf("%s#keys-1", id),
-		T:            "RsaVerificationKey2018",
-		PublicKeyPem: rsaPublicKey,
-	}
-
-	pubKey2 := PublicKey{
-		Owner:           id,
-		Id:              fmt.Sprintf("%s#keys-2", id),
-		T:               "Ed25519KeyExchange2018",
-		PublicKeyBase58: ed25519PublicKey,
-	}
-
-	doc.PublicKey = []PublicKey{pubKey, pubKey2}
-
-	auth := Authentication{}
-	auth.PublicKey = pubKey.Id
-	auth.T = "RsaSignatureAuthentication2018"
-	doc.Authentication = []Authentication{auth}
-
-	docJson, err := json.Marshal(doc)
-	if err != nil {
-		return nil, err
-	}
-
-	err = w.Dids().Create(doc.Id, string(docJson), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return &doc, err
 }
