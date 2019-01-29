@@ -8,19 +8,21 @@ import (
 
 type GenerateDidDocument struct {
 	Resolver ResolverInterface
+	W *wallet.Wallet
+
 }
 
-func (g *GenerateDidDocument) Generate(id string, w *wallet.Wallet) (*Document, error) {
+func (g *GenerateDidDocument) Generate(id string) (*Document, error) {
 	var doc Document
 	doc.Context = "https://w3id.org/did/v1"
 	doc.Id = id
 
-	rsaPublicKey, err := w.Crypto().GenerateRSAKey("RsaVerificationKey2018", id)
+	rsaPublicKey, err := g.W.Crypto().GenerateRSAKey("RsaVerificationKey2018", id)
 	if err != nil {
 		return nil, err
 	}
 
-	ed25519PublicKey, err := w.Crypto().GenerateEd25519Key("Ed25519KeyExchange2018", id)
+	ed25519PublicKey, err := g.W.Crypto().GenerateEd25519Key("Ed25519KeyExchange2018", id)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +53,7 @@ func (g *GenerateDidDocument) Generate(id string, w *wallet.Wallet) (*Document, 
 		return nil, err
 	}
 
-	err = w.Dids().Create(doc.Id, string(docJson), nil)
+	err = g.W.Dids().Create(doc.Id, string(docJson), nil)
 	if err != nil {
 		return nil, err
 	}

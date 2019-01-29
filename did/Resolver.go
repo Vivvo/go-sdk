@@ -6,7 +6,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"github.com/Vivvo/go-wallet"
 	"github.com/go-resty/resty"
 	"log"
 	"net/http"
@@ -49,7 +48,6 @@ type ResolverInterface interface {
 type MobileResolverInterface interface {
 	Resolve(string) (*Document, error)
 	RegisterMobile(string, string, *Document) error
-	GenerateDidDocument(string, *wallet.Wallet) (Document, error)
 }
 
 type Resolver struct {
