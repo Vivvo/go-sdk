@@ -186,65 +186,17 @@ func (t *TrustProvider) parseParameters(body interface{}, params []Parameter, r 
 }
 
 //TODO: Clean up, Move to the did folder maybe?
-func (t *TrustProvider) createPairwiseDid(w *wallet.Wallet) (*did.Document, error) {
+func (t *TrustProvider) createPairwiseDid(w *wallet.Wallet, resolver did.ResolverInterface) (*did.Document, error) {
 	u, _ := uuid.New().MarshalBinary()
 	pairwiseDid := "did:vvo:" + base58.Encode(u)
 
-	document, err := t.generateDidDocument(pairwiseDid, w)
+	genD := &did.GenerateDidDocument{Resolver: resolver}
+	document, err := genD.Generate(pairwiseDid, w)
 	if err != nil {
 		return nil, err
 	}
 
 	return document, nil
-}
-
-func (t *TrustProvider) generateDidDocument(id string, w *wallet.Wallet) (*did.Document, error) {
-	doc := did.Document{}
-	doc.Context = "https://w3id.org/did/v1"
-	doc.Id = id
-
-	rsaPublicKey, err := w.Crypto().GenerateRSAKey("RsaVerificationKey2018", id)
-	if err != nil {
-		return nil, err
-	}
-
-	ed25519PublicKey, err := w.Crypto().GenerateEd25519Key("Ed25519KeyExchange2018", id)
-	if err != nil {
-		return nil, err
-	}
-
-	pubKey := did.PublicKey{
-		Owner:        id,
-		Id:           fmt.Sprintf("%s#keys-1", id),
-		T:            "RsaVerificationKey2018",
-		PublicKeyPem: rsaPublicKey,
-	}
-
-	pubKey2 := did.PublicKey{
-		Owner:           id,
-		Id:              fmt.Sprintf("%s#keys-2", id),
-		T:               "Ed25519KeyExchange2018",
-		PublicKeyBase58: ed25519PublicKey,
-	}
-
-	doc.PublicKey = []did.PublicKey{pubKey, pubKey2}
-
-	auth := did.Authentication{}
-	auth.PublicKey = pubKey.Id
-	auth.T = "RsaSignatureAuthentication2018"
-	doc.Authentication = []did.Authentication{auth}
-
-	docJson, err := json.Marshal(doc)
-	if err != nil {
-		return nil, err
-	}
-
-	err = w.Dids().Create(doc.Id, string(docJson), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return &doc, err
 }
 
 func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
@@ -279,7 +231,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 			}
 
 			ourDid := os.Getenv("DID")
-			pairwiseDoc, err = t.createPairwiseDid(t.wallet)
+			pairwiseDoc, err = t.createPairwiseDid(t.wallet, t.resolver)
 			if err != nil {
 				utils.SendError(err, w)
 				return
@@ -362,7 +314,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 			utils.WriteJSON(res, http.StatusBadRequest, w)
 		}
 
-		pairwiseDoc, err = t.createPairwiseDid(t.wallet)
+		pairwiseDoc, err = t.createPairwiseDid(t.wallet, t.resolver)
 		if err != nil {
 			utils.SendError(err, w)
 			return
@@ -690,8 +642,9 @@ func applyNewRelic(pattern string, handler http.Handler) (string, http.Handler) 
 }
 
 type WalletResolver struct {
-	resolver did.ResolverInterface
-	wallet   *wallet.Wallet
+	resolver     did.ResolverInterface
+	wallet       *wallet.Wallet
+	generateDDoc did.GenerateDidDocument
 }
 
 func (wr *WalletResolver) Resolve(id string) (*did.Document, error) {
@@ -708,6 +661,16 @@ func (wr *WalletResolver) Resolve(id string) (*did.Document, error) {
 
 func (wr *WalletResolver) Register(ddoc *did.Document) error {
 	return wr.resolver.Register(ddoc)
+}
+
+func (wr *WalletResolver) GenerateDDoc(id string, w *wallet.Wallet) (*did.Document, error) {
+	doc, err := wr.generateDDoc.Generate(id, w)
+	if err != nil {
+		println(err.Error())
+		return nil, err
+	}
+
+	return doc, nil
 }
 
 // Create a new TrustProvider. Based on the onboarding, rules and account objects you pass in
@@ -757,8 +720,9 @@ func (t *TrustProvider) initAdapterDid() (error) {
 		}
 	} else {
 		if w, err = wallet.Open([]byte(masterKey), DefaultWalletId); err == nil {
+
 			t.wallet = w
-			wr := WalletResolver{resolver: t.resolver, wallet: t.wallet}
+			wr := WalletResolver{resolver: t.resolver, wallet: t.wallet, generateDDoc: did.GenerateDidDocument{Resolver: t.resolver}}
 			t.resolver = &wr
 
 			d, _ := w.Dids().Read(id)
@@ -776,7 +740,7 @@ func (t *TrustProvider) initAdapterDid() (error) {
 	}
 
 	t.wallet = w
-	wr := WalletResolver{resolver: t.resolver, wallet: t.wallet}
+	wr := WalletResolver{resolver: t.resolver, wallet: t.wallet, generateDDoc: did.GenerateDidDocument{Resolver: t.resolver}}
 	t.resolver = &wr
 
 	_, err := t.resolver.Resolve(id)
@@ -795,31 +759,9 @@ func (t *TrustProvider) initAdapterDid() (error) {
 		return nil
 	}
 
-	rsaPublicKey, err := t.wallet.Crypto().GenerateRSAKey("RsaVerificationKey2018", id)
+	doc, err := wr.generateDDoc.Generate(id, w)
 	if err != nil {
-		return err
-	}
-
-	ed25519PublicKey, err := t.wallet.Crypto().GenerateEd25519Key("Ed25519KeyExchange2018", id)
-	if err != nil {
-		return err
-	}
-
-	doc := &did.Document{
-		Id:             id,
-		PublicKey:      []did.PublicKey{{Owner: id, Id: fmt.Sprintf("%s#keys-1", id), PublicKeyPem: rsaPublicKey, T: "RsaVerificationKey2018"}, {Owner: id, Id: fmt.Sprintf("%s#keys-2", id), T: "Ed25519KeyExchange2018", PublicKeyBase58: ed25519PublicKey}},
-		Authentication: []did.Authentication{{T: "RsaVerificationKey2018", PublicKey: fmt.Sprintf("%s#keys-1", id)}},
-		Context:        "https://w3id.org/did/v1",
-	}
-
-	docJson, err := json.Marshal(doc)
-	if err != nil {
-		return errors.New("error marshalling ddoc")
-	}
-
-	err = w.Dids().Create(id, string(docJson), nil)
-	if err != nil {
-		fmt.Println("error storing the did doc:", err.Error())
+		log.Println(err.Error())
 	}
 
 	err = t.resolver.Register(doc)

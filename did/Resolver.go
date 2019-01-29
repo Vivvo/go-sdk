@@ -6,6 +6,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"github.com/Vivvo/go-wallet"
 	"github.com/go-resty/resty"
 	"log"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 )
 
 type Service struct {
+	Id              string `json:"id"`
 	T               string `json:"type"`
 	ServiceEndpoint string `json:"serviceEndpoint"`
 }
@@ -42,6 +44,12 @@ type Document struct {
 type ResolverInterface interface {
 	Resolve(string) (*Document, error)
 	Register(*Document) error
+}
+
+type MobileResolverInterface interface {
+	Resolve(string) (*Document, error)
+	RegisterMobile(string, string, *Document) error
+	GenerateDidDocument(string, *wallet.Wallet) (Document, error)
 }
 
 type Resolver struct {
@@ -94,6 +102,26 @@ func (d *Resolver) Register(ddoc *Document) error {
 	var body = struct {
 		DidDocument *Document `json:"didDocument"`
 	}{DidDocument: ddoc}
+
+	_, err := resty.New().
+		R().
+		SetBody(&body).
+		Post(fmt.Sprintf("%s/api/v1/did", os.Getenv("MOCK_BLOCKCHAIN_URL")))
+
+	if err != nil {
+		log.Println(err.Error())
+		return err
+	}
+
+	return nil
+}
+
+func (d *Resolver) RegisterMobile(parent string, pairwiseDid string, ddoc *Document) error {
+	var body = struct {
+		Parent      string    `json:"parent,omitempty"`
+		PairwiseDid string    `json:"pairwiseDid,omitempty"`
+		DidDocument *Document `json:"didDocument"`
+	}{Parent: parent, PairwiseDid: pairwiseDid, DidDocument: ddoc}
 
 	_, err := resty.New().
 		R().

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Vivvo/go-sdk/did"
-	"github.com/Vivvo/go-sdk/utils"
 	"github.com/Vivvo/go-wallet"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
@@ -133,7 +132,6 @@ func TestOnboardingVerifiableClaim(t *testing.T) {
 			os.Setenv("DID", "did:vvo:12H6btMP6hPy32VXbwKvGE")
 
 			resolver := NewMockResolver()
-
 			tp := New(onboarding, nil, nil, nil, &mockAccount, &resolver)
 
 			executeRequest := func(req *http.Request) *httptest.ResponseRecorder {
@@ -145,7 +143,9 @@ func TestOnboardingVerifiableClaim(t *testing.T) {
 
 			w, _ := newWallet(t)
 
-			ddoc := GenerateDidDocument(w, &resolver)
+			id := uuid.New().String()
+			genD := &did.GenerateDidDocument{Resolver: &resolver}
+			ddoc, err := genD.Generate(id, w)
 
 			vc := buildIAmMeCredential(w, ddoc)
 			b, err := json.Marshal(vc)
@@ -214,32 +214,6 @@ func TestOnboardingVerifiableClaim(t *testing.T) {
 		os.Remove("wallet.db")
 	}
 
-}
-
-func GenerateDidDocument(w *wallet.Wallet, resolver did.ResolverInterface) (*did.Document) {
-	id := utils.ClientIdToDid(uuid.New())
-
-	rsaPubKey, _ := w.Crypto().GenerateRSAKey(wallet.TypeRsaVerificationKey2018, id)
-	ed25519PubKey, _ := w.Crypto().GenerateEd25519Key(wallet.TypeEd25519KeyExchange2018, id)
-
-	didDocument := &did.Document{
-		Id: id,
-		PublicKey: []did.PublicKey{
-			{Owner: id, Id: fmt.Sprintf("%s#keys-1", id), PublicKeyPem: rsaPubKey, T: wallet.TypeRsaVerificationKey2018},
-			{Owner: id, Id: fmt.Sprintf("%s#keys-2", id), PublicKeyBase58: ed25519PubKey, T: wallet.TypeEd25519KeyExchange2018},
-		},
-		Authentication: []did.Authentication{{T: wallet.TypeRsaVerificationKey2018, PublicKey: fmt.Sprintf("%s#keys-1", id)}},
-		Context:        "https://w3id.org/did/v1",
-		Service:        []did.Service{{ServiceEndpoint: "http://example.com", T: "AgentService"}},
-	}
-
-	s, _ := json.Marshal(didDocument)
-
-	w.Dids().Create(didDocument.Id, string(s), nil)
-
-	resolver.Register(didDocument)
-
-	return didDocument
 }
 
 func newWallet(t *testing.T) (*wallet.Wallet, []byte) {
