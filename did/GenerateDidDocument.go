@@ -11,7 +11,7 @@ type GenerateDidDocument struct {
 }
 type GenerateDidDocumentMobile struct {
 	Resolver MobileResolverInterface
-	w        *wallet.Wallet
+	W        *wallet.Wallet
 }
 
 func (g *GenerateDidDocumentMobile) GenerateDDoc(id string) (*Document, error) {
@@ -19,12 +19,12 @@ func (g *GenerateDidDocumentMobile) GenerateDDoc(id string) (*Document, error) {
 	doc.Context = "https://w3id.org/did/v1"
 	doc.Id = id
 
-	rsaPublicKey, err := g.w.Crypto().GenerateRSAKey("RsaVerificationKey2018", id)
+	rsaPublicKey, err := g.W.Crypto().GenerateRSAKey("RsaVerificationKey2018", id)
 	if err != nil {
 		return nil, err
 	}
 
-	ed25519PublicKey, err := g.w.Crypto().GenerateEd25519Key("Ed25519KeyExchange2018", id)
+	ed25519PublicKey, err := g.W.Crypto().GenerateEd25519Key("Ed25519KeyExchange2018", id)
 	if err != nil {
 		return nil, err
 	}
