@@ -7,7 +7,7 @@ import (
 )
 
 type GenerateDidDocument struct {
-	Resolver ResolverInterface
+	Resolver MobileResolverInterface
 	W *wallet.Wallet
 
 }
@@ -54,11 +54,6 @@ func (g *GenerateDidDocument) GenerateDDoc(id string) (*Document, error) {
 	}
 
 	err = g.W.Dids().Create(doc.Id, string(docJson), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	err = g.Resolver.Register(&doc)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +108,7 @@ func (g *GenerateDidDocument) Generate(id string, w *wallet.Wallet) (*Document, 
 		return nil, err
 	}
 
-	err = g.Resolver.Register(&doc)
+	err = g.Resolver.RegisterMobile("", "", &doc)
 	if err != nil {
 		return nil, err
 	}

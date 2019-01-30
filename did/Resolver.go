@@ -53,6 +53,10 @@ type MobileResolverInterface interface {
 type Resolver struct {
 }
 
+type MobileResolver struct {
+	BaseUrl string
+}
+
 func (d *Document) GetPublicKeyById(id string) (*rsa.PublicKey, error) {
 	for _, v := range d.PublicKey {
 		if strings.Compare(v.Id, id) == 0 {
@@ -114,7 +118,26 @@ func (d *Resolver) Register(ddoc *Document) error {
 	return nil
 }
 
-func (d *Resolver) RegisterMobile(parent string, pairwiseDid string, ddoc *Document) error {
+func (d *MobileResolver) Resolve(did string) (*Document, error) {
+
+	var didDocument = Document{}
+
+	resp, err := resty.New().R().
+		SetResult(&didDocument).
+		Get(fmt.Sprintf("%s/api/v1/did/%s", d.BaseUrl, did))
+
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode() != http.StatusOK {
+		return nil, errors.New(resp.Status())
+	}
+
+	return &didDocument, nil
+}
+
+func (d *MobileResolver) RegisterMobile(parent string, pairwiseDid string, ddoc *Document) error {
 	var body = struct {
 		Parent      string    `json:"parent,omitempty"`
 		PairwiseDid string    `json:"pairwiseDid,omitempty"`
@@ -124,7 +147,7 @@ func (d *Resolver) RegisterMobile(parent string, pairwiseDid string, ddoc *Docum
 	_, err := resty.New().
 		R().
 		SetBody(&body).
-		Post(fmt.Sprintf("%s/api/v1/did", os.Getenv("MOCK_BLOCKCHAIN_URL")))
+		Post(fmt.Sprintf("%s/api/v1/did", d.BaseUrl))
 
 	if err != nil {
 		log.Println(err.Error())
