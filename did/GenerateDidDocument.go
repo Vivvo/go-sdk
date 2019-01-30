@@ -55,7 +55,7 @@ func (g *GenerateDidDocumentMobile) GenerateDDoc(id string) (*Document, error) {
 		return nil, err
 	}
 
-	err = g.w.Dids().Create(doc.Id, string(docJson), nil)
+	err = g.W.Dids().Create(doc.Id, string(docJson), nil)
 	if err != nil {
 		return nil, err
 	}
