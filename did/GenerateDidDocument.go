@@ -7,22 +7,24 @@ import (
 )
 
 type GenerateDidDocument struct {
+	Resolver ResolverInterface
+}
+type GenerateDidDocumentMobile struct {
 	Resolver MobileResolverInterface
-	W *wallet.Wallet
-
+	w        *wallet.Wallet
 }
 
-func (g *GenerateDidDocument) GenerateDDoc(id string) (*Document, error) {
+func (g *GenerateDidDocumentMobile) GenerateDDoc(id string) (*Document, error) {
 	var doc Document
 	doc.Context = "https://w3id.org/did/v1"
 	doc.Id = id
 
-	rsaPublicKey, err := g.W.Crypto().GenerateRSAKey("RsaVerificationKey2018", id)
+	rsaPublicKey, err := g.w.Crypto().GenerateRSAKey("RsaVerificationKey2018", id)
 	if err != nil {
 		return nil, err
 	}
 
-	ed25519PublicKey, err := g.W.Crypto().GenerateEd25519Key("Ed25519KeyExchange2018", id)
+	ed25519PublicKey, err := g.w.Crypto().GenerateEd25519Key("Ed25519KeyExchange2018", id)
 	if err != nil {
 		return nil, err
 	}
@@ -53,14 +55,13 @@ func (g *GenerateDidDocument) GenerateDDoc(id string) (*Document, error) {
 		return nil, err
 	}
 
-	err = g.W.Dids().Create(doc.Id, string(docJson), nil)
+	err = g.w.Dids().Create(doc.Id, string(docJson), nil)
 	if err != nil {
 		return nil, err
 	}
 
 	return &doc, err
 }
-
 
 func (g *GenerateDidDocument) Generate(id string, w *wallet.Wallet) (*Document, error) {
 	var doc Document
@@ -108,7 +109,7 @@ func (g *GenerateDidDocument) Generate(id string, w *wallet.Wallet) (*Document, 
 		return nil, err
 	}
 
-	err = g.Resolver.RegisterMobile("", "", &doc)
+	err = g.Resolver.Register(&doc)
 	if err != nil {
 		return nil, err
 	}
