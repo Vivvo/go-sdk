@@ -138,6 +138,7 @@ func (d *MobileResolver) ResolveMobile(did string) (*Document, error) {
 }
 
 func (d *MobileResolver) RegisterMobile(parent string, pairwiseDid string, ddoc *Document) error {
+	log.Println("didBaseUrl: ", d.DidBaseUrl)
 	var body = struct {
 		Parent      string    `json:"parent,omitempty"`
 		PairwiseDid string    `json:"pairwiseDid,omitempty"`
@@ -147,7 +148,7 @@ func (d *MobileResolver) RegisterMobile(parent string, pairwiseDid string, ddoc 
 	_, err := resty.New().
 		R().
 		SetBody(&body).
-		Post(fmt.Sprintf("%s/api/v1/did", d.BaseUrl))
+		Post(fmt.Sprintf("%s/api/v1/did", d.DidBaseUrl))
 
 	if err != nil {
 		log.Println(err.Error())
