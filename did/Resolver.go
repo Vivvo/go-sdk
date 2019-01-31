@@ -120,9 +120,8 @@ func (d *Resolver) Register(ddoc *Document) error {
 }
 
 func (d *MobileResolver) Resolve(did string) (*Document, error) {
-
 	var didDocument = Document{}
-
+	log.Println(fmt.Sprintf("%s/api/v1/did/%s", d.DidBaseUrl, did))
 	resp, err := resty.New().R().
 		SetResult(&didDocument).
 		Get(fmt.Sprintf("%s/api/v1/did/%s", d.DidBaseUrl, did))
