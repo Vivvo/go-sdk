@@ -54,7 +54,8 @@ type Resolver struct {
 }
 
 type MobileResolver struct {
-	BaseUrl string
+	BaseUrl    string
+	DidBaseUrl string
 }
 
 func (d *Document) GetPublicKeyById(id string) (*rsa.PublicKey, error) {
@@ -124,7 +125,7 @@ func (d *MobileResolver) Resolve(did string) (*Document, error) {
 
 	resp, err := resty.New().R().
 		SetResult(&didDocument).
-		Get(fmt.Sprintf("%s/api/v1/did/%s", d.BaseUrl, did))
+		Get(fmt.Sprintf("%s/api/v1/did/%s", d.DidBaseUrl, did))
 
 	if err != nil {
 		return nil, err
@@ -147,7 +148,7 @@ func (d *MobileResolver) RegisterMobile(parent string, pairwiseDid string, ddoc 
 	_, err := resty.New().
 		R().
 		SetBody(&body).
-		Post(fmt.Sprintf("%s/api/v1/did", d.BaseUrl))
+		Post(fmt.Sprintf("%s/api/v1/did", d.DidBaseUrl))
 
 	if err != nil {
 		log.Println(err.Error())
