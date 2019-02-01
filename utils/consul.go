@@ -37,7 +37,6 @@ func NewConsulService(address string) (ConsulServiceInterface, error) {
 }
 
 func (c *ConsulService) GetService(service string) string {
-
 	_, addrs, err := net.LookupSRV(service, os.Getenv("TAG"), "service.consul")
 	if err == nil || len(addrs) != 0 {
 		return fmt.Sprintf("%s:%d", addrs[0].Target, addrs[0].Port)
@@ -50,7 +49,8 @@ func (c *ConsulService) GetService(service string) string {
 	randomService := services[c.rng.Intn(len(services))].Service
 
 	newHost := fmt.Sprintf("%s:%d", randomService.Address, randomService.Port)
-	log.Printf("Remapping host %s -> %s", service, newHost)
+
+	log.Printf("Remapping host %s -> %s", os.Getenv("TAG") + service, newHost)
 
 	return newHost
 }
