@@ -50,7 +50,7 @@ func (c *ConsulService) GetService(service string) string {
 
 	newHost := fmt.Sprintf("%s:%d", randomService.Address, randomService.Port)
 
-	log.Printf("Remapping host %s -> %s", os.Getenv("TAG") + service, newHost)
+	log.Printf("Remapping host %s -> %s", os.Getenv("TAG") + "-" + service, newHost)
 
 	return newHost
 }
