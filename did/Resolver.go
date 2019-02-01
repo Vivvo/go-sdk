@@ -54,7 +54,6 @@ type Resolver struct {
 }
 
 type MobileResolver struct {
-	BaseUrl    string
 	DidBaseUrl string
 }
 
