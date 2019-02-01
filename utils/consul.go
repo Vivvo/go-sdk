@@ -43,7 +43,7 @@ func (c *ConsulService) GetService(service string) string {
 		return fmt.Sprintf("%s:%d", addrs[0].Target, addrs[0].Port)
 	}
 
-	services, _, err := c.health.Service(service, "", true, nil)
+	services, _, err := c.health.Service(service, os.Getenv("TAG"), true, nil)
 	if err != nil || len(services) == 0 {
 		return service
 	}
