@@ -37,7 +37,7 @@ func NewConsulService(address string) (ConsulServiceInterface, error) {
 }
 
 func (c *ConsulService) GetService(service string) string {
-	_, addrs, err := net.LookupSRV(service, "", "service.consul")
+	_, addrs, err := net.LookupSRV(service, os.Getenv("TAG"), "service.consul")
 	if err == nil || len(addrs) != 0 {
 		return fmt.Sprintf("%s:%d", addrs[0].Target, addrs[0].Port)
 	}
