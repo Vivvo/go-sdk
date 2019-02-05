@@ -24,6 +24,7 @@ const ProofOfLegalNameCredential = "ProofOfLegalNameCredential"
 const ProofOfResidencyCredential = "ProofOfResidencyCredential"
 const TokenizedConnectionCredential = "TokenizedConnectionCredential"
 const VerifiableCredential = "VerifiableCredential"
+const InviteCredential = "InviteCredential"
 
 const AuthenticationChallengeClaim = "challenge"
 const CallbackClaim = "callback"

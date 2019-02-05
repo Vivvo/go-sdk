@@ -38,6 +38,8 @@ type Document struct {
 	PublicKey      []PublicKey      `json:"publicKey"`
 	Authentication []Authentication `json:"authentication"`
 	Service        []Service        `json:"service"`
+	Name           string           `json:"name,omitempty"`
+	Logo           string           `json:"logo,omitempty"`
 }
 
 type ResolverInterface interface {

@@ -14,7 +14,7 @@ type GenerateDidDocumentMobile struct {
 	W        *wallet.Wallet
 }
 
-func (g *GenerateDidDocumentMobile) GenerateDDoc(id string) (*Document, error) {
+func (g *GenerateDidDocumentMobile) GenerateDDoc(id string, serviceEndpoints []Service) (*Document, error) {
 	var doc Document
 	doc.Context = "https://w3id.org/did/v1"
 	doc.Id = id
@@ -49,6 +49,8 @@ func (g *GenerateDidDocumentMobile) GenerateDDoc(id string) (*Document, error) {
 	auth.PublicKey = pubKey.Id
 	auth.T = "RsaSignatureAuthentication2018"
 	doc.Authentication = []Authentication{auth}
+
+	doc.Service = serviceEndpoints
 
 	docJson, err := json.Marshal(doc)
 	if err != nil {
