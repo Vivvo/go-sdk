@@ -37,11 +37,13 @@ func NewConsulService(address string) (ConsulServiceInterface, error) {
 }
 
 func (c *ConsulService) GetService(service string) string {
-	_, addrs, err := net.LookupSRV(service, os.Getenv("TAG"), "service.consul")
-	if err == nil || len(addrs) != 0 {
+	// single tenant quick lookup
+	_, addrs, err := net.LookupSRV(service, "", "service.consul")
+	if err == nil || len(addrs) == 1 {
 		return fmt.Sprintf("%s:%d", addrs[0].Target, addrs[0].Port)
 	}
 
+	// multi-tenant lookup by tag
 	services, _, err := c.health.Service(service, os.Getenv("TAG"), true, nil)
 	if err != nil || len(services) == 0 {
 		return service
