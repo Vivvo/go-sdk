@@ -123,6 +123,7 @@ func (d *Resolver) Register(ddoc *Document) error {
 func (d *MobileResolver) ResolveMobile(did string) (*Document, error) {
 	var didDocument = Document{}
 
+	log.Println("In the mobile resolver")
 	resp, err := resty.New().R().
 		SetResult(&didDocument).
 		Get(fmt.Sprintf("%s/api/v1/did/%s", d.DidBaseUrl, did))
@@ -130,8 +131,9 @@ func (d *MobileResolver) ResolveMobile(did string) (*Document, error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Println("didDocument: ", didDocument)
 
-	if resp.StatusCode() != http.StatusOK {
+	if resp.StatusCode() > 299 {
 		return nil, errors.New(resp.Status())
 	}
 
