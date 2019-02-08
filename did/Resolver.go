@@ -123,7 +123,7 @@ func (d *Resolver) Register(ddoc *Document, opts ...string) error {
 		log.Println(err.Error())
 		return err
 	}
-	if resp.StatusCode() >= http.StatusCreated {
+	if resp.StatusCode() != http.StatusOK {
 		return errors.New(resp.Status())
 	}
 	return nil
