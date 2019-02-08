@@ -44,7 +44,11 @@ func TestResolver_Register_WithParent(t *testing.T) {
 		}
 
 		if body.Parent != "imaparent" {
-			utils.SetErrorStatus(errors.New("bad parent"), http.StatusBadRequest, rw)
+			err = errors.New("bad parent")
+			utils.SetErrorStatus(err, http.StatusBadRequest, rw)
+		}
+		if err != nil {
+			t.Fatalf(err.Error())
 		}
 	}))
 
@@ -70,11 +74,16 @@ func TestResolver_Register_WithParentAndPairwise(t *testing.T) {
 		}
 
 		if body.Parent != "imaparent" {
-			utils.SetErrorStatus(errors.New("bad parent"), http.StatusBadRequest, rw)
+			err := errors.New("bad parent")
+			utils.SetErrorStatus(err, http.StatusBadRequest, rw)
 		}
 
 		if body.PairwiseDid != "totallypairwise" {
-			utils.SetErrorStatus(errors.New("bad pairwise"), http.StatusBadRequest, rw)
+			err = errors.New("bad pairwise")
+			utils.SetErrorStatus(err, http.StatusBadRequest, rw)
+		}
+		if err != nil {
+			t.Fatalf(err.Error())
 		}
 	}))
 

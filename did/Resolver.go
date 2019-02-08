@@ -111,7 +111,7 @@ func (d *Resolver) Register(ddoc *Document, opts ...string) error {
 	}
 
 	if len(opts) >= 2 {
-		body.Parent = opts[1]
+		body.PairwiseDid = opts[1]
 	}
 
 	_, err := resty.New().
