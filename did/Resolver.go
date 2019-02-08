@@ -44,8 +44,7 @@ type Document struct {
 
 type ResolverInterface interface {
 	Resolve(string) (*Document, error)
-	Register(*Document) error
-	RegisterMobile(string, string, *Document) error
+	Register(*Document, ...string) error
 }
 
 type Resolver struct {
@@ -99,32 +98,21 @@ func (d *Resolver) Resolve(did string) (*Document, error) {
 	return &didDocument, nil
 }
 
-func (d *Resolver) Register(ddoc *Document) error {
-
-	var body = struct {
-		DidDocument *Document `json:"didDocument"`
-	}{DidDocument: ddoc}
-
-	_, err := resty.New().
-		R().
-		SetBody(&body).
-		Post(fmt.Sprintf("%s/api/v1/did", os.Getenv("MOCK_BLOCKCHAIN_URL")))
-
-	if err != nil {
-		log.Println(err.Error())
-		return err
-	}
-
-	return nil
-}
-
-func (d *Resolver) RegisterMobile(parent string, pairwiseDid string, ddoc *Document) error {
+func (d *Resolver) Register(ddoc *Document, opts ...string) error {
 	log.Println("didBaseUrl: ", d.DidBaseUrl)
 	var body = struct {
 		Parent      string    `json:"parent,omitempty"`
 		PairwiseDid string    `json:"pairwiseDid,omitempty"`
 		DidDocument *Document `json:"didDocument"`
-	}{Parent: parent, PairwiseDid: pairwiseDid, DidDocument: ddoc}
+	}{DidDocument: ddoc}
+
+	if len(opts) >= 1 {
+		body.Parent = opts[0]
+	}
+
+	if len(opts) >= 2 {
+		body.Parent = opts[1]
+	}
 
 	_, err := resty.New().
 		R().

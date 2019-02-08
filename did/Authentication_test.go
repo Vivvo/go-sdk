@@ -58,7 +58,7 @@ func (m MockResolver) Resolve(d string) (*Document, error) {
 	return &Document{Id: "did:vvo:12H6btMP6hPy32VXbwKvGE", PublicKey: []PublicKey{{Id: "did:vvo:12H6btMP6hPy32VXbwKvGE#keys-1", PublicKeyPem: publicKeyPem}}}, nil
 }
 
-func (m MockResolver) Register(*Document) error {
+func (m MockResolver) Register(*Document, ...string) error {
 	return nil
 }
 

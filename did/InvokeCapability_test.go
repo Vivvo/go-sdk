@@ -54,7 +54,7 @@ func (m *MockOcapResolver) Resolve(id string) (*Document, error) {
 	}
 	return nil, errors.New("not found")
 }
-func (m *MockOcapResolver) Register(*Document) error {
+func (m *MockOcapResolver) Register(*Document, ...string) error {
 	return errors.New("not implemented")
 }
 
