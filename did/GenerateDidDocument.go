@@ -10,7 +10,7 @@ type GenerateDidDocument struct {
 	Resolver ResolverInterface
 }
 type GenerateDidDocumentMobile struct {
-	Resolver MobileResolverInterface
+	Resolver ResolverInterface
 	W        *wallet.Wallet
 }
 

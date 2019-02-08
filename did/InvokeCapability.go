@@ -17,6 +17,12 @@ type InvokeCapability struct {
 	InvokeProof *InvokeProof `json:"proof,omitempty"`
 }
 
+type InvokeOptions struct {
+	Created      string `json:"created"`
+	Creator      string `json:"creator"`
+	ProofPurpose string `json:"proofPurpose"`
+}
+
 type InvokeProof struct {
 	Type             string           `json:"type,omitempty"`
 	Created          string           `json:"created,omitempty"`
