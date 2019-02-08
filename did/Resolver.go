@@ -114,7 +114,7 @@ func (d *Resolver) Register(ddoc *Document, opts ...string) error {
 		body.PairwiseDid = opts[1]
 	}
 
-	_, err := resty.New().
+	resp, err := resty.New().
 		R().
 		SetBody(&body).
 		Post(fmt.Sprintf("%s/api/v1/did", d.DidBaseUrl))
@@ -123,6 +123,8 @@ func (d *Resolver) Register(ddoc *Document, opts ...string) error {
 		log.Println(err.Error())
 		return err
 	}
-
+	if resp.StatusCode() >= http.StatusCreated {
+		return errors.New(resp.Status())
+	}
 	return nil
 }
