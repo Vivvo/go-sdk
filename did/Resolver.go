@@ -124,6 +124,7 @@ func (d *Resolver) Register(ddoc *Document, opts ...string) error {
 		return err
 	}
 	if resp.StatusCode() != http.StatusCreated {
+		log.Println("in the error handler")
 		return errors.New(resp.Status())
 	}
 	return nil
