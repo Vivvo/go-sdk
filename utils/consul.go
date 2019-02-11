@@ -37,22 +37,29 @@ func NewConsulService(address string) (ConsulServiceInterface, error) {
 }
 
 func (c *ConsulService) GetService(service string) string {
-	// single tenant quick lookup
-	_, addrs, err := net.LookupSRV(service, "", "service.consul")
-	if err == nil || len(addrs) == 1 {
-		return fmt.Sprintf("%s:%d", addrs[0].Target, addrs[0].Port)
+	tag := os.Getenv("TAG")
+	var newHost string
+	if tag == "" {
+		services, _, err := c.health.Service(service, tag, true, nil)
+		if err != nil {
+			log.Println("Error looking up service in consul", "errorMsg", err.Error(), "service", service)
+			return service
+		}
+		if len(services) == 0 {
+			log.Println("No matching services found in consul", "service", service)
+			return service
+		}
+		randomService := services[c.rng.Intn(len(services))].Service
+		newHost = fmt.Sprintf("%s:%d", randomService.Address, randomService.Port)
+	} else {
+		_, addrs, err := net.LookupSRV(service, tag, "service.consul")
+		if err != nil || len(addrs) == 0 {
+			return service
+		}
+		newHost = fmt.Sprintf("%s:%d", addrs[0].Target, addrs[0].Port)
 	}
 
-	// multi-tenant lookup by tag
-	services, _, err := c.health.Service(service, os.Getenv("TAG"), true, nil)
-	if err != nil || len(services) == 0 {
-		return service
-	}
-	randomService := services[c.rng.Intn(len(services))].Service
-
-	newHost := fmt.Sprintf("%s:%d", randomService.Address, randomService.Port)
-
-	log.Printf("Remapping host %s -> %s", os.Getenv("TAG") + "-" + service, newHost)
+	log.Println("Remapping host", "service", service, "serviceMapping", newHost)
 
 	return newHost
 }
