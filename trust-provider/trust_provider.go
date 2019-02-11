@@ -659,7 +659,7 @@ func (wr *WalletResolver) Resolve(id string) (*did.Document, error) {
 	return &ddoc, err
 }
 
-func (wr *WalletResolver) Register(ddoc *did.Document) error {
+func (wr *WalletResolver) Register(ddoc *did.Document, opts ...string) error {
 	return wr.resolver.Register(ddoc)
 }
 

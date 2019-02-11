@@ -64,7 +64,7 @@ func (m *MockResolver) Resolve(d string) (*did.Document, error) {
 	return m.dids[d], nil
 }
 
-func (m *MockResolver) Register(ddoc *did.Document) error {
+func (m *MockResolver) Register(ddoc *did.Document, opts ...string) error {
 	m.dids[ddoc.Id] = ddoc
 	return nil
 }
