@@ -99,13 +99,13 @@ func (d *Resolver) Resolve(did string) (*Document, error) {
 }
 
 func (d *Resolver) Register(ddoc *Document, opts ...string) error {
-	log.Println("didBaseUrl: ", d.DidBaseUrl)
 	var body = struct {
 		Parent      string    `json:"parent,omitempty"`
 		PairwiseDid string    `json:"pairwiseDid,omitempty"`
 		DidDocument *Document `json:"didDocument"`
 	}{DidDocument: ddoc}
 
+	log.Println("options:", opts)
 	if len(opts) >= 1 {
 		body.Parent = opts[0]
 	}
@@ -123,7 +123,8 @@ func (d *Resolver) Register(ddoc *Document, opts ...string) error {
 		log.Println(err.Error())
 		return err
 	}
-	if resp.StatusCode() != http.StatusCreated {
+
+	if resp.StatusCode() == http.StatusCreated {
 		log.Println("in the error handler")
 		return errors.New(resp.Status())
 	}

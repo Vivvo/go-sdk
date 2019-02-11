@@ -191,7 +191,7 @@ func (t *TrustProvider) createPairwiseDid(w *wallet.Wallet, resolver did.Resolve
 	pairwiseDid := "did:vvo:" + base58.Encode(u)
 
 	genD := &did.GenerateDidDocument{Resolver: resolver}
-	document, err := genD.Generate(pairwiseDid, w)
+	document, err := genD.Generate(pairwiseDid, w, true)
 	if err != nil {
 		return nil, err
 	}
@@ -664,7 +664,7 @@ func (wr *WalletResolver) Register(ddoc *did.Document, opts ...string) error {
 }
 
 func (wr *WalletResolver) GenerateDDoc(id string, w *wallet.Wallet) (*did.Document, error) {
-	doc, err := wr.generateDDoc.Generate(id, w)
+	doc, err := wr.generateDDoc.Generate(id, w, true)
 	if err != nil {
 		println(err.Error())
 		return nil, err
@@ -759,7 +759,7 @@ func (t *TrustProvider) initAdapterDid() (error) {
 		return nil
 	}
 
-	doc, err := wr.generateDDoc.Generate(id, w)
+	doc, err := wr.generateDDoc.Generate(id, w, true)
 	if err != nil {
 		log.Println(err.Error())
 	}

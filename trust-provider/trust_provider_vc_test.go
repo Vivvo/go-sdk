@@ -145,7 +145,7 @@ func TestOnboardingVerifiableClaim(t *testing.T) {
 
 			id := uuid.New().String()
 			genD := &did.GenerateDidDocument{Resolver: &resolver}
-			ddoc, err := genD.Generate(id, w)
+			ddoc, err := genD.Generate(id, w, true)
 
 			vc := buildIAmMeCredential(w, ddoc)
 			b, err := json.Marshal(vc)
