@@ -82,7 +82,6 @@ func (d *Resolver) Resolve(did string) (*Document, error) {
 	}
 
 	var didDocument = Document{}
-
 	resp, err := resty.New().R().
 		SetResult(&didDocument).
 		Get(fmt.Sprintf("%s/api/v1/did/%s", didUrl, did))
@@ -99,13 +98,16 @@ func (d *Resolver) Resolve(did string) (*Document, error) {
 }
 
 func (d *Resolver) Register(ddoc *Document, opts ...string) error {
+	didUrl := d.DidBaseUrl
+	if d.DidBaseUrl == "" {
+		didUrl = os.Getenv("MOCK_BLOCKCHAIN_URL")
+	}
 	var body = struct {
 		Parent      string    `json:"parent,omitempty"`
 		PairwiseDid string    `json:"pairwiseDid,omitempty"`
 		DidDocument *Document `json:"didDocument"`
 	}{DidDocument: ddoc}
 
-	log.Println("options:", opts)
 	if len(opts) >= 1 {
 		body.Parent = opts[0]
 	}
@@ -117,15 +119,14 @@ func (d *Resolver) Register(ddoc *Document, opts ...string) error {
 	resp, err := resty.New().
 		R().
 		SetBody(&body).
-		Post(fmt.Sprintf("%s/api/v1/did", d.DidBaseUrl))
+		Post(fmt.Sprintf("%s/api/v1/did", didUrl))
 
 	if err != nil {
 		log.Println(err.Error())
 		return err
 	}
 
-	if resp.StatusCode() == http.StatusCreated {
-		log.Println("in the error handler")
+	if resp.StatusCode() != http.StatusCreated {
 		return errors.New(resp.Status())
 	}
 	return nil
