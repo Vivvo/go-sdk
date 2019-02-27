@@ -23,6 +23,8 @@ import (
 	"time"
 )
 
+type OnboardingFunc func(strings map[string]string, nums map[string]float64, bools map[string]bool, arrays map[string]interface{}) (interface{}, error, string)
+
 // Parameters:
 //     An array of required/optional parameters that the onboarding function will have access to. Validation will automatically
 //     be applied based on how the parameters are configured.
