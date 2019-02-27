@@ -23,7 +23,9 @@ import (
 	"time"
 )
 
-type OnboardingFunc func(strings map[string]string, nums map[string]float64, bools map[string]bool, arrays map[string]interface{}) (interface{}, error, string)
+const ErrorOnboardingRequired = "onboarding required"
+
+type OnboardingFunc func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}) (account interface{}, err error, token string)
 
 // Parameters:
 //     An array of required/optional parameters that the onboarding function will have access to. Validation will automatically
@@ -36,7 +38,7 @@ type OnboardingFunc func(strings map[string]string, nums map[string]float64, boo
 type Onboarding struct {
 	Parameters     []Parameter
 	Claims         []string
-	OnboardingFunc func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}) (interface{}, error, string)
+	OnboardingFunc OnboardingFunc
 }
 
 type ParameterType int
@@ -536,6 +538,10 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 
 		status, err := rule.RuleFunc(s, n, b, a, acct)
 		if err != nil {
+			if err.Error() == ErrorOnboardingRequired {
+				utils.WriteJSON(trustProviderResponse{Status: false, OnBoardingRequired: true}, http.StatusOK, w)
+				return
+			}
 			logger.Error("error", err.Error())
 			utils.SetErrorStatus(err, http.StatusServiceUnavailable, w)
 			return
