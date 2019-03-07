@@ -58,9 +58,11 @@ func (g *GenerateDidDocument) Generate(id string, w *wallet.Wallet, publish bool
 		return nil, err
 	}
 
-	err = g.Resolver.Register(&doc)
-	if err != nil {
-		return nil, err
+	if publish {
+		err = g.Resolver.Register(&doc)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &doc, err
