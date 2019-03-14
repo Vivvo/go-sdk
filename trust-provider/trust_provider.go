@@ -693,7 +693,7 @@ func New(onboarding Onboarding, rules []Rule, subscribedObjects []SubscribedObje
 	t.Router.HandleFunc("/api/register", t.register).Methods("POST")
 
 	for _, s := range subscribedObjects {
-		t.Router.HandleFunc(fmt.Sprintf("/api/subscriber/%s/{token}", s.Name), t.handleSubscribedObject(s)).Methods("POST")
+		t.Router.HandleFunc(fmt.Sprintf("/api/subscriber/%s", s.Name), t.handleSubscribedObject(s)).Methods("POST")
 	}
 
 	for _, r := range rules {
@@ -712,7 +712,7 @@ func New(onboarding Onboarding, rules []Rule, subscribedObjects []SubscribedObje
 	return t
 }
 
-func (t *TrustProvider) initAdapterDid() (error) {
+func (t *TrustProvider) initAdapterDid() error {
 	id := os.Getenv("DID")
 	if id == "" {
 		log.Fatalf("Missing environment variable DID")
