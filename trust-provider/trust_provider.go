@@ -217,7 +217,6 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 
 	var onboardingVC *did.VerifiableClaim
 	var pairwiseDoc *did.Document
-
 	if b, ok := body.(map[string]interface{}); ok {
 		if b["sender"] != nil && b["dhs"] != nil && b["pn"] != nil && b["ns"] != nil && b["payload"] != nil && b["initializationKey"] != nil {
 			// Must be an encrypted payload!
@@ -252,6 +251,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 				utils.SendError(err, w)
 				return
 			}
+
 			err = json.Unmarshal([]byte(payload), &body)
 			if err != nil {
 				utils.SendError(err, w)
@@ -272,6 +272,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 
 			body = onboardingVC.Claim
 		}
+
 	}
 
 	s, n, b, arrs, err := t.parseParameters(body, t.onboarding.Parameters, r)
@@ -289,6 +290,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	account, err, token := t.onboarding.OnboardingFunc(s, n, b, arrs)
+	//log.Print("Account - ", account)
 	if err != nil {
 		res := trustProviderResponse{Status: false, OnBoardingRequired: true, Message: err.Error()}
 		utils.WriteJSON(res, http.StatusOK, w)
@@ -590,19 +592,26 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 	})
 }
 
+type Subsrciber struct {
+	EventType  	string 			`json:"eventType"`
+	Data 		interface{}		`json:"data"`
+}
+
 func (t *TrustProvider) handleSubscribedObject(subscribedObject SubscribedObject) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		logger := utils.Logger(r.Context())
+		body, err := ioutil.ReadAll(r.Body)
 
-		var body interface{}
-		err := utils.ReadBody(&body, r)
+		var subsrciber Subsrciber
+		err = json.Unmarshal(body, &subsrciber)
+		log.Printf("Data ", subsrciber.Data)
 		if err != nil {
 			logger.Error("error", err.Error())
 			utils.SetErrorStatus(err, http.StatusBadRequest, w)
 			return
 		}
-		s, n, b, a, err := t.parseParameters(body, subscribedObject.Parameters, r)
+		s, n, b, a, err := t.parseParameters(subsrciber.Data, subscribedObject.Parameters, r)
 		if err != nil {
 			logger.Error("error", err.Error())
 			utils.SetErrorStatus(err, http.StatusBadRequest, w)
@@ -693,7 +702,7 @@ func New(onboarding Onboarding, rules []Rule, subscribedObjects []SubscribedObje
 	t.Router.HandleFunc("/api/register", t.register).Methods("POST")
 
 	for _, s := range subscribedObjects {
-		t.Router.HandleFunc(fmt.Sprintf("/api/subscriber/%s/{token}", s.Name), t.handleSubscribedObject(s)).Methods("POST")
+		t.Router.HandleFunc(fmt.Sprintf("/api/subscriber/%s", s.Name), t.handleSubscribedObject(s)).Methods("POST")
 	}
 
 	for _, r := range rules {
