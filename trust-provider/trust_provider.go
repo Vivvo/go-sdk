@@ -721,7 +721,7 @@ func New(onboarding Onboarding, rules []Rule, subscribedObjects []SubscribedObje
 	return t
 }
 
-func (t *TrustProvider) initAdapterDid() (error) {
+func (t *TrustProvider) initAdapterDid() error {
 	id := os.Getenv("DID")
 	if id == "" {
 		log.Fatalf("Missing environment variable DID")
