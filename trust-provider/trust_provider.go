@@ -603,6 +603,8 @@ func (t *TrustProvider) handleSubscribedObject(subscribedObject SubscribedObject
 		logger := utils.Logger(r.Context())
 		body, err := ioutil.ReadAll(r.Body)
 
+		log.Printf("Body = \n\n%s", body)
+
 		var subsrciber Subsrciber
 		err = json.Unmarshal(body, &subsrciber)
 		if err != nil {
