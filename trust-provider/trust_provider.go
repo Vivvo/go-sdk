@@ -605,7 +605,6 @@ func (t *TrustProvider) handleSubscribedObject(subscribedObject SubscribedObject
 
 		var subsrciber Subsrciber
 		err = json.Unmarshal(body, &subsrciber)
-		log.Printf("Data ", subsrciber.Data)
 		if err != nil {
 			logger.Error("error", err.Error())
 			utils.SetErrorStatus(err, http.StatusBadRequest, w)
