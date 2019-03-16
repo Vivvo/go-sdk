@@ -620,7 +620,8 @@ func (t *TrustProvider) handleSubscribedObject(subscribedObject SubscribedObject
 		}
 
 		vars := mux.Vars(r)
-		token := vars["token"]
+		//token := vars["token"]
+		token := s["identityId"]
 
 		acct, err := t.account.Read(token)
 		if err != nil {
