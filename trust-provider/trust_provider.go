@@ -619,7 +619,7 @@ func (t *TrustProvider) handleSubscribedObject(subscribedObject SubscribedObject
 			return
 		}
 
-		vars := mux.Vars(r)
+		//vars := mux.Vars(r)
 		//token := vars["token"]
 		token := s["identityId"]
 
