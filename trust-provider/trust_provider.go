@@ -619,15 +619,15 @@ func (t *TrustProvider) handleSubscribedObject(subscribedObject SubscribedObject
 			return
 		}
 
-		vars := mux.Vars(r)
-		token := vars["token"]
-
-		acct, err := t.account.Read(token)
-		if err != nil {
-			logger.Error("error", err.Error())
-			utils.SetErrorStatus(err, http.StatusBadRequest, w)
-			return
-		}
+		//vars := mux.Vars(r)
+		//token := vars["token"]
+		//
+		//acct, err := t.account.Read(token)
+		//if err != nil {
+		//	logger.Error("error", err.Error())
+		//	utils.SetErrorStatus(err, http.StatusBadRequest, w)
+		//	return
+		//}
 
 		status, err := subscribedObject.SubscribedObjectFunc(s, n, b, a, acct)
 		if err != nil {
