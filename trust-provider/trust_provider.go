@@ -71,7 +71,7 @@ type Data struct {
 type SubscribedObject struct {
 	Name                 string
 	Parameters           []Parameter
-	SubscribedObjectFunc func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}, acct interface{}) (bool, error)
+	SubscribedObjectFunc func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}) (bool, error)
 }
 
 type trustProviderResponse struct {
@@ -621,7 +621,7 @@ func (t *TrustProvider) handleSubscribedObject(subscribedObject SubscribedObject
 
 		//vars := mux.Vars(r)
 		//token := vars["token"]
-		//
+		////
 		//acct, err := t.account.Read(token)
 		//if err != nil {
 		//	logger.Error("error", err.Error())
@@ -629,7 +629,7 @@ func (t *TrustProvider) handleSubscribedObject(subscribedObject SubscribedObject
 		//	return
 		//}
 
-		status, err := subscribedObject.SubscribedObjectFunc(s, n, b, a, acct)
+		status, err := subscribedObject.SubscribedObjectFunc(s, n, b, a)
 		if err != nil {
 			logger.Error("error", err.Error())
 			utils.SetErrorStatus(err, http.StatusServiceUnavailable, w)
