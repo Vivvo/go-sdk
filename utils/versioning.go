@@ -5,7 +5,6 @@ import (
 	"github.com/Vivvo/vivvo-idp/utils"
 	"net/http"
 	"os"
-	"time"
 )
 
 func GetReleaseInfo(w http.ResponseWriter, r *http.Request) {
@@ -16,7 +15,7 @@ func GetReleaseInfo(w http.ResponseWriter, r *http.Request) {
 		AppName:       os.Getenv("APP_NAME"),
 		GitShaSort:    os.Getenv("GIT_SHA_SHORT"),
 		TenantName:    os.Getenv("TENANT_NAME"),
-		StaredOn:      time.Now(),
+		StaredOn:      os.Getenv("STARTED_ON"),
 	}
 	utils.WriteJSON(releaseInformation, http.StatusCreated, w)
 }
