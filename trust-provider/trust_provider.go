@@ -299,6 +299,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 
 	if token == "" {
 		token = uuid.New().String()
+		log.Printf("[INFO] Created token for user: %s", token)
 	}
 
 	err = t.account.Update(account, token)
