@@ -11,7 +11,7 @@ type IdentityDto struct {
 	FirstName  string       `json:"firstName,omitempty"`
 	MiddleName string       `json:"middleName,omitempty"`
 	LastName   string       `json:"lastName,omitempty"`
-	Birthdate  time.Time    `json:"birthdate"`
+	Birthdate  time.Time    `json:"birthdate,omitempty"`
 	Emails     []EmailDto   `json:"emails,omitempty"`
 	Phones     []PhoneDto   `json:"phones,omitempty"`
 	Addresses  []AddressDto `json:"addresses,omitempty"`

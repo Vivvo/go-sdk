@@ -700,6 +700,8 @@ func New(onboarding Onboarding, rules []Rule, subscribedObjects []SubscribedObje
 		t.initAdapterDid()
 	}
 
+	t.Router.HandleFunc("/version", utils.GetReleaseInfo).Methods("GET")
+
 	t.Router.HandleFunc("/api/register", t.register).Methods("POST")
 
 	for _, s := range subscribedObjects {
