@@ -2,7 +2,6 @@ package utils
 
 import (
 	"github.com/Vivvo/go-sdk/models"
-	"github.com/Vivvo/vivvo-idp/utils"
 	"net/http"
 	"os"
 )
@@ -17,5 +16,5 @@ func GetReleaseInfo(w http.ResponseWriter, r *http.Request) {
 		TenantName:    os.Getenv("TENANT_NAME"),
 		StaredOn:      os.Getenv("STARTED_ON"),
 	}
-	utils.WriteJSON(releaseInformation, http.StatusCreated, w)
+	WriteJSON(releaseInformation, http.StatusCreated, w)
 }
