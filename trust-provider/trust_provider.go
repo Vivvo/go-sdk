@@ -781,14 +781,9 @@ func (t *TrustProvider) initAdapterDid() error {
 		return nil
 	}
 
-	doc, err := wr.generateDDoc.Generate(id, w, true)
+	_, err = wr.generateDDoc.Generate(id, w, true)
 	if err != nil {
 		log.Println(err.Error())
-	}
-
-	err = t.resolver.Register(doc)
-	if err != nil {
-		fmt.Println("error registering the did doc:", err.Error())
 	}
 
 	log.Println("Adapter DID document created.")
