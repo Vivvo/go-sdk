@@ -6,7 +6,6 @@ import (
 	"github.com/Vivvo/go-sdk/did"
 	"github.com/Vivvo/go-sdk/utils"
 	"github.com/Vivvo/go-wallet"
-	"github.com/Vivvo/go-wallet/models"
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/go-resty/resty"
 	"github.com/google/uuid"
@@ -304,7 +303,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if pairwiseDoc != nil {
-		t.wallet.Add("pairwise", token, pairwiseDoc.Id, nil)
+		t.wallet.Dids().Create("pairwise", pairwiseDoc.Id, nil)
 	}
 	err = t.account.Update(account, token)
 
@@ -395,7 +394,6 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 }
 
 func (t *TrustProvider) pushNotification(subject string, vc *wallet.RatchetPayload) error {
-	log.Println("made into the push notification")
 	ddoc, err := t.resolver.Resolve(subject)
 	if err != nil {
 		log.Println(err.Error())
@@ -403,7 +401,6 @@ func (t *TrustProvider) pushNotification(subject string, vc *wallet.RatchetPaylo
 	}
 
 	for _, s := range ddoc.Service {
-		log.Println("in the for loop")
 		if s.T == "AgentService" {
 			log.Printf("Sending verifiable credential to messaging endpoint: %s", s.ServiceEndpoint)
 			_, err = resty.New().
@@ -527,16 +524,13 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 			utils.SetErrorStatus(err, http.StatusBadRequest, w)
 			return
 		}
-		log.Println("Body", body)
-		log.Println("params", rule.Parameters)
+
 		s, n, b, a, err := t.parseParameters(body, rule.Parameters, r)
 		if err != nil {
 			logger.Error("error", err.Error())
 			utils.SetErrorStatus(err, http.StatusBadRequest, w)
 			return
 		}
-
-		log.Println("s", s)
 
 		vars := mux.Vars(r)
 		token := vars["token"]
@@ -560,19 +554,13 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 		}
 
 		var vc *wallet.RatchetPayload
-		log.Println("did", s["did"])
-		log.Println("Status", status)
-		log.Println("Claim", rule.Claims)
-		log.Println("len", len(rule.Claims))
 		if status && s["did"] != "" && len(rule.Claims) > 0 {
 			subject := s["did"]
 
-			log.Println("in the if")
 			c := make(map[string]interface{})
 			acctJson, _ := json.Marshal(acct)
 			json.Unmarshal(acctJson, &c)
 
-			log.Println("made it here")
 			claim, _ := t.generateVerifiableClaim(c, subject, token, append([]string{did.VerifiableCredential}, t.onboarding.Claims...))
 			if err != nil {
 				logger.Errorf("Problem generating a verifiable credential response", "error", err.Error())
@@ -581,15 +569,18 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 			}
 
 			claimJson, _ := json.Marshal(claim)
-			log.Println("half way there")
+
 			message := MessageDto{Type: "credential", Payload: string(claimJson)}
 
 			m, _ := json.Marshal(message)
 
-			pairwiseId, err := t.wallet.Get("pairwise", token, models.RecordOptions{RetrieveValue: true})
+			pairwiseId, err := t.wallet.Dids().Read("pairwise")
+			if err != nil {
+				log.Println(err.Error())
+			}
 			log.Println("pariwiseId", pairwiseId)
 
-			rp, err := t.wallet.Messaging().RatchetEncrypt(pairwiseId.Value, string(m))
+			rp, err := t.wallet.Messaging().RatchetEncrypt(pairwiseId, string(m))
 			if err != nil {
 				utils.SendError(err, w)
 				return
@@ -601,7 +592,6 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 
 			t.pushNotification(subject, vc)
 
-			log.Println("made it!!!!")
 			utils.WriteJSON(trustProviderResponse{Status: status}, http.StatusOK, w)
 		} else {
 			utils.WriteJSON(trustProviderResponse{Status: status}, http.StatusOK, w)
