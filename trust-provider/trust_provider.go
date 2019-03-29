@@ -576,12 +576,19 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 
 			m, _ := json.Marshal(message)
 
+			var pairwise string
 			p, err := t.wallet.Get("pairwise", token, models.RecordOptions{RetrieveValue: true})
+			pairwise = p.Value
 			if err != nil {
-				log.Println(err.Error())
+				newPairwise , err := t.createPairwiseDid(t.wallet, t.resolver)
+				if err != nil {
+					utils.SendError(err, w)
+					return
+				}
+				pairwise = newPairwise.Id
 			}
 
-			rp, err := t.wallet.Messaging().RatchetEncrypt(p.Value, string(m))
+			rp, err := t.wallet.Messaging().RatchetEncrypt(pairwise, string(m))
 			if err != nil {
 				utils.SendError(err, w)
 				return
