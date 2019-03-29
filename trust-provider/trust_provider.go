@@ -395,6 +395,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 }
 
 func (t *TrustProvider) pushNotification(subject string, vc *wallet.RatchetPayload) error {
+	log.Println("made into the push notification")
 	ddoc, err := t.resolver.Resolve(subject)
 	if err != nil {
 		log.Println(err.Error())
@@ -402,6 +403,7 @@ func (t *TrustProvider) pushNotification(subject string, vc *wallet.RatchetPaylo
 	}
 
 	for _, s := range ddoc.Service {
+		log.Println("in the for loop")
 		if s.T == "AgentService" {
 			log.Printf("Sending verifiable credential to messaging endpoint: %s", s.ServiceEndpoint)
 			_, err = resty.New().
@@ -555,13 +557,19 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 		}
 
 		var vc *wallet.RatchetPayload
+		log.Println("did", s["did"])
+		log.Println("Status", status)
+		log.Println("Claim", rule.Claims)
+		log.Println("len", len(rule.Claims))
 		if status && s["did"] != "" && len(rule.Claims) > 0 {
 			subject := s["did"]
 
+			log.Println("in the if")
 			c := make(map[string]interface{})
 			acctJson, _ := json.Marshal(acct)
 			json.Unmarshal(acctJson, &c)
 
+			log.Println("made it here")
 			claim, _ := t.generateVerifiableClaim(c, subject, token, append([]string{did.VerifiableCredential}, t.onboarding.Claims...))
 			if err != nil {
 				logger.Errorf("Problem generating a verifiable credential response", "error", err.Error())
@@ -570,12 +578,13 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 			}
 
 			claimJson, _ := json.Marshal(claim)
-
+			log.Println("half way there")
 			message := MessageDto{Type: "credential", Payload: string(claimJson)}
 
 			m, _ := json.Marshal(message)
 
 			pairwiseId, err := t.wallet.Get("pairwise", token, models.RecordOptions{RetrieveValue: true})
+			log.Println("pariwiseId", pairwiseId)
 
 			rp, err := t.wallet.Messaging().RatchetEncrypt(pairwiseId.Value, string(m))
 			if err != nil {
@@ -589,6 +598,7 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 
 			t.pushNotification(subject, vc)
 
+			log.Println("made it!!!!")
 			utils.WriteJSON(trustProviderResponse{Status: status}, http.StatusOK, w)
 		} else {
 			utils.WriteJSON(trustProviderResponse{Status: status}, http.StatusOK, w)
