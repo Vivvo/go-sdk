@@ -577,7 +577,7 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 
 			m, _ := json.Marshal(message)
 
-			if strings.Compare(t.pairwiseDid, "") == 0 {
+			if t.pairwiseDid == "" {
 				newPairwise, err := t.createPairwiseDid(t.wallet, t.resolver)
 				if err != nil {
 					utils.SendError(err, w)
