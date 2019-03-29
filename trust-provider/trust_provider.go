@@ -528,13 +528,14 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 			return
 		}
 		log.Println("Body", body)
-
+		log.Println("params", rule.Parameters)
 		s, n, b, a, err := t.parseParameters(body, rule.Parameters, r)
 		if err != nil {
 			logger.Error("error", err.Error())
 			utils.SetErrorStatus(err, http.StatusBadRequest, w)
 			return
 		}
+		)
 		log.Println("s", s)
 
 		vars := mux.Vars(r)
