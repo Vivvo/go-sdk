@@ -6,6 +6,7 @@ import (
 	"github.com/Vivvo/go-sdk/did"
 	"github.com/Vivvo/go-sdk/utils"
 	"github.com/Vivvo/go-wallet"
+	"github.com/Vivvo/go-wallet/models"
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/go-resty/resty"
 	"github.com/google/uuid"
@@ -302,6 +303,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 		log.Printf("[INFO] Created token for user: %s", token)
 	}
 
+	t.wallet.Add("pairwise", token, pairwiseDoc.Id, nil)
 	err = t.account.Update(account, token)
 
 	if err != nil {
@@ -550,42 +552,41 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 			return
 		}
 
-		if status {
-			//var vc *did.VerifiableClaim
-			//connectionClaim, ve := t.parseVerifiableCredential(body, []string{did.VerifiableCredential, did.TokenizedConnectionCredential}, logger)
-			//if len(ve) > 0 {
-			//	e, err := json.Marshal(ve)
-			//	if err == nil {
-			//		err = errors.New(string(e))
-			//	}
-			//
-			//	logger.Errorf("Problem verifying Verifiable Credential", "error", err.Error())
-			//
-			//	utils.SetErrorStatus(err, http.StatusBadRequest, w)
-			//	return
-			//}
-			//
-			//if connectionClaim != nil {
-			//	ac := make(map[string]interface{})
-			//	for k, v := range s {
-			//		ac[k] = v
-			//	}
-			//	for k, v := range n {
-			//		ac[k] = v
-			//	}
-			//	for k, v := range b {
-			//		ac[k] = v
-			//	}
-			//
-			//	claim, err := t.generateVerifiableClaim(ac, connectionClaim.Claim[did.SubjectClaim].(string), uuid.New().String(), rule.Claims)
-			//	if err != nil {
-			//		logger.Error("error", err.Error())
-			//		utils.SetErrorStatus(err, http.StatusInternalServerError, w)
-			//		return
-			//	}
-			//	vc = &claim
-			//}
-			//utils.WriteJSON(trustProviderResponse{Status: status, VerifiableClaim: vc}, http.StatusOK, w)
+		var vc *wallet.RatchetPayload
+		if status && s["did"] != "" && len(t.onboarding.Claims) > 0 {
+			subject := s["did"]
+
+			c := make(map[string]interface{})
+			acctJson, _ := json.Marshal(acct)
+			json.Unmarshal(acctJson, &c)
+
+			claim, _ := t.generateVerifiableClaim(c, subject, token, append([]string{did.VerifiableCredential}, t.onboarding.Claims...))
+			if err != nil {
+				logger.Errorf("Problem generating a verifiable credential response", "error", err.Error())
+				utils.SetErrorStatus(err, http.StatusInternalServerError, w)
+				return
+			}
+
+			claimJson, _ := json.Marshal(claim)
+
+			message := MessageDto{Type: "credential", Payload: string(claimJson)}
+
+			m, _ := json.Marshal(message)
+
+			pairwiseId, err := t.wallet.Get("pairwise", token, models.RecordOptions{RetrieveValue:true})
+
+			rp, err := t.wallet.Messaging().RatchetEncrypt(pairwiseId.Value, string(m))
+			if err != nil {
+				utils.SendError(err, w)
+				return
+			}
+
+			rp.Sender = os.Getenv("DID")
+
+			vc = rp
+
+			t.pushNotification(subject, vc)
+
 			utils.WriteJSON(trustProviderResponse{Status: status}, http.StatusOK, w)
 		} else {
 			utils.WriteJSON(trustProviderResponse{Status: status}, http.StatusOK, w)
@@ -594,8 +595,8 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 }
 
 type Subsrciber struct {
-	EventType  	string 			`json:"eventType"`
-	Data 		interface{}		`json:"data"`
+	EventType string      `json:"eventType"`
+	Data      interface{} `json:"data"`
 }
 
 func (t *TrustProvider) handleSubscribedObject(subscribedObject SubscribedObject) http.HandlerFunc {
