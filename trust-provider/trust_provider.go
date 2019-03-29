@@ -6,7 +6,6 @@ import (
 	"github.com/Vivvo/go-sdk/did"
 	"github.com/Vivvo/go-sdk/utils"
 	"github.com/Vivvo/go-wallet"
-	"github.com/Vivvo/go-wallet/models"
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/go-resty/resty"
 	"github.com/google/uuid"
@@ -132,6 +131,7 @@ type TrustProvider struct {
 	port             string
 	resolver         did.ResolverInterface
 	wallet           *wallet.Wallet
+	pairwiseDid      string
 }
 
 func (t *TrustProvider) parseParameters(body interface{}, params []Parameter, r *http.Request) (map[string]string, map[string]float64, map[string]bool, map[string]interface{}, error) {
@@ -240,6 +240,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 				utils.SendError(err, w)
 				return
 			}
+			t.pairwiseDid = pairwiseDoc.Id
 
 			err = messaging.InitDoubleRatchetWithWellKnownPublicKey(ourDid, pairwiseDoc.Id, ratchetPayload.InitializationKey)
 			if err != nil {
@@ -576,25 +577,19 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 
 			m, _ := json.Marshal(message)
 
-			var pairwise string
-			p, err := t.wallet.Get("pairwise", token, models.RecordOptions{RetrieveValue: true})
-			log.Println("p", p)
-			if err != nil {
-				log.Println("in the err state")
-				newPairwise , err := t.createPairwiseDid(t.wallet, t.resolver)
+			if strings.Compare(t.pairwiseDid, "") == 0 {
+				newPairwise, err := t.createPairwiseDid(t.wallet, t.resolver)
 				if err != nil {
 					utils.SendError(err, w)
 					return
 				}
-				log.Println("after creating the pairwise did:", pairwise)
-				pairwise = newPairwise.Id
-			} else {
-				pairwise = p.Value
+				log.Println("after creating the pairwise did:", t.pairwiseDid)
+				t.pairwiseDid = newPairwise.Id
 			}
 
-			log.Println("using the pairwise did", pairwise)
+			log.Println("using the pairwise did", t.pairwiseDid)
 
-			rp, err := t.wallet.Messaging().RatchetEncrypt(pairwise, string(m))
+			rp, err := t.wallet.Messaging().RatchetEncrypt(t.pairwiseDid, string(m))
 			if err != nil {
 				utils.SendError(err, w)
 				return
