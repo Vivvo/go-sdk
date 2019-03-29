@@ -578,15 +578,21 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 
 			var pairwise string
 			p, err := t.wallet.Get("pairwise", token, models.RecordOptions{RetrieveValue: true})
-			pairwise = p.Value
+			log.Println("p", p)
 			if err != nil {
+				log.Println("in the err state")
 				newPairwise , err := t.createPairwiseDid(t.wallet, t.resolver)
 				if err != nil {
 					utils.SendError(err, w)
 					return
 				}
+				log.Println("after creating the pairwise did:", pairwise)
 				pairwise = newPairwise.Id
+			} else {
+				pairwise = p.Value
 			}
+
+			log.Println("using the pairwise did", pairwise)
 
 			rp, err := t.wallet.Messaging().RatchetEncrypt(pairwise, string(m))
 			if err != nil {
