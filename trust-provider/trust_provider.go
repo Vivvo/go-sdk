@@ -304,6 +304,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if pairwiseDoc != nil {
+		log.Printf("Saving the pairwise did for token: %s", token)
 		t.wallet.Add("pairwise", token, pairwiseDoc.Id, nil)
 	}
 	err = t.account.Update(account, token)
@@ -575,7 +576,7 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 
 			m, _ := json.Marshal(message)
 
-			p, _ := t.wallet.Get("pairwise", token, models.RecordOptions{RetrieveValue: true})
+			p, err := t.wallet.Get("pairwise", token, models.RecordOptions{RetrieveValue: true})
 			if err != nil {
 				log.Println(err.Error())
 			}
