@@ -527,6 +527,7 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 			utils.SetErrorStatus(err, http.StatusBadRequest, w)
 			return
 		}
+		log.Println("Body", body)
 
 		s, n, b, a, err := t.parseParameters(body, rule.Parameters, r)
 		if err != nil {
@@ -534,6 +535,7 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 			utils.SetErrorStatus(err, http.StatusBadRequest, w)
 			return
 		}
+		log.Println("s", s)
 
 		vars := mux.Vars(r)
 		token := vars["token"]
