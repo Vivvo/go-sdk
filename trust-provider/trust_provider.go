@@ -303,7 +303,9 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 		log.Printf("[INFO] Created token for user: %s", token)
 	}
 
-	t.wallet.Add("pairwise", token, pairwiseDoc.Id, nil)
+	if pairwiseDoc != nil {
+		t.wallet.Add("pairwise", token, pairwiseDoc.Id, nil)
+	}
 	err = t.account.Update(account, token)
 
 	if err != nil {
@@ -573,7 +575,7 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 
 			m, _ := json.Marshal(message)
 
-			pairwiseId, err := t.wallet.Get("pairwise", token, models.RecordOptions{RetrieveValue:true})
+			pairwiseId, err := t.wallet.Get("pairwise", token, models.RecordOptions{RetrieveValue: true})
 
 			rp, err := t.wallet.Messaging().RatchetEncrypt(pairwiseId.Value, string(m))
 			if err != nil {
