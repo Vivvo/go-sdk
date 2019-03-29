@@ -24,7 +24,6 @@ import (
 )
 
 const ErrorOnboardingRequired = "onboarding required"
-const ErrorCredentialAlreadySent = "credential already sent"
 
 type OnboardingFunc func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}) (account interface{}, err error, token string)
 
@@ -548,10 +547,6 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 		if err != nil {
 			if err.Error() == ErrorOnboardingRequired {
 				utils.WriteJSON(trustProviderResponse{Status: false, OnBoardingRequired: true}, http.StatusOK, w)
-				return
-			}
-			if err.Error() == ErrorCredentialAlreadySent {
-				utils.WriteJSON(trustProviderResponse{Status: status}, http.StatusOK, w)
 				return
 			}
 			logger.Error("error", err.Error())
