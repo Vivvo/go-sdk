@@ -131,7 +131,6 @@ type TrustProvider struct {
 	port             string
 	resolver         did.ResolverInterface
 	wallet           *wallet.Wallet
-	pairwiseDid      string
 }
 
 func (t *TrustProvider) parseParameters(body interface{}, params []Parameter, r *http.Request) (map[string]string, map[string]float64, map[string]bool, map[string]interface{}, error) {
@@ -240,7 +239,6 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 				utils.SendError(err, w)
 				return
 			}
-			t.pairwiseDid = pairwiseDoc.Id
 
 			err = messaging.InitDoubleRatchetWithWellKnownPublicKey(ourDid, pairwiseDoc.Id, ratchetPayload.InitializationKey)
 			if err != nil {
@@ -577,19 +575,39 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 
 			m, _ := json.Marshal(message)
 
-			if t.pairwiseDid == "" {
-				newPairwise, err := t.createPairwiseDid(t.wallet, t.resolver)
-				if err != nil {
-					utils.SendError(err, w)
-					return
-				}
-				log.Println("after creating the pairwise did:", t.pairwiseDid)
-				t.pairwiseDid = newPairwise.Id
+			messaging := t.wallet.Messaging()
+
+			contactDoc, err := t.resolver.Resolve(s["did"])
+			if err != nil {
+				res := trustProviderResponse{Status: false, OnBoardingRequired: true}
+				utils.WriteJSON(res, http.StatusBadRequest, w)
 			}
 
-			log.Println("using the pairwise did", t.pairwiseDid)
+			pairwiseDoc, err := t.createPairwiseDid(t.wallet, t.resolver)
+			if err != nil {
+				utils.SendError(err, w)
+				return
+			}
 
-			rp, err := t.wallet.Messaging().RatchetEncrypt(t.pairwiseDid, string(m))
+			var contactPubkey string
+			for _, k := range contactDoc.PublicKey {
+				if k.T == wallet.TypeEd25519KeyExchange2018 {
+					contactPubkey = k.PublicKeyBase58
+				}
+			}
+
+			if contactPubkey == "" {
+				utils.SendError(errors.New("no ed25519 exchange key found"), w)
+				return
+			}
+
+			err = messaging.InitDoubleRatchet(pairwiseDoc.Id, contactPubkey)
+			if err != nil {
+				utils.SendError(err, w)
+				return
+			}
+
+			rp, err := t.wallet.Messaging().RatchetEncrypt(pairwiseDoc.Id, string(m))
 			if err != nil {
 				utils.SendError(err, w)
 				return
