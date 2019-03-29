@@ -131,7 +131,7 @@ type TrustProvider struct {
 	port             string
 	resolver         did.ResolverInterface
 	wallet           *wallet.Wallet
-	pairwiseDid      *string
+	pairwiseDid      string
 }
 
 func (t *TrustProvider) parseParameters(body interface{}, params []Parameter, r *http.Request) (map[string]string, map[string]float64, map[string]bool, map[string]interface{}, error) {
@@ -240,7 +240,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 				utils.SendError(err, w)
 				return
 			}
-			t.pairwiseDid = &pairwiseDoc.Id
+			t.pairwiseDid = pairwiseDoc.Id
 
 			err = messaging.InitDoubleRatchetWithWellKnownPublicKey(ourDid, pairwiseDoc.Id, ratchetPayload.InitializationKey)
 			if err != nil {
@@ -577,19 +577,19 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 
 			m, _ := json.Marshal(message)
 
-			if t.pairwiseDid == nil{
+			if strings.Compare(t.pairwiseDid, "") == 0 {
 				newPairwise, err := t.createPairwiseDid(t.wallet, t.resolver)
 				if err != nil {
 					utils.SendError(err, w)
 					return
 				}
 				log.Println("after creating the pairwise did:", t.pairwiseDid)
-				t.pairwiseDid = &newPairwise.Id
+				t.pairwiseDid = newPairwise.Id
 			}
 
 			log.Println("using the pairwise did", t.pairwiseDid)
 
-			rp, err := t.wallet.Messaging().RatchetEncrypt(*t.pairwiseDid, string(m))
+			rp, err := t.wallet.Messaging().RatchetEncrypt(t.pairwiseDid, string(m))
 			if err != nil {
 				utils.SendError(err, w)
 				return
