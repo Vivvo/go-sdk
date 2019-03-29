@@ -535,7 +535,7 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 			utils.SetErrorStatus(err, http.StatusBadRequest, w)
 			return
 		}
-		)
+
 		log.Println("s", s)
 
 		vars := mux.Vars(r)
