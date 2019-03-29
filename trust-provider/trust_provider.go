@@ -6,6 +6,7 @@ import (
 	"github.com/Vivvo/go-sdk/did"
 	"github.com/Vivvo/go-sdk/utils"
 	"github.com/Vivvo/go-wallet"
+	"github.com/Vivvo/go-wallet/models"
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/go-resty/resty"
 	"github.com/google/uuid"
@@ -303,7 +304,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if pairwiseDoc != nil {
-		t.wallet.Dids().Create("pairwise", pairwiseDoc.Id, nil)
+		t.wallet.Add("pairwise", token, pairwiseDoc.Id, nil)
 	}
 	err = t.account.Update(account, token)
 
@@ -574,13 +575,12 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 
 			m, _ := json.Marshal(message)
 
-			pairwiseId, err := t.wallet.Dids().Read("pairwise")
+			p, _ := t.wallet.Get("pairwise", token, models.RecordOptions{RetrieveValue: true})
 			if err != nil {
 				log.Println(err.Error())
 			}
-			log.Println("pariwiseId", pairwiseId)
 
-			rp, err := t.wallet.Messaging().RatchetEncrypt(pairwiseId, string(m))
+			rp, err := t.wallet.Messaging().RatchetEncrypt(p.Value, string(m))
 			if err != nil {
 				utils.SendError(err, w)
 				return
