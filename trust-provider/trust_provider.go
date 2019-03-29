@@ -555,7 +555,7 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 		}
 
 		var vc *wallet.RatchetPayload
-		if status && s["did"] != "" && len(t.onboarding.Claims) > 0 {
+		if status && s["did"] != "" && len(rule.Claims) > 0 {
 			subject := s["did"]
 
 			c := make(map[string]interface{})
