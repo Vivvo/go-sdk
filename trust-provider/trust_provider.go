@@ -24,6 +24,7 @@ import (
 )
 
 const ErrorOnboardingRequired = "onboarding required"
+const ErrorCredentialAlreadySent = "credential already sent"
 
 type OnboardingFunc func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}) (account interface{}, err error, token string)
 
@@ -297,15 +298,12 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("Account object: %+v\n", account)
 	if token == "" {
 		token = uuid.New().String()
 		log.Printf("[INFO] Created token for user: %s", token)
 	}
 
-	if pairwiseDoc != nil {
-		log.Printf("Saving the pairwise did for token: %s", token)
-		t.wallet.Add("pairwise", token, pairwiseDoc.Id, nil)
-	}
 	err = t.account.Update(account, token)
 
 	if err != nil {
@@ -547,6 +545,10 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 		if err != nil {
 			if err.Error() == ErrorOnboardingRequired {
 				utils.WriteJSON(trustProviderResponse{Status: false, OnBoardingRequired: true}, http.StatusOK, w)
+				return
+			}
+			if err.Error() == ErrorCredentialAlreadySent {
+				utils.WriteJSON(trustProviderResponse{Status: status}, http.StatusOK, w)
 				return
 			}
 			logger.Error("error", err.Error())
