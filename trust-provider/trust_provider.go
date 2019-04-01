@@ -559,7 +559,7 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 			acctJson, _ := json.Marshal(acct)
 			json.Unmarshal(acctJson, &c)
 
-			claim, _ := t.generateVerifiableClaim(c, subject, token, append([]string{did.VerifiableCredential}, t.onboarding.Claims...))
+			claim, _ := t.generateVerifiableClaim(c, subject, token, append([]string{did.VerifiableCredential}, rule.Claims...))
 			if err != nil {
 				logger.Errorf("Problem generating a verifiable credential response", "error", err.Error())
 				utils.SetErrorStatus(err, http.StatusInternalServerError, w)
