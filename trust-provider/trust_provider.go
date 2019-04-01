@@ -305,16 +305,17 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = t.account.Update(account, token)
-
 	if err != nil {
+		log.Println("in the err state")
+		log.Println("err: ", err.Error())
 		res := trustProviderResponse{Status: false, OnBoardingRequired: true}
 		utils.WriteJSON(res, http.StatusInternalServerError, w)
 		return
 	}
 
 	if s["did"] != "" {
-		// Initialize the double ratchet encryption...
-
+		// Initialize the double ratchet encryption...\
+		log.Println("In the if register")
 		messaging := t.wallet.Messaging()
 
 		contactDoc, err := t.resolver.Resolve(s["did"])
@@ -387,6 +388,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 		t.pushNotification(subject, vc)
 	}
 
+	log.Println("Made it this far...")
 	res := trustProviderResponse{Status: true, OnBoardingRequired: false, Token: token, VerifiableClaim: vc}
 	utils.WriteJSON(res, http.StatusCreated, w)
 
@@ -494,7 +496,7 @@ func (t *TrustProvider) handleData(data Data) http.HandlerFunc {
 
 		acct, err := t.account.Read(token)
 		if err != nil {
-			logger.Error("error", err.Error())
+			logger.Error(" error", err.Error())
 			utils.SetErrorStatus(err, http.StatusBadRequest, w)
 			return
 		}
@@ -885,7 +887,7 @@ func (d *DefaultAccount) Update(account interface{}, token string) error {
 		log.Fatalf("Error writing to file: %s", err)
 	}
 
-	log.Println("WARNING: Note you are using the default internal database.  This is for debugging only, please don't use this in production.")
+	log.Println("WARNING: Note you are using the default internal database. This is for debugging only, please don't use this in production.")
 
 	return err
 }
