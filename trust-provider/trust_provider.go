@@ -298,7 +298,6 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Printf("Account object: %+v\n", account)
 	if token == "" {
 		token = uuid.New().String()
 		log.Printf("[INFO] Created token for user: %s", token)
@@ -306,8 +305,6 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 
 	err = t.account.Update(account, token)
 	if err != nil {
-		log.Println("in the err state")
-		log.Println("err: ", err.Error())
 		res := trustProviderResponse{Status: false, OnBoardingRequired: true}
 		utils.WriteJSON(res, http.StatusInternalServerError, w)
 		return
@@ -315,7 +312,6 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 
 	if s["did"] != "" {
 		// Initialize the double ratchet encryption...\
-		log.Println("In the if register")
 		messaging := t.wallet.Messaging()
 
 		contactDoc, err := t.resolver.Resolve(s["did"])
@@ -388,7 +384,6 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 		t.pushNotification(subject, vc)
 	}
 
-	log.Println("Made it this far...")
 	res := trustProviderResponse{Status: true, OnBoardingRequired: false, Token: token, VerifiableClaim: vc}
 	utils.WriteJSON(res, http.StatusCreated, w)
 
@@ -553,7 +548,7 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 				utils.WriteJSON(trustProviderResponse{Status: status}, http.StatusOK, w)
 				return
 			}
-			logger.Error("error", err.Error())
+			logger.Error("error: ", err.Error())
 			utils.SetErrorStatus(err, http.StatusServiceUnavailable, w)
 			return
 		}
