@@ -51,6 +51,21 @@ type Resolver struct {
 	DidBaseUrl string
 }
 
+func (d *Document) GetKeyByType(typ string) (*PublicKey, error) {
+	var key *PublicKey
+	for _, v := range d.PublicKey {
+		if v.T == typ {
+			key = &v
+		}
+	}
+
+	if key == nil {
+		return nil, errors.New(fmt.Sprintf("document %s has no publicKey with type %s", d.Id, typ))
+	}
+
+	return key, nil
+}
+
 func (d *Document) GetPublicKeyById(id string) (*rsa.PublicKey, error) {
 	for _, v := range d.PublicKey {
 		if strings.Compare(v.Id, id) == 0 {
