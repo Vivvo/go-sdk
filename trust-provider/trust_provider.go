@@ -6,6 +6,7 @@ import (
 	"github.com/Vivvo/go-sdk/did"
 	"github.com/Vivvo/go-sdk/utils"
 	"github.com/Vivvo/go-wallet"
+	"github.com/Vivvo/go-wallet/storage/mariadb"
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/go-resty/resty"
 	"github.com/google/uuid"
@@ -25,6 +26,11 @@ import (
 
 const ErrorOnboardingRequired = "onboarding required"
 const ErrorCredentialAlreadySent = "credential already sent"
+
+const ConfigTrustProviderPort = "TRUST_PROVIDER_PORT"
+const WalletConfigDID = "DID"
+const WalletConfigMasterKey = "MASTER_KEY"
+const WalletConfigMariadbDSN = "MARIADB_DSN"
 
 type OnboardingFunc func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}) (account interface{}, err error, token string)
 
@@ -234,7 +240,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			ourDid := os.Getenv("DID")
+			ourDid := getWalletConfigValue(WalletConfigDID)
 			pairwiseDoc, err = t.createPairwiseDid(t.wallet, t.resolver)
 			if err != nil {
 				utils.SendError(err, w)
@@ -375,7 +381,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		rp.Sender = os.Getenv("DID")
+		rp.Sender = getWalletConfigValue(WalletConfigDID)
 
 		vc = rp
 
@@ -455,7 +461,7 @@ func containsType(types []string, t string) bool {
 }
 
 func (t *TrustProvider) generateVerifiableClaim(c map[string]interface{}, subject string, token string, types []string) (did.VerifiableClaim, error) {
-	id := os.Getenv("DID")
+	id := getWalletConfigValue(WalletConfigDID)
 
 	c[did.SubjectClaim] = subject
 	c[did.PublicKeyClaim] = fmt.Sprintf("%s#keys-1", token)
@@ -610,7 +616,7 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 				return
 			}
 
-			rp.Sender = os.Getenv("DID")
+			rp.Sender = getWalletConfigValue(WalletConfigDID)
 
 			vc = rp
 
@@ -728,7 +734,7 @@ func New(onboarding Onboarding, rules []Rule, subscribedObjects []SubscribedObje
 	os.Setenv("STARTED_ON", time.Now().String())
 	t := TrustProvider{onboarding: onboarding, rules: rules, subscribedObject: subscribedObjects, account: account, Router: mux.NewRouter(), resolver: resolver}
 
-	if os.Getenv("DID") != "" {
+	if getWalletConfigValue(WalletConfigDID) != "" {
 		t.initAdapterDid()
 	}
 
@@ -748,8 +754,7 @@ func New(onboarding Onboarding, rules []Rule, subscribedObjects []SubscribedObje
 		t.Router.HandleFunc(fmt.Sprintf("/api/%s/{token}", d.Name), t.handleData(d)).Methods("GET")
 	}
 
-	const TrustProviderPortKey = "TRUST_PROVIDER_PORT"
-	t.port = os.Getenv(TrustProviderPortKey)
+	t.port = os.Getenv(ConfigTrustProviderPort)
 	if t.port == "" {
 		t.port = "3000"
 	}
@@ -757,52 +762,24 @@ func New(onboarding Onboarding, rules []Rule, subscribedObjects []SubscribedObje
 }
 
 func (t *TrustProvider) initAdapterDid() error {
-	id := os.Getenv("DID")
+	id := getWalletConfigValue(WalletConfigDID)
 	if id == "" {
 		log.Fatalf("Missing environment variable DID")
 	}
-	masterKey := os.Getenv("MASTER_KEY")
-
-	var w *wallet.Wallet
-	if _, err := os.Stat(DefaultWalletId); os.IsNotExist(err) {
-		w, err = wallet.Create([]byte(masterKey), DefaultWalletId)
-		if err != nil {
-			fmt.Println("error opening wallet: ", err.Error())
-			return err
-		}
-	} else {
-		if w, err = wallet.Open([]byte(masterKey), DefaultWalletId); err == nil {
-
-			t.wallet = w
-			wr := WalletResolver{resolver: t.resolver, wallet: t.wallet, generateDDoc: did.GenerateDidDocument{Resolver: t.resolver}}
-			t.resolver = &wr
-
-			d, _ := w.Dids().Read(id)
-			if err != nil {
-				fmt.Println("error opening wallet:", err.Error())
-				return err
-			}
-			if len(d) > 0 {
-				fmt.Println("Adapter DID doc already exist")
-				return nil
-			}
-		} else {
-			log.Fatalf("Unable to open the wallet!")
-		}
-	}
+	w, err := walletFactory(t)
 
 	t.wallet = w
 	wr := WalletResolver{resolver: t.resolver, wallet: t.wallet, generateDDoc: did.GenerateDidDocument{Resolver: t.resolver}}
 	t.resolver = &wr
 
-	_, err := t.resolver.Resolve(id)
+	_, err = t.resolver.Resolve(id)
 	if err == nil {
 		log.Println("DID already published")
 
-		if os.Getenv("PRIVATE_KEY") != "" {
+		if getWalletConfigValue("PRIVATE_KEY") != "" {
 			log.Println("Adding private key to wallet from env variable.")
-			pk := strings.Replace(os.Getenv("PRIVATE_KEY"), "\\n", "\n", -1)
-			err = t.wallet.Add(wallet.TypeRsaVerificationKey2018, os.Getenv("DID"), pk, nil)
+			pk := strings.Replace(getWalletConfigValue("PRIVATE_KEY"), "\\n", "\n", -1)
+			err = t.wallet.Add(wallet.TypeRsaVerificationKey2018, getWalletConfigValue(WalletConfigDID), pk, nil)
 			if err != nil {
 				log.Println(err.Error())
 			}
@@ -820,6 +797,80 @@ func (t *TrustProvider) initAdapterDid() error {
 
 	return nil
 
+}
+
+func walletFactory(t *TrustProvider) (*wallet.Wallet, error) {
+	if dsn := getWalletConfigValue(WalletConfigMariadbDSN); dsn != "" {
+		return mariadbWalletFactory(t, dsn)
+	} else {
+		return sqliteWalletFactory(t)
+	}
+}
+
+func sqliteWalletFactory(t *TrustProvider) (*wallet.Wallet, error) {
+	masterKey := getWalletConfigValue(WalletConfigMasterKey)
+	id := getWalletConfigValue(WalletConfigDID)
+
+	var w *wallet.Wallet
+
+	if _, err := os.Stat(DefaultWalletId); os.IsNotExist(err) {
+		w, err = wallet.Create([]byte(masterKey), DefaultWalletId)
+		if err != nil {
+			fmt.Println("error opening wallet: ", err.Error())
+			return nil, err
+		}
+	} else {
+		if w, err = wallet.Open([]byte(masterKey), DefaultWalletId); err == nil {
+
+			t.wallet = w
+			wr := WalletResolver{resolver: t.resolver, wallet: t.wallet, generateDDoc: did.GenerateDidDocument{Resolver: t.resolver}}
+			t.resolver = &wr
+
+			d, _ := w.Dids().Read(id)
+			if err != nil {
+				fmt.Println("error opening wallet:", err.Error())
+				return nil, err
+			}
+			if len(d) > 0 {
+				fmt.Println("Adapter DID doc already exist")
+				return nil, nil
+			}
+		} else {
+			log.Fatalf("Unable to open the wallet!")
+		}
+	}
+	return w, nil
+}
+
+func mariadbWalletFactory(t *TrustProvider, dsn string) (*wallet.Wallet, error) {
+	masterKey := getWalletConfigValue(WalletConfigMasterKey)
+
+	var w *wallet.Wallet
+	var err error
+
+	ws, err := mariadb.Init(dsn)
+	if err != nil {
+		return nil, err
+	}
+
+	if w, err = wallet.OpenFromStorage(append([]byte{}, []byte(masterKey)...), ws); err == wallet.ErrNotInitialized {
+		log.Println("Initializing wallet!")
+		return wallet.CreateFromStorage(append([]byte{}, []byte(masterKey)...), ws)
+	} else if err != nil {
+		log.Printf("Error opening the wallet! Check your connection details [%s]", dsn)
+		return nil, err
+	} else {
+		return w, nil
+	}
+}
+
+func getWalletConfigValue(name string) string {
+	prefix := "WALLET_"
+	if c := os.Getenv(prefix + name); c != "" {
+		return c
+	} else {
+		return os.Getenv(name)
+	}
 }
 
 func (t *TrustProvider) ListenAndServe() error {
