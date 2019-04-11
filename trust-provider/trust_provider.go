@@ -767,6 +767,9 @@ func (t *TrustProvider) initAdapterDid() error {
 		log.Fatalf("Missing environment variable DID")
 	}
 	w, err := walletFactory(t)
+	if err != nil {
+		log.Fatalf("Wallet error: %s", err.Error())
+	}
 
 	t.wallet = w
 	wr := WalletResolver{resolver: t.resolver, wallet: t.wallet, generateDDoc: did.GenerateDidDocument{Resolver: t.resolver}}
