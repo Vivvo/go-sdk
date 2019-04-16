@@ -316,19 +316,11 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var vc *wallet.RatchetPayload
-	if (onboardingVC != nil || s["did"] != "") && len(t.onboarding.Claims) > 0 {
-		var subject string
-		if s["did"] != "" {
-			subject = s["did"]
-		} else {
-			subject = onboardingVC.Claim[did.SubjectClaim].(string)
-		}
-
+	if s["did"] != "" {
 		// Initialize the double ratchet encryption...\
 		messaging := t.wallet.Messaging()
 
-		contactDoc, err := t.resolver.Resolve(subject)
+		contactDoc, err := t.resolver.Resolve(s["did"])
 		if err != nil {
 			res := trustProviderResponse{Status: false, OnBoardingRequired: true}
 			utils.WriteJSON(res, http.StatusBadRequest, w)
@@ -356,6 +348,16 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			utils.SendError(err, w)
 			return
+		}
+	}
+
+	var vc *wallet.RatchetPayload
+	if (onboardingVC != nil || s["did"] != "") && len(t.onboarding.Claims) > 0 {
+		var subject string
+		if s["did"] != "" {
+			subject = s["did"]
+		} else {
+			subject = onboardingVC.Claim[did.SubjectClaim].(string)
 		}
 
 		c := make(map[string]interface{})
