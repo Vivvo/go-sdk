@@ -98,7 +98,7 @@ func TestOnboardingVerifiableClaim(t *testing.T) {
 
 	for _, tt := range tests {
 		os.Remove("w.db")
-		os.Remove("wallet.db")
+		os.Remove("Wallet.db")
 
 		t.Run(tt.name, func(t *testing.T) {
 			onboardingFuncCalled = false
@@ -153,7 +153,7 @@ func TestOnboardingVerifiableClaim(t *testing.T) {
 				t.Fatal(err.Error())
 			}
 
-			adapterDdocJson, err := tp.wallet.Dids().Read(os.Getenv("DID"))
+			adapterDdocJson, err := tp.Wallet.Dids().Read(os.Getenv("DID"))
 			if err != nil {
 				t.Fatalf(err.Error())
 			}
@@ -211,7 +211,7 @@ func TestOnboardingVerifiableClaim(t *testing.T) {
 		})
 
 		os.Remove("w.db")
-		os.Remove("wallet.db")
+		os.Remove("Wallet.db")
 	}
 
 }

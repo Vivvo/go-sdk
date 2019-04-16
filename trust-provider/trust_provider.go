@@ -104,7 +104,7 @@ type MessageDto struct {
 }
 
 const DefaultCsvFilePath = "./db.json"
-const DefaultWalletId = "wallet.db"
+const DefaultWalletId = "Wallet.db"
 
 // Account interface should be implemented and passed in when creating a TrustProvider.
 type Account interface {
@@ -137,7 +137,7 @@ type TrustProvider struct {
 	account          Account
 	port             string
 	resolver         did.ResolverInterface
-	wallet           *wallet.Wallet
+	Wallet           *wallet.Wallet
 }
 
 func (t *TrustProvider) parseParameters(body interface{}, params []Parameter, r *http.Request) (map[string]string, map[string]float64, map[string]bool, map[string]interface{}, error) {
@@ -229,7 +229,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 			// Must be an encrypted payload!
 			logger := utils.Logger(r.Context())
 
-			messaging := t.wallet.Messaging()
+			messaging := t.Wallet.Messaging()
 
 			var ratchetPayload = wallet.RatchetPayload{}
 			err = utils.ReadBody(&ratchetPayload, r)
@@ -241,7 +241,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 			}
 
 			ourDid := getWalletConfigValue(WalletConfigDID)
-			pairwiseDoc, err = t.createPairwiseDid(t.wallet, t.resolver)
+			pairwiseDoc, err = t.createPairwiseDid(t.Wallet, t.resolver)
 			if err != nil {
 				utils.SendError(err, w)
 				return
@@ -317,8 +317,8 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if s["did"] != "" {
-		// Initialize the double ratchet encryption...\
-		messaging := t.wallet.Messaging()
+		// Initialize the double ratchet encryption...
+		messaging := t.Wallet.Messaging()
 
 		contactDoc, err := t.resolver.Resolve(s["did"])
 		if err != nil {
@@ -326,7 +326,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 			utils.WriteJSON(res, http.StatusBadRequest, w)
 		}
 
-		pairwiseDoc, err = t.createPairwiseDid(t.wallet, t.resolver)
+		pairwiseDoc, err = t.createPairwiseDid(t.Wallet, t.resolver)
 		if err != nil {
 			utils.SendError(err, w)
 			return
@@ -377,7 +377,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 
 		m, _ := json.Marshal(message)
 
-		rp, err := t.wallet.Messaging().RatchetEncrypt(pairwiseDoc.Id, string(m))
+		rp, err := t.Wallet.Messaging().RatchetEncrypt(pairwiseDoc.Id, string(m))
 		if err != nil {
 			utils.SendError(err, w)
 			return
@@ -434,9 +434,9 @@ func (t *TrustProvider) parseVerifiableCredential(body interface{}, logger *zap.
 	vc = &cred
 
 	// If this is an IAmMeCredential and includes their did document, then this must be a pairwise did that was not
-	// registered with the Eeze service. Toss that bad boy in our wallet!
+	// registered with the Eeze service. Toss that bad boy in our Wallet!
 	if containsType(cred.Type, did.IAmMeCredential) {
-		t.wallet.Dids().Create(cred.Claim[did.SubjectClaim].(string), cred.Claim["ddoc"].(string), nil)
+		t.Wallet.Dids().Create(cred.Claim[did.SubjectClaim].(string), cred.Claim["ddoc"].(string), nil)
 	}
 
 	err = cred.Verify([]string{did.VerifiableCredential}, cred.Proof.Nonce, t.resolver)
@@ -476,7 +476,7 @@ func (t *TrustProvider) generateVerifiableClaim(c map[string]interface{}, subjec
 		Claim:  c,
 	}
 
-	return claim.WalletSign(t.wallet, id, uuid.New().String())
+	return claim.WalletSign(t.Wallet, id, uuid.New().String())
 }
 
 func (t *TrustProvider) handleData(data Data) http.HandlerFunc {
@@ -580,7 +580,7 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 
 			m, _ := json.Marshal(message)
 
-			messaging := t.wallet.Messaging()
+			messaging := t.Wallet.Messaging()
 
 			contactDoc, err := t.resolver.Resolve(s["did"])
 			if err != nil {
@@ -588,7 +588,7 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 				utils.WriteJSON(res, http.StatusBadRequest, w)
 			}
 
-			pairwiseDoc, err := t.createPairwiseDid(t.wallet, t.resolver)
+			pairwiseDoc, err := t.createPairwiseDid(t.Wallet, t.resolver)
 			if err != nil {
 				utils.SendError(err, w)
 				return
@@ -612,7 +612,7 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 				return
 			}
 
-			rp, err := t.wallet.Messaging().RatchetEncrypt(pairwiseDoc.Id, string(m))
+			rp, err := t.Wallet.Messaging().RatchetEncrypt(pairwiseDoc.Id, string(m))
 			if err != nil {
 				utils.SendError(err, w)
 				return
@@ -773,8 +773,8 @@ func (t *TrustProvider) initAdapterDid() error {
 		log.Fatalf("Wallet error: %s", err.Error())
 	}
 
-	t.wallet = w
-	wr := WalletResolver{resolver: t.resolver, wallet: t.wallet, generateDDoc: did.GenerateDidDocument{Resolver: t.resolver}}
+	t.Wallet = w
+	wr := WalletResolver{resolver: t.resolver, wallet: t.Wallet, generateDDoc: did.GenerateDidDocument{Resolver: t.resolver}}
 	t.resolver = &wr
 
 	_, err = t.resolver.Resolve(id)
@@ -782,9 +782,9 @@ func (t *TrustProvider) initAdapterDid() error {
 		log.Println("DID already published")
 
 		if getWalletConfigValue("PRIVATE_KEY") != "" {
-			log.Println("Adding private key to wallet from env variable.")
+			log.Println("Adding private key to Wallet from env variable.")
 			pk := strings.Replace(getWalletConfigValue("PRIVATE_KEY"), "\\n", "\n", -1)
-			err = t.wallet.Add(wallet.TypeRsaVerificationKey2018, getWalletConfigValue(WalletConfigDID), pk, nil)
+			err = t.Wallet.Add(wallet.TypeRsaVerificationKey2018, getWalletConfigValue(WalletConfigDID), pk, nil)
 			if err != nil {
 				log.Println(err.Error())
 			}
@@ -821,19 +821,19 @@ func sqliteWalletFactory(t *TrustProvider) (*wallet.Wallet, error) {
 	if _, err := os.Stat(DefaultWalletId); os.IsNotExist(err) {
 		w, err = wallet.Create([]byte(masterKey), DefaultWalletId)
 		if err != nil {
-			fmt.Println("error opening wallet: ", err.Error())
+			fmt.Println("error opening Wallet: ", err.Error())
 			return nil, err
 		}
 	} else {
 		if w, err = wallet.Open([]byte(masterKey), DefaultWalletId); err == nil {
 
-			t.wallet = w
-			wr := WalletResolver{resolver: t.resolver, wallet: t.wallet, generateDDoc: did.GenerateDidDocument{Resolver: t.resolver}}
+			t.Wallet = w
+			wr := WalletResolver{resolver: t.resolver, wallet: t.Wallet, generateDDoc: did.GenerateDidDocument{Resolver: t.resolver}}
 			t.resolver = &wr
 
 			d, _ := w.Dids().Read(id)
 			if err != nil {
-				fmt.Println("error opening wallet:", err.Error())
+				fmt.Println("error opening Wallet:", err.Error())
 				return nil, err
 			}
 			if len(d) > 0 {
@@ -841,7 +841,7 @@ func sqliteWalletFactory(t *TrustProvider) (*wallet.Wallet, error) {
 				return nil, nil
 			}
 		} else {
-			log.Fatalf("Unable to open the wallet!")
+			log.Fatalf("Unable to open the Wallet!")
 		}
 	}
 	return w, nil
@@ -859,10 +859,10 @@ func mariadbWalletFactory(t *TrustProvider, dsn string) (*wallet.Wallet, error) 
 	}
 
 	if w, err = wallet.OpenFromStorage(append([]byte{}, []byte(masterKey)...), ws); err == wallet.ErrNotInitialized {
-		log.Println("Initializing wallet!")
+		log.Println("Initializing Wallet!")
 		return wallet.CreateFromStorage(append([]byte{}, []byte(masterKey)...), ws)
 	} else if err != nil {
-		log.Printf("Error opening the wallet! Check your connection details [%s]", dsn)
+		log.Printf("Error opening the Wallet! Check your connection details [%s]", dsn)
 		return nil, err
 	} else {
 		return w, nil
