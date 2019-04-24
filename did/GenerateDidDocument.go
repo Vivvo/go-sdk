@@ -10,6 +10,11 @@ type GenerateDidDocument struct {
 	Resolver ResolverInterface
 }
 
+func Generate(id string, resolver ResolverInterface, w *wallet.Wallet, publish bool, serviceEndpoints ...Service) (*Document, error) {
+	g := GenerateDidDocument{Resolver: resolver}
+	return g.Generate(id, w, publish, serviceEndpoints...)
+}
+
 func (g *GenerateDidDocument) Generate(id string, w *wallet.Wallet, publish bool, serviceEndpoints ...Service) (*Document, error) {
 	var doc Document
 	doc.Context = "https://w3id.org/did/v1"
