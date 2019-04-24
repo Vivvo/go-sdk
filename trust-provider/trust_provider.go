@@ -527,16 +527,6 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 			return
 		}
 
-		//var incomingVc *did.VerifiableClaim
-		//var pairwiseDoc *did.Document
-		//if b, ok := body.(map[string]interface{}); ok {
-		//	body, err = t.doubleRatchetDecryptBody(incomingVc, pairwiseDoc, b, r)
-		//	if err != nil {
-		//		utils.SendError(err, w)
-		//		return
-		//	}
-		//}
-
 		s, n, b, a, err := t.parseParameters(body, rule.Parameters, r)
 		if err != nil {
 			logger.Error("error", err.Error())
