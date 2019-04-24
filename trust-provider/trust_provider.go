@@ -210,63 +210,6 @@ func (t *TrustProvider) createPairwiseDid(w *wallet.Wallet, resolver did.Resolve
 	return document, nil
 }
 
-//*did.VerifiableClaim
-//	var pairwiseDoc *did.Document
-func (t *TrustProvider) doubleRatchetDecryptBody(rp map[string]interface{}, r *http.Request) (map[string]interface{}, error) {
-	if t.isDoubleRatchetEncrypted(rp) {
-		// Must be an encrypted payload!
-		var body interface{}
-		logger := utils.Logger(r.Context())
-
-		messaging := t.Wallet.Messaging()
-
-		// check for existing contact
-		var ratchetPayload = wallet.RatchetPayload{}
-		err := utils.ReadBody(&ratchetPayload, r)
-		if err != nil {
-			logger.Errorf("Problem unmarshalling onboarding request ratchetPayload", "error", err.Error())
-			return nil, err
-		}
-
-		ourDid := getWalletConfigValue(WalletConfigDID)
-		pairwiseDoc, err = t.createPairwiseDid(t.Wallet, t.resolver)
-		if err != nil {
-			return nil, err
-		}
-
-		err = messaging.InitDoubleRatchetWithWellKnownPublicKey(ourDid, pairwiseDoc.Id, ratchetPayload.InitializationKey)
-		if err != nil {
-			return nil, err
-		}
-
-		payload, err := messaging.RatchetDecrypt(pairwiseDoc.Id, &ratchetPayload)
-		if err != nil {
-			return nil, err
-		}
-
-		err = json.Unmarshal([]byte(payload), &body)
-		if err != nil {
-			return nil, err
-		}
-
-		var ve []string
-		vc, ve = t.parseVerifiableCredential(body, logger)
-		if len(ve) > 0 {
-			e, err := json.Marshal(ve)
-			if err == nil {
-				err = errors.New(string(e))
-			}
-			logger.Errorf("Problem verifying the Verifiable Credential", "error", ve)
-			return nil, err
-		}
-
-		return vc.Claim, nil
-	} else {
-		return rp, nil // not a ratchet payload
-	}
-
-}
-
 func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 
 	logger := utils.Logger(r.Context())
@@ -279,14 +222,64 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//var onboardingVC *did.VerifiableClaim
-	//var pairwiseDoc *did.Document
+	var onboardingVC *did.VerifiableClaim
+	var pairwiseDoc *did.Document
 	if b, ok := body.(map[string]interface{}); ok {
-		body, err = t.doubleRatchetDecryptBody(b, r)
-		if err != nil {
-			utils.SendError(err, w)
-			return
+		if b["sender"] != nil && b["dhs"] != nil && b["pn"] != nil && b["ns"] != nil && b["payload"] != nil && b["initializationKey"] != nil {
+			// Must be an encrypted payload!
+			logger := utils.Logger(r.Context())
+
+			messaging := t.Wallet.Messaging()
+
+			var ratchetPayload = wallet.RatchetPayload{}
+			err = utils.ReadBody(&ratchetPayload, r)
+
+			if err != nil {
+				logger.Errorf("Problem unmarshalling onboarding request ratchetPayload", "error", err.Error())
+				utils.SetErrorStatus(err, http.StatusBadRequest, w)
+				return
+			}
+
+			ourDid := getWalletConfigValue(WalletConfigDID)
+			pairwiseDoc, err = t.createPairwiseDid(t.Wallet, t.resolver)
+			if err != nil {
+				utils.SendError(err, w)
+				return
+			}
+
+			err = messaging.InitDoubleRatchetWithWellKnownPublicKey(ourDid, pairwiseDoc.Id, ratchetPayload.InitializationKey)
+			if err != nil {
+				utils.SendError(err, w)
+				return
+			}
+
+			payload, err := messaging.RatchetDecrypt(pairwiseDoc.Id, &ratchetPayload)
+			if err != nil {
+				utils.SendError(err, w)
+				return
+			}
+
+			err = json.Unmarshal([]byte(payload), &body)
+			if err != nil {
+				utils.SendError(err, w)
+				return
+			}
+
+			var ve []string
+			onboardingVC, ve = t.parseVerifiableCredential(body, logger)
+			if len(ve) > 0 {
+				e, err := json.Marshal(ve)
+				if err == nil {
+					err = errors.New(string(e))
+				}
+				logger.Errorf("Problem verifying the Verifiable Credential", "error", ve)
+				utils.SetErrorStatus(err, http.StatusBadRequest, w)
+				return
+			}
+
+			body = onboardingVC.Claim
 		}
+
 	}
 
 	s, n, b, arrs, err := t.parseParameters(body, t.onboarding.Parameters, r)
@@ -359,12 +352,12 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var vc *wallet.RatchetPayload
-	if (s[did.SubjectClaim] != "" || s["did"] != "") && len(t.onboarding.Claims) > 0 {
+	if (onboardingVC != nil || s["did"] != "") && len(t.onboarding.Claims) > 0 {
 		var subject string
 		if s["did"] != "" {
 			subject = s["did"]
 		} else {
-			subject = s[did.SubjectClaim]
+			subject = onboardingVC.Claim[did.SubjectClaim].(string)
 		}
 
 		c := make(map[string]interface{})
