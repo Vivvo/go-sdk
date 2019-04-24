@@ -7,6 +7,7 @@ import (
 	"github.com/Vivvo/go-sdk/utils"
 	"github.com/Vivvo/go-wallet"
 	"github.com/google/uuid"
+	"log"
 )
 
 type Encryption struct {
@@ -27,6 +28,7 @@ func (e *Encryption) Encrypt(recipientDid string, message interface{}) (*wallet.
 
 	var pairwise string
 	if ratchetPartner == nil {
+		log.Println("ENCRYPT WITH NEW PARTNER, RECIPIENT: " + recipientDid)
 		var pubkey *did.PublicKey
 		pairwise, pubkey, err = e.createNewPairwise(recipientDid)
 		if err != nil {
@@ -38,6 +40,7 @@ func (e *Encryption) Encrypt(recipientDid string, message interface{}) (*wallet.
 			return nil, err
 		}
 	} else {
+		log.Println("ENCRYPT WITH EXISTING PARTNER, PAIRWISE: " + ratchetPartner.PairwiseDid)
 		pairwise = ratchetPartner.PairwiseDid
 	}
 
@@ -59,6 +62,7 @@ func (e *Encryption) Decrypt(encryptedMessage *wallet.RatchetPayload, obj interf
 
 	var pairwise string
 	if ratchetPartner == nil {
+		log.Println("DECRYPT WITH NEW PARTNER, SENDER: " + encryptedMessage.Sender)
 		var pubkey *did.PublicKey
 		pairwise, pubkey, err = e.createNewPairwise(encryptedMessage.Sender)
 		if err != nil {
@@ -73,6 +77,7 @@ func (e *Encryption) Decrypt(encryptedMessage *wallet.RatchetPayload, obj interf
 			return err
 		}
 	} else {
+		log.Println("DECRYPT WITH EXISTING PARTNER, SENDER: " + ratchetPartner.PairwiseDid)
 		pairwise = ratchetPartner.PairwiseDid
 	}
 

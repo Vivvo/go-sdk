@@ -106,11 +106,35 @@ func testEncryptMessageWithExistingPartner(t *testing.T) {
 	}
 }
 
+func testEncryptMessageWithExistingPartnerReverse(t *testing.T) {
+
+	aliceMessaging := Encryption{aliceWallet, resolver}
+	payload, err := aliceMessaging.Encrypt(bobPublicDid, "Hi, Bob!")
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	bobMessaging := Encryption{bobWallet, resolver}
+	var msg string
+	err = bobMessaging.Decrypt(payload, &msg)
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	if strings.Compare(msg, "Hi, Bob!") != 0 {
+		t.Errorf("Expected: %s, Actual: %s", "Hi, Bob!", msg)
+	}
+}
+
 func testEncryptMessageWithExistingPartnerLoop(t *testing.T) {
 	testEncryptMessageWithNewPartner(t) // run new partner to cover initdoubleratchet, now they are partners
 
 	for i := 0; i < 10; i++ {
-		t.Run(fmt.Sprintf("testEncryptMessageWithExistingPartner %d", i), testEncryptMessageWithExistingPartner)
+		if i%2 == 0 {
+			t.Run(fmt.Sprintf("testEncryptMessageWithExistingPartnerReverse %d", i), testEncryptMessageWithExistingPartnerReverse)
+		} else {
+			t.Run(fmt.Sprintf("testEncryptMessageWithExistingPartner %d", i), testEncryptMessageWithExistingPartner)
+		}
 	}
 }
 
