@@ -7,7 +7,6 @@ import (
 	"github.com/Vivvo/go-sdk/utils"
 	"github.com/Vivvo/go-wallet"
 	"github.com/google/uuid"
-	"log"
 )
 
 type Encryption struct {
@@ -21,55 +20,25 @@ type Encryption struct {
 func (e *Encryption) Encrypt(recipientDid string, message interface{}) (*wallet.RatchetPayload, error) {
 	m := e.wallet.Messaging()
 
-	tags := struct{
-		PublicDid string
-	}{
-		PublicDid: recipientDid,
-	}
-	tj, err := json.Marshal(tags)
-
-	existing, err := e.wallet.Contacts().Read(recipientDid)
+	ratchetPartner, err := e.findRatchetPartnerByPublicOrPairwiseDid(recipientDid)
 	if err != nil {
-		// no existing contact, still need to check if recipientDid a publicDid
-		eBytes, err := e.wallet.Contacts().FindByTags(tj)
-		if err == nil {
-			existing = string(eBytes)
-		}
+		return nil, err
 	}
 
 	var pairwise string
-	if existing == "" {
-		pairwise = utils.ClientIdToDid(uuid.New())
-		_, err = did.Generate(pairwise, e.resolver, e.wallet, true)
-
-		ddoc, err := e.resolver.Resolve(recipientDid)
+	if ratchetPartner == nil {
+		var pubkey *did.PublicKey
+		pairwise, pubkey, err = e.createNewPairwise(recipientDid)
 		if err != nil {
 			return nil, err
 		}
 
-		pubkey, err := ddoc.GetKeyByType(wallet.TypeEd25519KeyExchange2018)
-		if err != nil {
-			return nil, err
-		}
 		err = m.InitDoubleRatchet(pairwise, pubkey.PublicKeyBase58)
 		if err != nil {
 			return nil, err
 		}
-
-		contact := models.Contact{Id: pairwise, PairwiseDid: pairwise, PublicDid: recipientDid}
-		cj, err := json.Marshal(contact)
-		err = e.wallet.Contacts().Create(pairwise, string(cj), tj)
-		if err != nil {
-			return nil, err
-		}
 	} else {
-		var c models.Contact
-		err := json.Unmarshal([]byte(existing), &c)
-		if err != nil {
-			return nil, err
-		}
-
-		pairwise = c.PairwiseDid
+		pairwise = ratchetPartner.PairwiseDid
 	}
 
 	j, err := json.Marshal(message)
@@ -83,26 +52,28 @@ func (e *Encryption) Encrypt(recipientDid string, message interface{}) (*wallet.
 func (e *Encryption) Decrypt(encryptedMessage *wallet.RatchetPayload, obj interface{}) error {
 	m := e.wallet.Messaging()
 
-	pairwise := utils.ClientIdToDid(uuid.New())
-	_, err := did.Generate(pairwise, e.resolver, e.wallet, false)
-
-	log.Println(encryptedMessage.Sender)
-	ddoc, err := e.resolver.Resolve(encryptedMessage.Sender)
+	ratchetPartner, err := e.findRatchetPartnerByPublicOrPairwiseDid(encryptedMessage.Sender)
 	if err != nil {
 		return err
 	}
 
-	pubkey, err := ddoc.GetKeyByType(wallet.TypeEd25519KeyExchange2018)
-	if err != nil {
-		return err
-	}
+	var pairwise string
+	if ratchetPartner == nil {
+		var pubkey *did.PublicKey
+		pairwise, pubkey, err = e.createNewPairwise(encryptedMessage.Sender)
+		if err != nil {
+			return err
+		}
 
-	profiles, _ := e.wallet.UserProfile().ReadAll()
-	var ups []models.UserProfile
-	_ = json.Unmarshal(profiles, &ups)
-	err = m.InitDoubleRatchetWithWellKnownPublicKey(ups[0].PublicDid, pairwise, pubkey.PublicKeyBase58)
-	if err != nil {
-		return err
+		profiles, _ := e.wallet.UserProfile().ReadAll()
+		var ups []models.UserProfile
+		_ = json.Unmarshal(profiles, &ups)
+		err = m.InitDoubleRatchetWithWellKnownPublicKey(ups[0].PublicDid, pairwise, pubkey.PublicKeyBase58)
+		if err != nil {
+			return err
+		}
+	} else {
+		pairwise = ratchetPartner.PairwiseDid
 	}
 
 	msg, err := m.RatchetDecrypt(pairwise, encryptedMessage)
@@ -115,10 +86,61 @@ func (e *Encryption) Decrypt(encryptedMessage *wallet.RatchetPayload, obj interf
 	return nil
 }
 
-func IsDoubleRatchetEncrypted(msg interface{}) bool {
-	if payload, ok := msg.(map[string]interface{}); ok {
-		return payload["sender"] != nil && payload["dhs"] != nil && payload["pn"] != nil && payload["ns"] != nil && payload["payload"] != nil && payload["initializationKey"] != nil
-	} else {
-		return false
+func (e *Encryption) createNewPairwise(partnerPublicDid string) (string, *did.PublicKey, error) {
+	pairwise := utils.ClientIdToDid(uuid.New())
+	_, err := did.Generate(pairwise, e.resolver, e.wallet, true)
+
+	ddoc, err := e.resolver.Resolve(partnerPublicDid)
+	if err != nil {
+		return "", nil, err
 	}
+
+	pubkey, err := ddoc.GetKeyByType(wallet.TypeEd25519KeyExchange2018)
+	if err != nil {
+		return "", nil, err
+	}
+
+	partner := models.RatchetPartner{Id: pairwise, PairwiseDid: pairwise, PublicDid: partnerPublicDid}
+	cj, err := json.Marshal(partner)
+	err = e.wallet.RatchetPartners().Create(pairwise, string(cj), e.rpTags(partnerPublicDid))
+	if err != nil {
+		return "", nil, err
+	}
+
+	return pairwise, pubkey, err
+}
+
+// TODO: This should be done better smh..
+// And can userProfile replace ratchetPartner model in wallet?
+func (e *Encryption) findRatchetPartnerByPublicOrPairwiseDid(recipientDid string) (*models.RatchetPartner, error) {
+	var rp *models.RatchetPartner
+	existing, err := e.wallet.RatchetPartners().Read(recipientDid)
+	if err != nil {
+		// no existing contact, still need to check if recipientDid a publicDid
+		eBytes, err := e.wallet.RatchetPartners().FindByTags(e.rpTags(recipientDid))
+		if err != nil {
+			return nil, err
+		}
+		if len(eBytes) > 2 {
+			var rpList []*models.RatchetPartner
+			err = json.Unmarshal(eBytes, &rpList)
+			if err == nil && len(rpList) > 0 {
+				return rpList[0], nil
+			} else {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
+	}
+
+	_ = json.Unmarshal([]byte(existing), &rp)
+	return rp, nil
+}
+
+func (e *Encryption) rpTags(recipientDid string) []byte {
+	tags := make(map[string]string, 0)
+	tags["publicDid"] = recipientDid
+	tj, _ := json.Marshal(tags)
+	return tj
 }

@@ -3,6 +3,7 @@ package doubleratchet
 import (
 	"crypto/rand"
 	"encoding/json"
+	"fmt"
 	"github.com/Vivvo/go-sdk/did"
 	"github.com/Vivvo/go-sdk/models"
 	"github.com/Vivvo/go-sdk/utils"
@@ -44,8 +45,9 @@ func TestSuite(t *testing.T) {
 		name string
 		fn   func(t *testing.T)
 	}{
-		//{"testEncryptMessageWithNewContact", testEncryptMessageWithNewContact},
-		{"testEncryptMessageWithExistingContact", testEncryptMessageWithExistingContact},
+		{"testEncryptMessageWithNewPartner", testEncryptMessageWithNewPartner},
+		{"testEncryptMessageWithExistingPartner", testEncryptMessageWithExistingPartner},
+		{"testEncryptMessageWithExistingPartnerLoop", testEncryptMessageWithExistingPartnerLoop},
 	}
 
 	for _, tt := range tests {
@@ -61,7 +63,7 @@ func TestSuite(t *testing.T) {
 
 }
 
-func testEncryptMessageWithNewContact(t *testing.T) {
+func testEncryptMessageWithNewPartner(t *testing.T) {
 
 	bobMessaging := Encryption{bobWallet, resolver}
 	payload, err := bobMessaging.Encrypt(alicePublicDid, "Hi, Alice!")
@@ -83,16 +85,14 @@ func testEncryptMessageWithNewContact(t *testing.T) {
 	}
 }
 
-func testEncryptMessageWithExistingContact(t *testing.T) {
-	testEncryptMessageWithNewContact(t) // run new contact to cover initdoubleratchet
+func testEncryptMessageWithExistingPartner(t *testing.T) {
+	testEncryptMessageWithNewPartner(t) // run new partner to cover initdoubleratchet, now they are partners
 
 	bobMessaging := Encryption{bobWallet, resolver}
 	payload, err := bobMessaging.Encrypt(alicePublicDid, "Hi, Alice!")
 	if err != nil {
 		t.Error(err.Error())
 	}
-
-	log.Println(payload)
 
 	aliceMessaging := Encryption{aliceWallet, resolver}
 	var msg string
@@ -103,6 +103,14 @@ func testEncryptMessageWithExistingContact(t *testing.T) {
 
 	if strings.Compare(msg, "Hi, Alice!") != 0 {
 		t.Errorf("Expected: %s, Actual: %s", "Hi, Alice!", msg)
+	}
+}
+
+func testEncryptMessageWithExistingPartnerLoop(t *testing.T) {
+	testEncryptMessageWithNewPartner(t) // run new partner to cover initdoubleratchet, now they are partners
+
+	for i := 0; i < 10; i++ {
+		t.Run(fmt.Sprintf("testEncryptMessageWithExistingPartner %d", i), testEncryptMessageWithExistingPartner)
 	}
 }
 

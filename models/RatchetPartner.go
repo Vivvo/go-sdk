@@ -1,6 +1,6 @@
 package models
 
-type Contact struct {
+type RatchetPartner struct {
 	Id             string
 	PairwiseDid    string
 	PublicDid      string
