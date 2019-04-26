@@ -9,4 +9,3 @@ type Proof struct {
 	ProofPurpose   string `json:"proofPurpose,omitempty"`
 	Capability     string `json:"capability,omitempty"`
 }
-

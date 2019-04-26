@@ -36,10 +36,10 @@ type ObjectCapability struct {
 }
 
 type CapabilityOptions struct {
-	Capability *string `json:"capability,omitempty"`
-	Created string `json:"created"`
-	Creator string `json:"creator"`
-	ProofPurpose string `json:"proofPurpose"`
+	Capability   *string `json:"capability,omitempty"`
+	Created      string  `json:"created"`
+	Creator      string  `json:"creator"`
+	ProofPurpose string  `json:"proofPurpose"`
 }
 
 type Caveat struct {

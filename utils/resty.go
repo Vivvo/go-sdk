@@ -21,7 +21,7 @@ func Resty(ctx context.Context) *resty.Client {
 	client := resty.New()
 
 	client.OnBeforeRequest(func(c *resty.Client, r *resty.Request) error {
-		logger.Infow("Outbound Request", "method", r.Method, "url", r.URL, )
+		logger.Infow("Outbound Request", "method", r.Method, "url", r.URL)
 
 		if ctxRequestId, ok := ctx.Value(CorrelationId).(string); ok {
 			r.Header.Add("X-Trace-Id", ctxRequestId)

@@ -2,10 +2,10 @@ package utils
 
 import (
 	"github.com/hashicorp/consul/api"
+	"math/rand"
 	"strings"
 	"testing"
 	"time"
-	"math/rand"
 )
 
 type MockConsulHealth struct {
