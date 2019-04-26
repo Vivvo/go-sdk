@@ -261,19 +261,22 @@ func (t *TrustProvider) handleData(data Data) http.HandlerFunc {
 		vars := mux.Vars(r)
 		token := vars["token"]
 
-		acct, err := t.account.Read(token)
+		account, err := t.account.Read(token)
 		if err != nil {
 			logger.Error(" error", err.Error())
 			utils.SetErrorStatus(err, http.StatusBadRequest, w)
 			return
 		}
 
-		resp, err := data.DataFunc(acct)
+		resp, err := data.DataFunc(account)
 		if err != nil {
 			logger.Error("error", err.Error())
 			utils.SetErrorStatus(err, http.StatusServiceUnavailable, w)
 			return
 		}
+
+		// Inside the rule function they can update the account object and we will persist it for them!
+		t.account.Update(account, token)
 
 		utils.WriteJSON(resp, http.StatusOK, w)
 
@@ -316,6 +319,9 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 			return
 		}
 
+		// Inside the rule function they can update the account object and we will persist it for them!
+		t.account.Update(account, token)
+
 		if stringVars["did"] != "" {
 			pairwiseDoc, err = t.initializeEncryption(stringVars, w, pairwiseDoc)
 			if err != nil {
@@ -350,24 +356,16 @@ func (t *TrustProvider) handleSubscribedObject(subscribedObject SubscribedObject
 			utils.SetErrorStatus(err, http.StatusBadRequest, w)
 			return
 		}
-		s, n, b, a, err := t.parseParameters(subscriber.Data, subscribedObject.Parameters, r)
+
+		stringVars, numberVars, boolVars, arrayVars, err := t.parseParameters(subscriber.Data, subscribedObject.Parameters, r)
 		if err != nil {
 			logger.Error("error", err.Error())
 			utils.SetErrorStatus(err, http.StatusBadRequest, w)
 			return
 		}
 
-		//vars := mux.Vars(r)
-		//token := vars["token"]
-		////
-		//acct, err := t.account.Read(token)
-		//if err != nil {
-		//	logger.Error("error", err.Error())
-		//	utils.SetErrorStatus(err, http.StatusBadRequest, w)
-		//	return
-		//}
-
-		status, err := subscribedObject.SubscribedObjectFunc(s, n, b, a)
+		// FIXME: How does the subscribe work without knowing the account???
+		status, err := subscribedObject.SubscribedObjectFunc(stringVars, numberVars, boolVars, arrayVars)
 		if err != nil {
 			logger.Error("error", err.Error())
 			utils.SetErrorStatus(err, http.StatusServiceUnavailable, w)
