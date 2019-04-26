@@ -7,7 +7,7 @@ import (
 	"github.com/Vivvo/go-sdk/models"
 )
 
-// GetReleaseInfo pulls the release info from environment variables writes it to json
+// GetReleaseInfo pulls the release info from environment variables and writes it to json
 func GetReleaseInfo(w http.ResponseWriter, r *http.Request) {
 	logger := Logger(r.Context())
 	defer logger.Sync()

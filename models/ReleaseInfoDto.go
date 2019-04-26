@@ -6,5 +6,5 @@ type ReleaseInfoDto struct {
 	AppName       string `json:"app_name"`
 	GitShaSort    string `json:"git_sha_short"`
 	TenantName    string `json:"tenant_name"`
-	StartedOn     string `json:"started_one"`
+	StartedOn     string `json:"started_on"`
 }
