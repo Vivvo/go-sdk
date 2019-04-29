@@ -45,9 +45,10 @@ type OnboardingFunc func(s map[string]string, n map[string]float64, b map[string
 //    This function should execute the required business logic to ensure that the person onboarding is tied to
 //    and account in your system. The interface{} that is returned from here should be your implementation of an account.
 type Onboarding struct {
-	Parameters     []Parameter
-	Claims         []string
-	OnboardingFunc OnboardingFunc
+	Parameters           []Parameter
+	Claims               []string
+	OnboardingFunc       OnboardingFunc
+	VerifiableCredential bool
 }
 
 type ParameterType int
@@ -66,10 +67,11 @@ type Parameter struct {
 }
 
 type Rule struct {
-	Name       string
-	Parameters []Parameter
-	RuleFunc   func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}, acct interface{}) (bool, error)
-	Claims     []string
+	Name                 string
+	Parameters           []Parameter
+	RuleFunc             func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}, acct interface{}) (bool, error)
+	Claims               []string
+	VerifiableCredential bool
 }
 
 type Data struct {
@@ -191,7 +193,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 
 	logger := utils.Logger(r.Context())
 
-	err, onboardingVC, pairwiseDoc, stringVars, numberVars, boolVars, arrayVars := t.parseRequestBody(w, r, t.onboarding.Parameters)
+	err, onboardingVC, pairwiseDoc, stringVars, numberVars, boolVars, arrayVars := t.parseRequestBody(w, r, t.onboarding.Parameters, t.onboarding.VerifiableCredential)
 	if err != nil {
 		res := trustProviderResponse{Status: false, OnBoardingRequired: true, Message: err.Error()}
 		utils.WriteJSON(res, http.StatusBadRequest, w)
@@ -289,7 +291,7 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 
 		logger := utils.Logger(r.Context())
 
-		err, onboardingVC, pairwiseDoc, stringVars, numberVars, boolVars, arrayVars := t.parseRequestBody(w, r, rule.Parameters)
+		err, onboardingVC, pairwiseDoc, stringVars, numberVars, boolVars, arrayVars := t.parseRequestBody(w, r, rule.Parameters, rule.VerifiableCredential)
 		if err != nil {
 			utils.WriteJSON(trustProviderResponse{Status: false, OnBoardingRequired: true}, http.StatusBadRequest, w)
 			return
@@ -502,7 +504,7 @@ func (t *TrustProvider) decryptAndParseVerifiableCredential(w http.ResponseWrite
 	return
 }
 
-func (t *TrustProvider) parseRequestBody(w http.ResponseWriter, r *http.Request, parameters []Parameter) (error, *did.VerifiableClaim, *did.Document, map[string]string, map[string]float64, map[string]bool, map[string]interface{}) {
+func (t *TrustProvider) parseRequestBody(w http.ResponseWriter, r *http.Request, parameters []Parameter, requireVC bool) (error, *did.VerifiableClaim, *did.Document, map[string]string, map[string]float64, map[string]bool, map[string]interface{}) {
 	var body map[string]interface{}
 
 	logger := utils.Logger(r.Context())
@@ -519,8 +521,11 @@ func (t *TrustProvider) parseRequestBody(w http.ResponseWriter, r *http.Request,
 		if err != nil {
 			logger.Errorf("Problem decrypting and parsing onboarding request ratchetPayload", "error", err.Error())
 			return err, nil, nil, nil, nil, nil, nil
-
 		}
+	} else if requireVC {
+		err := errors.New("must present a verifiable credential")
+		logger.Errorf(err.Error())
+		return err, nil, nil, nil, nil, nil, nil
 	}
 	stringVars, numberVars, boolVars, arrayVars, err := t.parseParameters(body, parameters, r)
 	if err != nil {
