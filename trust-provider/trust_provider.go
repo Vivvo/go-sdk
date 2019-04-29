@@ -14,7 +14,7 @@ import (
 
 	"github.com/Vivvo/go-sdk/did"
 	"github.com/Vivvo/go-sdk/utils"
-	"github.com/Vivvo/go-wallet"
+	wallet "github.com/Vivvo/go-wallet"
 	"github.com/Vivvo/go-wallet/storage/mariadb"
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/go-resty/resty"
