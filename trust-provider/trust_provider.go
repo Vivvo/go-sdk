@@ -8,13 +8,12 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/Vivvo/go-sdk/did"
 	"github.com/Vivvo/go-sdk/utils"
-	wallet "github.com/Vivvo/go-wallet"
+	"github.com/Vivvo/go-wallet"
 	"github.com/Vivvo/go-wallet/storage/mariadb"
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/go-resty/resty"
@@ -814,8 +813,6 @@ func containsType(types []string, t string) bool {
 	}
 	return false
 }
-
-
 
 func createDevDB() error {
 
