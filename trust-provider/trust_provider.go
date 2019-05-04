@@ -649,7 +649,7 @@ func (t *TrustProvider) parseVerifiableCredential(body interface{}, logger *zap.
 	}
 
 	if !containsType(cred.Type, did.IAmMeCredential) {
-		//TODO:  only accept verifiable credentials from issuers we trustProvider!
+		//TODO:  only accept verifiable credentials from issuers we TrustProvider!
 	}
 
 	return vc, ve

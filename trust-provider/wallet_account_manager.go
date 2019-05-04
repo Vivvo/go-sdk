@@ -6,7 +6,7 @@ import (
 )
 
 type WalletAccountManager struct {
-	trustProvider TrustProvider
+	TrustProvider TrustProvider
 }
 
 func (wam *WalletAccountManager) Update(account interface{}, token string) error {
@@ -16,11 +16,11 @@ func (wam *WalletAccountManager) Update(account interface{}, token string) error
 		return err
 	}
 
-	err = wam.trustProvider.Wallet.Accounts().Create(token, string(b), nil)
+	err = wam.TrustProvider.Wallet.Accounts().Create(token, string(b), nil)
 	if err != nil {
 		log.Printf("Error inserting account object: %s", err.Error())
 		log.Printf("Attempting to update account...")
-		err = wam.trustProvider.Wallet.Accounts().Update(token, string(b))
+		err = wam.TrustProvider.Wallet.Accounts().Update(token, string(b))
 		if err != nil {
 			log.Printf("Error updating account object: %s", err.Error())
 			return err
@@ -30,7 +30,7 @@ func (wam *WalletAccountManager) Update(account interface{}, token string) error
 }
 
 func (wam *WalletAccountManager) Read(token string) (interface{}, error) {
-	s, err := wam.trustProvider.Wallet.Accounts().Read(token)
+	s, err := wam.TrustProvider.Wallet.Accounts().Read(token)
 	if err != nil {
 		log.Printf("Error reading account object: %s", err.Error())
 		return nil, err
