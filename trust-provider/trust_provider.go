@@ -88,8 +88,20 @@ type trustProviderResponse struct {
 	Status             bool                   `json:"value"`
 	Message            string                 `json:"message,omitempty"`
 	OnBoardingRequired bool                   `json:"onBoardingRequired"`
+	IgnoreAttempt      bool                   `json:"ignoreAttempt"`
 	Token              string                 `json:"token,omitempty"`
 	VerifiableClaim    *wallet.RatchetPayload `json:"verifiableClaim,omitempty"`
+}
+
+type TrustProviderErrorResponse struct {
+	OnboardingStatus   bool
+	OnboardingRequired bool
+	Message            string
+	HttpStatus         int
+}
+
+func (t TrustProviderErrorResponse) Error() string {
+	return t.Message
 }
 
 type ConnectionResponse struct {
@@ -209,9 +221,20 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 	account, err, token := t.onboarding.OnboardingFunc(stringVars, numberVars, boolVars, arrayVars)
 	//log.Print("Account - ", account)
 	if err != nil {
-		res := trustProviderResponse{Status: false, OnBoardingRequired: true, Message: err.Error()}
-		utils.WriteJSON(res, http.StatusOK, w)
-		return
+		if e, ok := err.(TrustProviderErrorResponse); ok {
+			res := trustProviderResponse{
+				Status: e.OnboardingStatus,
+				OnBoardingRequired: e.OnboardingRequired,
+				IgnoreAttempt: e.HttpStatus >= 500,
+				Message: err.Error(),
+			}
+			utils.WriteJSON(res, http.StatusOK, w)
+			return
+		} else {
+			res := trustProviderResponse{Status: false, OnBoardingRequired: true, Message: err.Error()}
+			utils.WriteJSON(res, http.StatusOK, w)
+			return
+		}
 	}
 
 	if token == "" {
