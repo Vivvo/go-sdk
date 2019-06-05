@@ -12,9 +12,9 @@ import (
 )
 
 type InvokeCapability struct {
-	Id          string       `json:"id"`
-	Action      string       `json:"action"`
-	InvokeProof *InvokeProof `json:"proof,omitempty"`
+	Id     string       `json:"id"`
+	Action string       `json:"action"`
+	Proof  *InvokeProof `json:"proof,omitempty"`
 }
 
 type InvokeOptions struct {
@@ -33,12 +33,12 @@ type InvokeProof struct {
 }
 
 func (i *InvokeCapability) VerifyInvocation(issuer string, resolver ResolverInterface) (map[string][]string, error) {
-	ocapInvoker, capabilities, err := VerifyOCaps(i.InvokeProof.ObjectCapability, issuer, resolver)
+	ocapInvoker, capabilities, err := VerifyOCaps(i.Proof.ObjectCapability, issuer, resolver)
 	if err != nil {
 		log.Println("Failed to verify ocaps.")
 		return nil, err
 	}
-	if i.InvokeProof.Creator != ocapInvoker {
+	if i.Proof.Creator != ocapInvoker {
 		log.Println("Invoker does not match the creator.")
 		return nil, errors.New("incorrect invoker")
 	}
@@ -84,7 +84,7 @@ func VerifyOCaps(ocap ObjectCapability, issuer string, resolver ResolverInterfac
 
 func (c *InvokeCapability) verify(resolver ResolverInterface) error {
 	// FIXME: Utility to do this with some validation!
-	did := strings.Split(c.InvokeProof.Creator, "#")[0]
+	did := strings.Split(c.Proof.Creator, "#")[0]
 
 	// need to get the resolver to get the person who signed it so we can go to the block chain and get the issuers public key....
 	didDocument, err := resolver.Resolve(did)
@@ -93,15 +93,15 @@ func (c *InvokeCapability) verify(resolver ResolverInterface) error {
 	}
 
 	// Find the public key that the claim is using
-	pubKey, err := didDocument.GetPublicKeyById(c.InvokeProof.Creator)
+	pubKey, err := didDocument.GetPublicKeyById(c.Proof.Creator)
 	if err != nil {
 		return err
 	}
 
-	sig := c.InvokeProof.SignatureValue
+	sig := c.Proof.SignatureValue
 
-	options := utils.Proof{Created: c.InvokeProof.Created, Creator: c.InvokeProof.Creator, ProofPurpose: c.InvokeProof.ProofPurpose}
-	c.InvokeProof = nil
+	options := utils.Proof{Created: c.Proof.Created, Creator: c.Proof.Creator, ProofPurpose: c.Proof.ProofPurpose}
+	c.Proof = nil
 
 	credJson, err := utils.Canonicalize(c)
 	if err != nil {

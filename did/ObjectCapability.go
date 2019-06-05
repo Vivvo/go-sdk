@@ -20,7 +20,7 @@ type Capability struct {
 	Invoker          string              `json:"invoker"`
 	Caveat           []Caveat            `json:"caveat,omitempty"`
 	Creator          string              `json:"creator"`
-	Capabilities     map[string][]string `json:"capabilities"` // key is url to entity, values are action urls
+	Capabilities     map[string][]string `json:"capabilities,omitempty"` // key is url to entity, values are action urls
 }
 
 type ObjectCapability struct {
@@ -31,15 +31,15 @@ type ObjectCapability struct {
 	Invoker          string              `json:"invoker"`
 	Caveat           []Caveat            `json:"caveat,omitempty"`
 	Creator          string              `json:"creator"`
-	Capabilities     map[string][]string `json:"capabilities"` // key is url to entity, values are action urls
+	Capabilities     map[string][]string `json:"capabilities,omitempty"` // key is url to entity, values are action urls
 	Proof            *utils.Proof        `json:"proof,omitempty"`
 }
 
 type CapabilityOptions struct {
-	Capability *string `json:"capability,omitempty"`
-	Created string `json:"created"`
-	Creator string `json:"creator"`
-	ProofPurpose string `json:"proofPurpose"`
+	Capability   *string `json:"capability,omitempty"`
+	Created      string  `json:"created"`
+	Creator      string  `json:"creator"`
+	ProofPurpose string  `json:"proofPurpose"`
 }
 
 type Caveat struct {

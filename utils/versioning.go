@@ -1,11 +1,13 @@
 package utils
 
 import (
-	"github.com/Vivvo/go-sdk/models"
 	"net/http"
 	"os"
+
+	"github.com/Vivvo/go-sdk/models"
 )
 
+// GetReleaseInfo pulls the release info from environment variables and writes it to json
 func GetReleaseInfo(w http.ResponseWriter, r *http.Request) {
 	logger := Logger(r.Context())
 	defer logger.Sync()
@@ -14,7 +16,7 @@ func GetReleaseInfo(w http.ResponseWriter, r *http.Request) {
 		AppName:       os.Getenv("APP_NAME"),
 		GitShaSort:    os.Getenv("GIT_SHA_SHORT"),
 		TenantName:    os.Getenv("TENANT_NAME"),
-		StaredOn:      os.Getenv("STARTED_ON"),
+		StartedOn:     os.Getenv("STARTED_ON"),
 	}
 	WriteJSON(releaseInformation, http.StatusCreated, w)
 }

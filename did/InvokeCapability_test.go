@@ -48,9 +48,9 @@ type MockOcapResolver struct {
 
 func (m *MockOcapResolver) Resolve(id string) (*Document, error) {
 	if strings.Compare(id, "did:vvo:5oZzq6u4ZVNxp8YA3YBkgq") == 0 {
-		return &Document{PublicKey: []PublicKey{{Id: "did:vvo:5oZzq6u4ZVNxp8YA3YBkgq#keys-1", PublicKeyPem: didvvo5oZzq6u4ZVNxp8YA3YBkgqkeys1}},}, nil
+		return &Document{PublicKey: []PublicKey{{Id: "did:vvo:5oZzq6u4ZVNxp8YA3YBkgq#keys-1", PublicKeyPem: didvvo5oZzq6u4ZVNxp8YA3YBkgqkeys1}}}, nil
 	} else if strings.Compare(id, "did:vvo:AVgg8xz2s3222UMfJtjCFR") == 0 {
-		return &Document{PublicKey: []PublicKey{{Id: "did:vvo:AVgg8xz2s3222UMfJtjCFR#keys-1", PublicKeyPem: didvvoAVgg8xz2s3222UMfJtjCFRkeys1}},}, nil
+		return &Document{PublicKey: []PublicKey{{Id: "did:vvo:AVgg8xz2s3222UMfJtjCFR#keys-1", PublicKeyPem: didvvoAVgg8xz2s3222UMfJtjCFRkeys1}}}, nil
 	}
 	return nil, errors.New("not found")
 }

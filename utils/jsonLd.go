@@ -67,3 +67,39 @@ func Sign(o interface{}, proof *Proof, privateKey *rsa.PrivateKey) (*Proof, erro
 
 	return proof, nil
 }
+
+func SignDomain(obj []byte, privateKey *rsa.PrivateKey) ([]byte, error) {
+
+	h := sha256.New()
+	_, err := h.Write([]byte(obj))
+	if err != nil {
+		return nil, err
+	}
+
+	sig, err := privateKey.Sign(rand.Reader, h.Sum(nil), &SHA256Hasher{})
+	if err != nil {
+		return nil, err
+	}
+
+	return sig, nil
+}
+
+func VerifyDomain(obj []byte, sig string, publicKey *rsa.PublicKey) error {
+	h := sha256.New()
+	_, err := h.Write(obj)
+	if err != nil {
+		return err
+	}
+
+	decodedSig, err := base64.URLEncoding.DecodeString(sig)
+	if err != nil {
+		return err
+	}
+
+	err = rsa.VerifyPKCS1v15(publicKey, crypto.SHA256, h.Sum(nil), decodedSig)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
