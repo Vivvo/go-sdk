@@ -75,6 +75,35 @@ type Data struct {
 	DataFunc func(acct interface{}) (interface{}, error)
 }
 
+type GetStatus struct {
+	GetStatusFunc	func(acct interface{}) (StatusResponse, error)
+}
+
+type StatusResponse struct {
+	StatusAction 	[]StatusAction
+	StatusLabel		[]StatusLabel
+	StatusFile		[]StatusFile
+}
+
+type StatusAction struct {
+	Label 		string	`json:"label"`
+	Action 		string 	`json:"action"`
+	Description	string	`json:"description"`
+}
+
+type StatusLabel struct {
+	Label 		string 	`json:"label"`
+	Value 		string 	`json:"value"`
+}
+
+type StatusFile struct {
+	Title 		string 	`json:"title"`
+	Action 		string 	`json:"action"`
+	Description	string 	`json:"description"`
+	FileType	string	`json:"fileType"`
+	FileSize 	string	`json:"fileSize"`
+	Date 		string 	`json:"date"`
+}
 type SubscribedObject struct {
 	Name                 string
 	Parameters           []Parameter
@@ -133,6 +162,8 @@ type TrustProvider struct {
 	onboarding       Onboarding
 	rules            []Rule
 	subscribedObject []SubscribedObject
+	data 			 []Data
+	getStatus		 GetStatus
 	Router           *mux.Router
 	account          Account
 	port             string
@@ -640,8 +671,6 @@ func (t *TrustProvider) handleSubscribedObject(subscribedObject SubscribedObject
 		logger := utils.Logger(r.Context())
 		body, err := ioutil.ReadAll(r.Body)
 
-		log.Printf("Body = \n\n%s", body)
-
 		var subsrciber Subsrciber
 		err = json.Unmarshal(body, &subsrciber)
 		if err != nil {
@@ -656,16 +685,6 @@ func (t *TrustProvider) handleSubscribedObject(subscribedObject SubscribedObject
 			return
 		}
 
-		//vars := mux.Vars(r)
-		//token := vars["token"]
-		////
-		//acct, err := t.account.Read(token)
-		//if err != nil {
-		//	logger.Error("error", err.Error())
-		//	utils.SetErrorStatus(err, http.StatusBadRequest, w)
-		//	return
-		//}
-
 		status, err := subscribedObject.SubscribedObjectFunc(s, n, b, a)
 		if err != nil {
 			logger.Error("error", err.Error())
@@ -675,6 +694,30 @@ func (t *TrustProvider) handleSubscribedObject(subscribedObject SubscribedObject
 
 		utils.WriteJSON(trustProviderResponse{Status: status}, http.StatusOK, w)
 
+	})
+}
+
+func (t *TrustProvider) handleGetStatus() http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		logger := utils.Logger(r.Context())
+
+		vars := mux.Vars(r)
+		identityId := vars["identityId"]
+
+		acct, err := t.account.Read(identityId)
+		if err != nil {
+			logger.Error("error", err.Error())
+			utils.SetErrorStatus(err, http.StatusBadRequest, w)
+			return
+		}
+
+		statusResponse, err := t.getStatus.GetStatusFunc(acct)
+		if err != nil {
+			utils.SetErrorStatus(err, http.StatusServiceUnavailable, w)
+		} else {
+			utils.WriteJSON(statusResponse, http.StatusOK, w)
+		}
 	})
 }
 
@@ -728,11 +771,11 @@ func (wr *WalletResolver) GenerateDDoc(id string, w *wallet.Wallet) (*did.Docume
 	return doc, nil
 }
 
-// Create a new TrustProvider. Based on the onboarding, rules and account objects you pass in
+// Create a new TrustProvider. Based on the onboarding, rules, data, getStatus and account objects you pass in
 // this will bootstrap an http server with onboarding and rules endpoints exposed.
-func New(onboarding Onboarding, rules []Rule, subscribedObjects []SubscribedObject, data []Data, account Account, resolver did.ResolverInterface) TrustProvider {
+func New(onboarding Onboarding, rules []Rule, subscribedObjects []SubscribedObject, data []Data, getStatus GetStatus, account Account, resolver did.ResolverInterface) TrustProvider {
 	os.Setenv("STARTED_ON", time.Now().String())
-	t := TrustProvider{onboarding: onboarding, rules: rules, subscribedObject: subscribedObjects, account: account, Router: mux.NewRouter(), resolver: resolver}
+	t := TrustProvider{onboarding: onboarding, rules: rules, subscribedObject: subscribedObjects, data: data, getStatus: getStatus, account: account, Router: mux.NewRouter(), resolver: resolver}
 
 	if getWalletConfigValue(WalletConfigDID) != "" {
 		t.initAdapterDid()
@@ -741,6 +784,8 @@ func New(onboarding Onboarding, rules []Rule, subscribedObjects []SubscribedObje
 	t.Router.HandleFunc("/version", utils.GetReleaseInfo).Methods("GET")
 
 	t.Router.HandleFunc("/api/register", t.register).Methods("POST")
+
+	t.Router.HandleFunc("/api/getstatus/{identityId}", t.handleGetStatus()).Methods("GET")
 
 	for _, s := range subscribedObjects {
 		t.Router.HandleFunc(fmt.Sprintf("/api/subscriber/%s", s.Name), t.handleSubscribedObject(s)).Methods("POST")
