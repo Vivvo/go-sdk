@@ -40,11 +40,17 @@ func (c *ConsulService) GetService(service string) string {
 	tag := os.Getenv("TAG")
 	var newHost string
 	if tag == "" {
-		_, addrs, err := net.LookupSRV("", "", service)
-		if err != nil || len(addrs) == 0 {
+		services, _, err := c.health.Service(service, tag, true, nil)
+		if err != nil {
+			log.Println("Error looking up service in consul", "errorMsg", err.Error(), "service", service)
 			return service
 		}
-		newHost = fmt.Sprintf("%s:%d", addrs[0].Target, addrs[0].Port)
+		if len(services) == 0 {
+			log.Println("No matching services found in consul", "service", service)
+			return service
+		}
+		randomService := services[c.rng.Intn(len(services))].Service
+		newHost = fmt.Sprintf("%s:%d", randomService.Address, randomService.Port)
 	} else {
 		_, addrs, err := net.LookupSRV(service, tag, "service.consul")
 		if err != nil || len(addrs) == 0 {
