@@ -193,7 +193,7 @@ type TrustProvider struct {
 
 // New will create a new TrustProvider. Based on the onboarding, rules and account objects you pass in
 // this will bootstrap an http server with onboarding and rules endpoints exposed.
-func New(onboarding Onboarding, rules []Rule, subscribedObjects []SubscribedObject, data []Data, account Account, resolver did.ResolverInterface) TrustProvider {
+func New(onboarding Onboarding, rules []Rule, subscribedObjects []SubscribedObject, data []Data, getStatus GetStatus, account Account, resolver did.ResolverInterface) TrustProvider {
 	os.Setenv("STARTED_ON", time.Now().Format(time.RFC3339))
 	t := TrustProvider{onboarding: onboarding, rules: rules, subscribedObject: subscribedObjects, account: account, Router: mux.NewRouter(), resolver: resolver}
 
