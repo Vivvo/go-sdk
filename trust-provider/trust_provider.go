@@ -739,7 +739,7 @@ func (t *TrustProvider) handleGetStatus() http.HandlerFunc {
 		acct, err := t.account.Read(token)
 		if err != nil {
 			logger.Error("error", err.Error())
-			utils.SetErrorStatus(err, http.StatusNoContent, w)
+			utils.SetErrorStatus(err, http.StatusOK, w)
 			return
 		}
 
