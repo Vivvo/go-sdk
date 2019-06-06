@@ -83,9 +83,9 @@ type GetStatus struct {
 }
 
 type StatusResponse struct {
-	StatusAction 	[]StatusAction
-	StatusLabel		[]StatusLabel
-	StatusFile		[]StatusFile
+	StatusAction 	[]StatusAction 	`json:"actions"`
+	StatusLabel		[]StatusLabel	`json:"labels"`
+	StatusFile		[]StatusFile	`json:"files`"`
 }
 
 type StatusAction struct {
