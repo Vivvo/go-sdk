@@ -205,6 +205,8 @@ func New(onboarding Onboarding, rules []Rule, subscribedObjects []SubscribedObje
 
 	t.Router.HandleFunc("/api/register", t.register).Methods("POST")
 
+	t.Router.HandleFunc("/api/getstatus/{token}", t.handleGetStatus()).Methods("GET")
+
 	for _, s := range subscribedObjects {
 		t.Router.HandleFunc(fmt.Sprintf("/api/subscriber/%s", s.Name), t.handleSubscribedObject(s)).Methods("POST")
 	}
@@ -732,9 +734,9 @@ func (t *TrustProvider) handleGetStatus() http.HandlerFunc {
 		logger := utils.Logger(r.Context())
 
 		vars := mux.Vars(r)
-		identityId := vars["identityId"]
+		token := vars["token"]
 
-		acct, err := t.account.Read(identityId)
+		acct, err := t.account.Read(token)
 		if err != nil {
 			logger.Error("error", err.Error())
 			utils.SetErrorStatus(err, http.StatusBadRequest, w)
