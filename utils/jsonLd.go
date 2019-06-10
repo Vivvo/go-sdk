@@ -2,22 +2,16 @@ package utils
 
 import (
 	"crypto"
+	"crypto/hmac"
 	"crypto/rand"
 	"crypto/rsa"
-	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"strings"
 )
 
 type SHA256Hasher struct {
-}
-
-type SHA1Hasher struct {
-}
-
-func (s *SHA1Hasher) HashFunc() crypto.Hash {
-	return crypto.SHA1
 }
 
 func (s *SHA256Hasher) HashFunc() crypto.Hash {
@@ -65,7 +59,7 @@ func Sign(o interface{}, proof *Proof, privateKey *rsa.PrivateKey) (*Proof, erro
 		return nil, err
 	}
 
-	sig, err := privateKey.Sign(rand.Reader, h.Sum(nil), &SHA1Hasher{})
+	sig, err := privateKey.Sign(rand.Reader, h.Sum(nil), &SHA256Hasher{})
 	if err != nil {
 		return nil, err
 	}
@@ -76,38 +70,23 @@ func Sign(o interface{}, proof *Proof, privateKey *rsa.PrivateKey) (*Proof, erro
 	return proof, nil
 }
 
-func SignDomain(obj []byte, privateKey *rsa.PrivateKey) ([]byte, error) {
+func SignDomain(url string, clientId string) (string, error) {
 
-	h := sha1.New()
-	_, err := h.Write([]byte(obj))
-	if err != nil {
-		return nil, err
-	}
+	// Generate a secretKey based on a "random" salt and the clientId
+	// This ensures every Eeze domain will have a different url signature
+	// even if they try to use the same url
+	h1 := hmac.New(sha256.New, []byte("aGVsbG8gZnJvbSB2aXZ2byB0aGlzIGlzIGEgbG9uZyByYW5kb20gc3RyaW5nIGxvbA=="))
+	h1.Write([]byte(clientId))
+	secretKey := h1.Sum(nil)
 
-	sig, err := privateKey.Sign(rand.Reader, h.Sum(nil), &SHA1Hasher{})
-	if err != nil {
-		return nil, err
-	}
+	// perform an HMAC with	the secretKey and the url
+	h := hmac.New(sha256.New, secretKey)
+	h.Write([]byte(url))
 
-	return sig, nil
+	return base64.URLEncoding.EncodeToString(h.Sum(nil)), nil
 }
 
-func VerifyDomain(obj []byte, sig string, publicKey *rsa.PublicKey) error {
-	h := sha1.New()
-	_, err := h.Write(obj)
-	if err != nil {
-		return err
-	}
-
-	decodedSig, err := base64.URLEncoding.DecodeString(sig)
-	if err != nil {
-		return err
-	}
-
-	err = rsa.VerifyPKCS1v15(publicKey, crypto.SHA256, h.Sum(nil), decodedSig)
-	if err != nil {
-		return err
-	}
-
-	return nil
+func VerifyDomain(url string, clientId string, signature string) (bool, error) {
+	sig, err := SignDomain(url, clientId)
+	return strings.Compare(sig, signature) == 0, err
 }
