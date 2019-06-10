@@ -13,6 +13,13 @@ import (
 type SHA256Hasher struct {
 }
 
+type SHA1Hasher struct {
+}
+
+func (s *SHA1Hasher) HashFunc() crypto.Hash {
+	return crypto.SHA1
+}
+
 func (s *SHA256Hasher) HashFunc() crypto.Hash {
 	return crypto.SHA256
 }
@@ -58,7 +65,7 @@ func Sign(o interface{}, proof *Proof, privateKey *rsa.PrivateKey) (*Proof, erro
 		return nil, err
 	}
 
-	sig, err := privateKey.Sign(rand.Reader, h.Sum(nil), &SHA256Hasher{})
+	sig, err := privateKey.Sign(rand.Reader, h.Sum(nil), &SHA1Hasher{})
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +84,7 @@ func SignDomain(obj []byte, privateKey *rsa.PrivateKey) ([]byte, error) {
 		return nil, err
 	}
 
-	sig, err := privateKey.Sign(rand.Reader, h.Sum(nil), &SHA256Hasher{})
+	sig, err := privateKey.Sign(rand.Reader, h.Sum(nil), &SHA1Hasher{})
 	if err != nil {
 		return nil, err
 	}
