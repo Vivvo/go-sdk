@@ -4,6 +4,7 @@ import (
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
@@ -70,7 +71,7 @@ func Sign(o interface{}, proof *Proof, privateKey *rsa.PrivateKey) (*Proof, erro
 
 func SignDomain(obj []byte, privateKey *rsa.PrivateKey) ([]byte, error) {
 
-	h := sha256.New()
+	h := sha1.New()
 	_, err := h.Write([]byte(obj))
 	if err != nil {
 		return nil, err
@@ -85,7 +86,7 @@ func SignDomain(obj []byte, privateKey *rsa.PrivateKey) ([]byte, error) {
 }
 
 func VerifyDomain(obj []byte, sig string, publicKey *rsa.PublicKey) error {
-	h := sha256.New()
+	h := sha1.New()
 	_, err := h.Write(obj)
 	if err != nil {
 		return err
