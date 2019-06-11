@@ -40,7 +40,7 @@ func (s *SpaceConfig) ListBuckets() ([]*s3.Bucket, error) {
 func (s *SpaceConfig) Upload(content, key string) error {
 	object := s3.PutObjectInput{
 		Body:   strings.NewReader(content),
-		Bucket: aws.String(s.bucket),
+		Bucket: aws.String(s.Bucket),
 		Key:    aws.String(key),
 	}
 	_, err := s.S3Instance.PutObject(&object)
