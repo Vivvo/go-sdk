@@ -12,6 +12,7 @@ import (
 
 type SpaceConfig struct {
 	S3Instance *s3.S3
+	Bucket     string
 }
 
 // NewS3Instance creates a new S3 instance with the specifed endpoint & region.
@@ -36,10 +37,10 @@ func (s *SpaceConfig) ListBuckets() ([]*s3.Bucket, error) {
 }
 
 // Upload will upload the content with the specifed key to the specifed bucket
-func (s *SpaceConfig) Upload(content, bucket, key string) error {
+func (s *SpaceConfig) Upload(content, key string) error {
 	object := s3.PutObjectInput{
 		Body:   strings.NewReader(content),
-		Bucket: aws.String(bucket),
+		Bucket: aws.String(s.bucket),
 		Key:    aws.String(key),
 	}
 	_, err := s.S3Instance.PutObject(&object)
