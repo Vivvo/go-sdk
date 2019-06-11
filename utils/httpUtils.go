@@ -9,6 +9,19 @@ import (
 	"strings"
 )
 
+type StatusError struct {
+	Code int
+	Err error
+}
+
+func (se StatusError) Error() string {
+	return se.Err.Error()
+}
+
+func (se StatusError) Status() int {
+	return se.Code
+}
+
 type ErrorDto struct {
 	StatusCode int    `json:"statusCode"`
 	Message    string `json:"message"`
