@@ -12,15 +12,18 @@ import (
 
 var logger *zap.Logger
 
-func init() {
-	var config zap.Config
-	if os.Getenv("DEBUG") == "true" {
-		config = zap.NewDevelopmentConfig()
-	} else {
-		config = zap.NewProductionConfig()
+func getLogger() *zap.Logger {
+	if logger == nil {
+		var config zap.Config
+		if os.Getenv("DEBUG") == "true" {
+			config = zap.NewDevelopmentConfig()
+		} else {
+			config = zap.NewProductionConfig()
+		}
+		config.OutputPaths = []string{"stdout"}
+		logger, _ = config.Build()
 	}
-	config.OutputPaths = []string{"stdout"}
-	logger, _ = config.Build()
+	return logger
 }
 
 // WithRequestId returns a context which knows its request ID
@@ -30,7 +33,7 @@ func WithRequestId(ctx context.Context, requestId string) context.Context {
 
 // Logger returns a zap logger with as much context as possible
 func Logger(ctx context.Context) *zap.SugaredLogger {
-	newLogger := logger
+	newLogger := getLogger()
 	if ctx != nil {
 		if ctxRequestId, ok := ctx.Value(CorrelationIdConst).(string); ok {
 			newLogger = newLogger.With(zap.String("correlation-id", ctxRequestId))

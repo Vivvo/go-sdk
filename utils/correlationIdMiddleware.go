@@ -18,7 +18,6 @@ func CorrelationIdMiddleware(handler http.Handler) http.Handler {
 			correlationId = uuid.New().String()
 		}
 
-		logger.Infow("Adding correlation-id to request context", "correlation-id", correlationId)
 		r = r.WithContext(context.WithValue(r.Context(), CorrelationIdConst, correlationId))
 		handler.ServeHTTP(rw, r)
 	})
