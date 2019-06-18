@@ -3,12 +3,18 @@ package utils
 import (
 	"context"
 	"go.uber.org/zap"
+	"os"
 )
 
 var logger *zap.Logger
 
 func init() {
-	config := zap.NewProductionConfig()
+	var config zap.Config
+	if os.Getenv("DEBUG") == "true" {
+		config = zap.NewDevelopmentConfig()
+	} else {
+		config = zap.NewProductionConfig()
+	}
 	config.OutputPaths = []string{"stdout"}
 	logger, _ = config.Build()
 }
