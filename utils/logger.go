@@ -52,21 +52,23 @@ func RequestLogger(handler http.Handler) http.Handler {
 
 		logger := Logger(req.Context())
 
-		defer func() {
-			end := time.Now()
-			latency := end.Sub(start)
-			logger.Infow(path,
-				"status", lrw.status,
-				"method", req.Method,
-				"path", path,
-				"query", query,
-				"ip", ClientIP(req),
-				"user-agent", req.UserAgent(),
-				"time", end.Format(time.RFC3339),
-				"latency", latency,
-			)
-			logger.Sync()
-		}()
+		if !strings.Contains(path, "healthz") {
+			defer func() {
+				end := time.Now()
+				latency := end.Sub(start)
+				logger.Infow(path,
+					"status", lrw.status,
+					"method", req.Method,
+					"path", path,
+					"query", query,
+					"ip", ClientIP(req),
+					"user-agent", req.UserAgent(),
+					"time", end.Format(time.RFC3339),
+					"latency", latency,
+				)
+				logger.Sync()
+			}()
+		}
 
 		if handler != nil {
 			handler.ServeHTTP(lrw, req)
