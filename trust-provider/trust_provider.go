@@ -80,33 +80,33 @@ type Data struct {
 }
 
 type GetStatus struct {
-	GetStatusFunc	func(acct interface{}) (StatusResponse, error)
+	GetStatusFunc func(acct interface{}) (StatusResponse, error)
 }
 
 type StatusResponse struct {
-	StatusAction 	[]StatusAction 	`json:"actions"`
-	StatusLabel		[]StatusLabel	`json:"labels"`
-	StatusFile		[]StatusFile	`json:"files"`
+	StatusAction []StatusAction `json:"actions"`
+	StatusLabel  []StatusLabel  `json:"labels"`
+	StatusFile   []StatusFile   `json:"files"`
 }
 
 type StatusAction struct {
-	Label 		string	`json:"label"`
-	Action 		string 	`json:"action"`
-	Description	string	`json:"description"`
+	Label       string `json:"label"`
+	Action      string `json:"action"`
+	Description string `json:"description"`
 }
 
 type StatusLabel struct {
-	Label 		string 	`json:"label"`
-	Value 		string 	`json:"value"`
+	Label string `json:"label"`
+	Value string `json:"value"`
 }
 
 type StatusFile struct {
-	Title 		string 	`json:"title"`
-	Action 		string 	`json:"action"`
-	Description	string 	`json:"description"`
-	FileType	string	`json:"fileType"`
-	FileSize 	string	`json:"fileSize"`
-	Date 		string 	`json:"date"`
+	Title       string `json:"title"`
+	Action      string `json:"action"`
+	Description string `json:"description"`
+	FileType    string `json:"fileType"`
+	FileSize    string `json:"fileSize"`
+	Date        string `json:"date"`
 }
 type SubscribedObject struct {
 	Name                 string
@@ -183,8 +183,8 @@ type TrustProvider struct {
 	onboarding       Onboarding
 	rules            []Rule
 	subscribedObject []SubscribedObject
-	data 			 []Data
-	getStatus		 GetStatus
+	data             []Data
+	getStatus        GetStatus
 	Router           *mux.Router
 	account          Account
 	port             string
@@ -257,10 +257,10 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if e, ok := err.(TrustProviderErrorResponse); ok {
 			res := trustProviderResponse{
-				Status: e.OnboardingStatus,
+				Status:             e.OnboardingStatus,
 				OnBoardingRequired: e.OnboardingRequired,
-				IgnoreAttempt: e.HttpStatus >= 500,
-				Message: err.Error(),
+				IgnoreAttempt:      e.HttpStatus >= 500,
+				Message:            err.Error(),
 			}
 			utils.WriteJSON(res, http.StatusOK, w)
 			return
@@ -809,13 +809,13 @@ func sqliteWalletFactory(t *TrustProvider) (*wallet.Wallet, error) {
 	var w *wallet.Wallet
 
 	if _, err := os.Stat(DefaultWalletId); os.IsNotExist(err) {
-		w, err = wallet.Create([]byte(masterKey), DefaultWalletId)
+		w, err = wallet.Create([]byte(masterKey), []byte("I'm a salt!"), DefaultWalletId)
 		if err != nil {
 			fmt.Println("error opening Wallet: ", err.Error())
 			return nil, err
 		}
 	} else {
-		if w, err = wallet.Open([]byte(masterKey), DefaultWalletId); err == nil {
+		if w, err = wallet.Open([]byte(masterKey), []byte("I'm a salt!"), DefaultWalletId); err == nil {
 
 			t.Wallet = w
 			wr := WalletResolver{resolver: t.resolver, wallet: t.Wallet, generateDDoc: did.GenerateDidDocument{Resolver: t.resolver}}

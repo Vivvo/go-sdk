@@ -100,6 +100,6 @@ func main() {
 		{Name: "is19yearsold", Parameters: []trustprovider.Parameter{}, RuleFunc: is19YearsOld},
 	}
 
-	tp := trustprovider.New(onboarding, rules, nil, nil, &DMVAccountManager{}, &did.Resolver{})
+	tp := trustprovider.New(onboarding, rules, nil, nil, trustprovider.GetStatus{}, &DMVAccountManager{}, &did.Resolver{})
 	log.Fatal(tp.ListenAndServe())
 }

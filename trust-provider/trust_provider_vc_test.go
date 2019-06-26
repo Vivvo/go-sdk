@@ -132,7 +132,7 @@ func TestOnboardingVerifiableClaim(t *testing.T) {
 			os.Setenv("DID", "did:vvo:12H6btMP6hPy32VXbwKvGE")
 
 			resolver := NewMockResolver()
-			tp := New(onboarding, nil, nil, nil, &mockAccount, &resolver)
+			tp := New(onboarding, nil, nil, nil, GetStatus{}, &mockAccount, &resolver)
 
 			executeRequest := func(req *http.Request) *httptest.ResponseRecorder {
 				rr := httptest.NewRecorder()
@@ -220,7 +220,7 @@ func newWallet(t *testing.T) (*wallet.Wallet, []byte) {
 	masterKey := make([]byte, 32)
 	rand.Reader.Read(masterKey)
 
-	w, err := wallet.Create(append(make([]byte, 0), masterKey...), "w.db")
+	w, err := wallet.Create(append(make([]byte, 0), masterKey...), []byte("I'm a salt!"), "w.db")
 	if err != nil {
 		t.Fatalf("Unexpected error: %s", err.Error())
 	}

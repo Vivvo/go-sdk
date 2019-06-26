@@ -142,7 +142,7 @@ func (d *Resolver) Register(ddoc *Document, opts ...string) error {
 	}
 
 	if resp.StatusCode() != http.StatusCreated {
-		return errors.New(resp.Status())
+		return errors.New(fmt.Sprintf("Expected: %d, Actual: %d", http.StatusCreated, resp.StatusCode()))
 	}
 	return nil
 }

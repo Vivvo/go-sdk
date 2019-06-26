@@ -19,7 +19,9 @@ func TestResolver_Register(t *testing.T) {
 		err := utils.ReadBody(&body, r)
 		if err != nil {
 			utils.SetErrorStatus(err, http.StatusBadRequest, rw)
+			return
 		}
+		rw.WriteHeader(http.StatusCreated)
 	}))
 
 	r := Resolver{DidBaseUrl: s.URL}
@@ -41,11 +43,14 @@ func TestResolver_Register_WithParent(t *testing.T) {
 		err := utils.ReadBody(&body, r)
 		if err != nil {
 			utils.SetErrorStatus(err, http.StatusBadRequest, rw)
+			return
 		}
 
 		if body.Parent != "imaparent" {
 			utils.SetErrorStatus(errors.New("bad parent"), http.StatusBadRequest, rw)
+			return
 		}
+		rw.WriteHeader(http.StatusCreated)
 	}))
 
 	r := Resolver{DidBaseUrl: s.URL}
@@ -67,15 +72,20 @@ func TestResolver_Register_WithParentAndPairwise(t *testing.T) {
 		err := utils.ReadBody(&body, r)
 		if err != nil {
 			utils.SetErrorStatus(err, http.StatusBadRequest, rw)
+			return
 		}
 
 		if body.Parent != "imaparent" {
 			utils.SetErrorStatus(errors.New("bad parent"), http.StatusBadRequest, rw)
+			return
 		}
 
 		if body.PairwiseDid != "totallypairwise" {
 			utils.SetErrorStatus(errors.New("bad pairwise"), http.StatusBadRequest, rw)
+			return
 		}
+		rw.WriteHeader(http.StatusCreated)
+
 	}))
 
 	r := Resolver{DidBaseUrl: s.URL}
