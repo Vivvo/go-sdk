@@ -2,6 +2,7 @@ package trustprovider
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -847,9 +848,11 @@ func mariadbWalletFactory(t *TrustProvider, dsn string) (*wallet.Wallet, error) 
 		return nil, err
 	}
 
-	if w, err = wallet.OpenFromStorage(append([]byte{}, []byte(masterKey)...), ws); err == wallet.ErrNotInitialized {
+	salt, _ := base64.StdEncoding.DecodeString("A/Mo0QR0Wo6bOj1/xB/DjLHsXKOKjjarD3OrDJwmMlyFfro1Dgbm+S7TlC13NWV7NIh9TsTD4cIxNN6rIeNruw==")
+
+	if w, err = wallet.OpenFromStorage(append([]byte{}, []byte(masterKey)...), salt, ws); err == wallet.ErrNotInitialized {
 		log.Println("Initializing Wallet!")
-		return wallet.CreateFromStorage(append([]byte{}, []byte(masterKey)...), ws)
+		return wallet.CreateFromStorage(append([]byte{}, []byte(masterKey)...), salt, ws)
 	} else if err != nil {
 		log.Printf("Error opening the Wallet! Check your connection details [%s]", dsn)
 		return nil, err
