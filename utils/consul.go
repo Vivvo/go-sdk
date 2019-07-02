@@ -38,10 +38,6 @@ func NewConsulService(address string) (ConsulServiceInterface, error) {
 
 func (c *ConsulService) GetService(service string) string {
 	tag := os.Getenv("TAG")
-	name := os.Getenv("CONSUL_SERVICE_NAME")
-	if name == "" {
-		name = "service.consul"
-	}
 	var newHost string
 	if tag == "" {
 		services, _, err := c.health.Service(service, tag, true, nil)
@@ -56,7 +52,7 @@ func (c *ConsulService) GetService(service string) string {
 		randomService := services[c.rng.Intn(len(services))].Service
 		newHost = fmt.Sprintf("%s:%d", randomService.Address, randomService.Port)
 	} else {
-		_, addrs, err := net.LookupSRV(service, tag, name)
+		_, addrs, err := net.LookupSRV(service, tag, "service.consul")
 		if err != nil || len(addrs) == 0 {
 			return service
 		}
