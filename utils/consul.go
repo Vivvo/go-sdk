@@ -54,6 +54,7 @@ func (c *ConsulService) GetService(service string) string {
 	} else {
 		_, addrs, err := net.LookupSRV(service, tag, "service.consul")
 		if err != nil || len(addrs) == 0 {
+			log.Println("No matching srv record found.", "service", service)
 			return service
 		}
 		newHost = fmt.Sprintf("%s:%d", addrs[0].Target, addrs[0].Port)
