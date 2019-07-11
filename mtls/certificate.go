@@ -1,16 +1,16 @@
 package mtls
 
 import (
-"crypto/rand"
-"crypto/rsa"
-"crypto/tls"
-"crypto/x509"
-"encoding/json"
-"encoding/pem"
-"github.com/go-resty/resty"
-"io/ioutil"
-"log"
-"os"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/json"
+	"encoding/pem"
+	"github.com/go-resty/resty"
+	"io/ioutil"
+	"log"
+	"os"
 )
 
 func RetrieveMutualAuthCertificate(signRequest SignRequest) tls.Certificate {
@@ -20,7 +20,7 @@ func RetrieveMutualAuthCertificate(signRequest SignRequest) tls.Certificate {
 		publicKey := &privateKey.PublicKey
 
 		a := x509.MarshalPKCS1PublicKey(publicKey)
-		certificateToSign := ClientCertificate {
+		certificateToSign := ClientCertificate{
 			Certificate: a,
 		}
 
@@ -56,6 +56,7 @@ func RetrieveMutualAuthCertificate(signRequest SignRequest) tls.Certificate {
 func RetrieveCaCertificate(request SignRequest) []byte {
 	if _, err := os.Stat("ca.crt"); os.IsNotExist(err) {
 
+		resty.SetTLSClientConfig(&tls.Config{ InsecureSkipVerify: true })  // No CA certificate yet to verify connection
 		response, err := resty.R().
 			SetHeader("Content-Type", "application/json").
 			Get(request.CertificateAuthorityUrl + "/api/v1/cert")
@@ -71,8 +72,6 @@ func RetrieveCaCertificate(request SignRequest) []byte {
 		certOut, err := os.Create("ca.crt")
 		pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: caCert.Certificate})
 		certOut.Close()
-		log.Print("written ca.crt\n")
-
 	}
 	return loadCACert()
 }
@@ -82,7 +81,7 @@ func loadSignedClientCert() tls.Certificate {
 	if err != nil {
 		panic(err)
 	}
-	return  catls
+	return catls
 }
 
 func loadCACert() []byte {
@@ -94,12 +93,11 @@ func loadCACert() []byte {
 }
 
 type ClientCertificate struct {
-	Certificate 	[]byte	`json:"certificate"`
+	Certificate []byte `json:"certificate"`
 }
 
-
 type SignRequest struct {
-	CommonName string
-	CertificateAuthorityUrl	string
-	Authorization 	string
+	CommonName              string
+	CertificateAuthorityUrl string
+	Authorization           string
 }
