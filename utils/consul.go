@@ -45,11 +45,19 @@ func (c *ConsulService) GetService(service string) string {
 			log.Println("Error looking up service in consul", "errorMsg", err.Error(), "service", service)
 			return service
 		}
-		if len(services) == 0 {
+
+		var filteredServices []*api.ServiceEntry
+		for _, service := range services {
+			if len(service.Service.Tags) == 0 {
+				filteredServices = append(filteredServices, service)
+			}
+		}
+		if len(filteredServices) == 0 {
 			log.Println("No matching services found in consul", "service", service)
 			return service
 		}
-		randomService := services[c.rng.Intn(len(services))].Service
+
+		randomService := filteredServices[c.rng.Intn(len(filteredServices))].Service
 		newHost = fmt.Sprintf("%s:%d", randomService.Address, randomService.Port)
 	} else {
 		_, addrs, err := net.LookupSRV(service, tag, "service.consul")
