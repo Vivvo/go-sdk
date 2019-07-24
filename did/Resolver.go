@@ -6,7 +6,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"github.com/go-resty/resty"
+	"gopkg.in/resty.v1"
 	"log"
 	"net/http"
 	"os"

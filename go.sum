@@ -1,6 +1,9 @@
 github.com/Vivvo/go-sdk v0.0.0-20190724142854-d0e8913f9fe9/go.mod h1:rox68RyDClPMyIpLTrZtqPUY/ez3WAwW6M2pLVwKbAs=
+github.com/Vivvo/go-sdk v1.0.0-PRE1/go.mod h1:e7FQDH9SnKNIDBYqD1IBGK1mOoTJD5g2bAANLcqdxJw=
 github.com/Vivvo/go-wallet v1.0.0-PRE1 h1:zGPvY5yjg8G1arjQeFOwmJergCTHUfm+uym6+HOW3c8=
 github.com/Vivvo/go-wallet v1.0.0-PRE1/go.mod h1:R2t2kM0CQrbQoKwT5DS/FrX0tKKBKCCozEWQ9pLmRtY=
+github.com/Vivvo/go-wallet v1.0.0-PRE2 h1:+wYYdeDLSbf1R3ILjtrl9NTrCPOddm0KfUf7EFQds4Y=
+github.com/Vivvo/go-wallet v1.0.0-PRE2/go.mod h1:US54NZXvG8LYoNwLx8w+nnV0c1YSTmdb8kL53WxRMr8=
 github.com/apex/log v1.1.1 h1:BwhRZ0qbjYtTob0I+2M+smavV0kOC8XgcnGZcyL9liA=
 github.com/apex/log v1.1.1/go.mod h1:Ls949n1HFtXfbDcjiTTFQqkVUrte0puoIBfO3SVgwOA=
 github.com/aphistic/golf v0.0.0-20180712155816-02c07f170c5a/go.mod h1:3NqKYiepwy8kCu4PNA+aP7WUV72eXWJeP9/r3/K9aLE=
