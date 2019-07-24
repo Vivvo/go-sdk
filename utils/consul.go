@@ -36,6 +36,16 @@ func NewConsulService(address string) (ConsulServiceInterface, error) {
 	return &service, err
 }
 
+func (c *ConsulService) filterByUntagged (services []*api.ServiceEntry) []*api.ServiceEntry {
+	var filteredServices []*api.ServiceEntry
+	for _, service := range services {
+		if len(service.Service.Tags) == 0 {
+			filteredServices = append(filteredServices, service)
+		}
+	}
+	return filteredServices
+}
+
 func (c *ConsulService) GetService(service string) string {
 	tag := os.Getenv("TAG")
 	var newHost string
@@ -45,10 +55,19 @@ func (c *ConsulService) GetService(service string) string {
 			log.Println("Error looking up service in consul", "errorMsg", err.Error(), "service", service)
 			return service
 		}
+
 		if len(services) == 0 {
 			log.Println("No matching services found in consul", "service", service)
 			return service
 		}
+
+		filteredServices := c.filterByUntagged(services)
+		if len(filteredServices) == 0 {
+			log.Println("Tag was left empty but all matching services in consul are tagged. Defaulting to using a random tagged service.", "service", service)
+		} else {
+			services = filteredServices
+		}
+
 		randomService := services[c.rng.Intn(len(services))].Service
 		newHost = fmt.Sprintf("%s:%d", randomService.Address, randomService.Port)
 	} else {
