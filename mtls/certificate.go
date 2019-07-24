@@ -7,7 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
-	"github.com/go-resty/resty"
+	"gopkg.in/resty.v1"
 	"io/ioutil"
 	"log"
 	"os"
