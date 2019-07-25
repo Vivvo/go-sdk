@@ -48,7 +48,7 @@ func (c *ConsulService) filterByUntagged(services []*api.ServiceEntry) []*api.Se
 
 func (c *ConsulService) GetService(service string, _tag ...string) string {
 	var tag string
-	if _tag[0] != "" {
+	if len(_tag) > 0 && _tag[0] != "" {
 		tag = _tag[0]
 	} else {
 		tag = os.Getenv("TAG")
