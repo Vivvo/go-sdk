@@ -1,7 +1,9 @@
 package utils
 
 import (
+	"bufio"
 	"context"
+	"fmt"
 	"go.uber.org/zap"
 	"net"
 	"net/http"
@@ -57,7 +59,7 @@ func RequestLogger(handler http.Handler) http.Handler {
 				end := time.Now()
 				latency := end.Sub(start)
 				logger.Infow(path,
-					"status", lrw.status,
+					"status", lrw.Status(),
 					"method", req.Method,
 					"path", path,
 					"query", query,
@@ -81,34 +83,107 @@ func RequestLogger(handler http.Handler) http.Handler {
 // so we can store the status code.
 type LoggingResponseWriter struct {
 	status int
+	size   int
 	http.ResponseWriter
 }
 
-func NewLoggingResponseWriter(res http.ResponseWriter) *LoggingResponseWriter {
+type loggingResponseWriter interface {
+	commonLoggingResponseWriter
+	http.Pusher
+}
+
+type commonLoggingResponseWriter interface {
+	http.ResponseWriter
+	http.Flusher
+	Status() int
+	Size() int
+}
+
+func NewLoggingResponseWriter(w http.ResponseWriter) loggingResponseWriter {
 	// Default the status code to 200 since its implicit if WriteHeader is not called
-	return &LoggingResponseWriter{200, res}
+	return makeLogger(w)
+}
+
+func makeLogger(w http.ResponseWriter) loggingResponseWriter {
+	var logger loggingResponseWriter = &LoggingResponseWriter{status: http.StatusOK, ResponseWriter: w}
+	if _, ok := w.(http.Hijacker); ok {
+		logger = &hijackLogger{LoggingResponseWriter{status: http.StatusOK, ResponseWriter: w}}
+	}
+	h, ok1 := logger.(http.Hijacker)
+	c, ok2 := w.(http.CloseNotifier)
+	if ok1 && ok2 {
+		return hijackCloseNotifier{logger, h, c}
+	}
+	if ok2 {
+		return &closeNotifyWriter{logger, c}
+	}
+	return logger
+}
+
+type closeNotifyWriter struct {
+	loggingResponseWriter
+	http.CloseNotifier
+}
+
+type hijackCloseNotifier struct {
+	loggingResponseWriter
+	http.Hijacker
+	http.CloseNotifier
+}
+
+type hijackLogger struct {
+	LoggingResponseWriter
+}
+
+func (l *hijackLogger) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	h := l.ResponseWriter.(http.Hijacker)
+	conn, rw, err := h.Hijack()
+	if err == nil && l.status == 0 {
+		// The status will be StatusSwitchingProtocols if there was no error and
+		// WriteHeader has not been called yet
+		l.status = http.StatusSwitchingProtocols
+	}
+	return conn, rw, err
 }
 
 // Give a way to get the status
-func (w LoggingResponseWriter) Status() int {
-	return w.status
+func (l LoggingResponseWriter) Status() int {
+	return l.status
 }
 
 // Satisfy the http.ResponseWriter interface
-func (w LoggingResponseWriter) Header() http.Header {
-	return w.ResponseWriter.Header()
+func (l LoggingResponseWriter) Header() http.Header {
+	return l.ResponseWriter.Header()
 }
 
-func (w LoggingResponseWriter) Write(data []byte) (int, error) {
-	return w.ResponseWriter.Write(data)
+func (l *LoggingResponseWriter) Write(b []byte) (int, error) {
+	size, err := l.ResponseWriter.Write(b)
+	l.size += size
+	return size, err
 }
 
-func (w LoggingResponseWriter) WriteHeader(statusCode int) {
-	// Store the status code
-	w.status = statusCode
+func (l *LoggingResponseWriter) WriteHeader(s int) {
+	l.ResponseWriter.WriteHeader(s)
+	l.status = s
+}
 
-	// Write the status code onward.
-	w.ResponseWriter.WriteHeader(statusCode)
+func (l *LoggingResponseWriter) Size() int {
+	return l.size
+}
+
+func (l *LoggingResponseWriter) Flush() {
+	f, ok := l.ResponseWriter.(http.Flusher)
+	if ok {
+		f.Flush()
+	}
+}
+
+func (l *LoggingResponseWriter) Push(target string, opts *http.PushOptions) error {
+	p, ok := l.ResponseWriter.(http.Pusher)
+	if !ok {
+		return fmt.Errorf("responseLogger does not implement http.Pusher")
+	}
+	return p.Push(target, opts)
 }
 
 // ClientIP implements a best effort algorithm to return the real client IP, it parses
