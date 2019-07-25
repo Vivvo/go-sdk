@@ -11,7 +11,7 @@ import (
 )
 
 type ConsulServiceInterface interface {
-	GetService(service string) string
+	GetService(service string, _tag ...string) string
 }
 
 type ConsulHealth interface {
@@ -36,7 +36,7 @@ func NewConsulService(address string) (ConsulServiceInterface, error) {
 	return &service, err
 }
 
-func (c *ConsulService) filterByUntagged (services []*api.ServiceEntry) []*api.ServiceEntry {
+func (c *ConsulService) filterByUntagged(services []*api.ServiceEntry) []*api.ServiceEntry {
 	var filteredServices []*api.ServiceEntry
 	for _, service := range services {
 		if len(service.Service.Tags) == 0 {
@@ -46,8 +46,14 @@ func (c *ConsulService) filterByUntagged (services []*api.ServiceEntry) []*api.S
 	return filteredServices
 }
 
-func (c *ConsulService) GetService(service string) string {
-	tag := os.Getenv("TAG")
+func (c *ConsulService) GetService(service string, _tag ...string) string {
+	var tag string
+	if _tag[0] != "" {
+		tag = _tag[0]
+	} else {
+		tag = os.Getenv("TAG")
+	}
+
 	var newHost string
 	if tag == "" {
 		services, _, err := c.health.Service(service, tag, true, nil)
