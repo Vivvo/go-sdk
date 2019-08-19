@@ -6,13 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 )
 
 func CreateTarball(tarballFilePath string, filePaths []string) error {
-	log.Printf("Calling: CreateTarball")
 	file, err := os.Create(tarballFilePath)
 	if err != nil {
 		return errors.New(fmt.Sprintf("Could not create tarball file '%s', got error '%s'", tarballFilePath, err.Error()))
@@ -31,7 +29,7 @@ func CreateTarball(tarballFilePath string, filePaths []string) error {
 			return errors.New(fmt.Sprintf("Could not add file '%s', to tarball, got error '%s'", filePath, err.Error()))
 		}
 	}
-	log.Printf("Finished: CreateTarball")
+
 	return nil
 }
 
@@ -103,7 +101,6 @@ func Untar(dst string, r io.Reader) (files []string, err error) {
 }
 
 func addFileToTarWriter(filePath string, tarWriter *tar.Writer) error {
-	log.Printf("Calling: Add file to tar writer")
 	file, err := os.Open(filePath)
 	if err != nil {
 		return errors.New(fmt.Sprintf("Could not open file '%s', got error '%s'", filePath, err.Error()))
@@ -112,7 +109,6 @@ func addFileToTarWriter(filePath string, tarWriter *tar.Writer) error {
 
 	stat, err := file.Stat()
 	if err != nil {
-		log.Println("Error getting stats for file", err.Error())
 		return errors.New(fmt.Sprintf("Could not get stat for file '%s', got error '%s'", filePath, err.Error()))
 	}
 
@@ -125,7 +121,6 @@ func addFileToTarWriter(filePath string, tarWriter *tar.Writer) error {
 
 	err = tarWriter.WriteHeader(header)
 	if err != nil {
-		log.Println("Error writing headers", err.Error())
 		return errors.New(fmt.Sprintf("Could not write header for file '%s', got error '%s'", filePath, err.Error()))
 	}
 
@@ -134,6 +129,5 @@ func addFileToTarWriter(filePath string, tarWriter *tar.Writer) error {
 		return errors.New(fmt.Sprintf("Could not copy the file '%s' data to the tarball, got error '%s'", filePath, err.Error()))
 	}
 
-	log.Printf("Finished: Add file to tar writer")
 	return nil
 }

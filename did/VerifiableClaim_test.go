@@ -2,12 +2,12 @@ package did
 
 //func TestVerifiableClaim(t *testing.T){
 //	claim := Claim{
-//		IdentityId: "did:vvo:4eV4fs5UU6CP6PRqopKrAo",
+//		Id: "did:vvo:4eV4fs5UU6CP6PRqopKrAo",
 //		Type: []string{"Credential","IamMeCredential"},
 //		Issuer: "did:vvo:4eV4fs5UU6CP6PRqopKrAo",
 //		Issued:"2018-10-10",
 //		Claim: AuthClaim{
-//			IdentityId: "did:vvo:4eV4fs5UU6CP6PRqopKrAo",
+//			Id: "did:vvo:4eV4fs5UU6CP6PRqopKrAo",
 //			FirstName: "DID",
 //			LastName: "USER",
 //			EmailAddress: "",

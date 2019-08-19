@@ -13,7 +13,7 @@ func CorrelationIdMiddleware(handler http.Handler) http.Handler {
 		logger := Logger(r.Context())
 		defer logger.Sync()
 
-		correlationId := r.Header.Get("X-Trace-IdentityId")
+		correlationId := r.Header.Get("X-Trace-Id")
 		if correlationId == "" {
 			correlationId = uuid.New().String()
 		}
