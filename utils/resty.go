@@ -24,7 +24,7 @@ func Resty(ctx context.Context) *resty.Client {
 		logger.Infow("Outbound Request", "method", r.Method, "url", r.URL)
 
 		if ctxRequestId, ok := ctx.Value(CorrelationId).(string); ok {
-			r.Header.Add("X-Trace-Id", ctxRequestId)
+			r.Header.Add("X-Trace-IdentityId", ctxRequestId)
 		}
 
 		u, err := url.Parse(r.URL)
