@@ -9,6 +9,10 @@ type WalletAccountManager struct {
 	TrustProvider TrustProvider
 }
 
+func (wam *WalletAccountManager) Close() error {
+	return wam.TrustProvider.Wallet.Close()
+}
+
 func (wam *WalletAccountManager) Update(account interface{}, token string) error {
 	b, err := json.Marshal(account)
 	if err != nil {

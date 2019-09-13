@@ -24,6 +24,8 @@ func TestServiceDiscovery(t *testing.T) {
 	}{
 		{"test-service", []*api.ServiceEntry{{Service: &api.AgentService{Address: "localhost", Port: 9105}}}, "localhost:9105"},
 		{"test-service", []*api.ServiceEntry{}, "test-service"},
+		{"test-service", []*api.ServiceEntry{{Service: &api.AgentService{Address: "taggedHost", Port: 9105, Tags: []string{"vivvo"}}}, {Service: &api.AgentService{Address: "localhost", Port: 9105}}}, "localhost:9105"},
+		{"test-service", []*api.ServiceEntry{{Service: &api.AgentService{Address: "taggedHost", Port: 9105, Tags: []string{"vivvo"}}}}, "taggedHost:9105"},
 	}
 
 	service := ConsulService{}

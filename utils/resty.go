@@ -2,7 +2,7 @@ package utils
 
 import (
 	"context"
-	"github.com/go-resty/resty"
+	"gopkg.in/resty.v1"
 	"net/url"
 )
 
