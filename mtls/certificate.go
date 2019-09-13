@@ -7,7 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
-	"github.com/go-resty/resty"
+	"gopkg.in/resty.v1"
 	"io/ioutil"
 	"log"
 	"os"
@@ -62,7 +62,7 @@ func RetrieveCaCertificate(request SignRequest) []byte {
 			Get(request.CertificateAuthorityUrl + "/api/v1/cert")
 
 		if err != nil {
-			log.Printf("Error calling CA for CA certificate, error: %s", err.Error())
+			log.Printf("Error calling CA at /api/v1/cert for CA certificate, error: %s", err.Error())
 		}
 
 		var caCert ClientCertificate
