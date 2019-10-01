@@ -5,6 +5,7 @@ import (
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"gopkg.in/resty.v1"
 	"io/ioutil"
@@ -18,16 +19,16 @@ func RetrieveMutualAuthCertificate(signRequest SignRequest) tls.Certificate {
 		privateKey, _ := rsa.GenerateKey(rand.Reader, 2048)
 		publicKey := &privateKey.PublicKey
 
-		//a := x509.MarshalPKCS1PublicKey(publicKey)
-		//certificateToSign := ClientCertificate{
-		//	Certificate: a,
-		//}
+		a := x509.MarshalPKCS1PublicKey(publicKey)
+		certificateToSign := ClientCertificate{
+			Certificate: a,
+		}
 
-		//requestBody, err := json.Marshal(certificateToSign)
+		requestBody, err := json.Marshal(certificateToSign)
 
 		response, err := resty.R().
 			SetHeader("Content-Type", "application/json").
-			SetBody(x509.MarshalPKCS1PublicKey(publicKey)).
+			SetBody(requestBody).
 			SetHeader("cn", signRequest.CommonName).
 			SetHeader("Authorization", signRequest.Authorization).
 			Post(signRequest.CertificateAuthorityUrl + "/api/v1/sign")
@@ -36,16 +37,12 @@ func RetrieveMutualAuthCertificate(signRequest SignRequest) tls.Certificate {
 			log.Fatal("Error calling CA /api/v1/sign for signing certificate, error: ", err.Error())
 		}
 
-		//var signedCert ClientCertificate
-		var signedCert []byte
-
-		//json.Unmarshal(response.Body(), &signedCert)
-		signedCert = response.Body()
+		var signedCert ClientCertificate
+		json.Unmarshal(response.Body(), &signedCert)
 
 		//Public key
 		certOut, err := os.Create("client.crt")
-		//pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: signedCert.Certificate})
-		pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: signedCert})
+		pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: signedCert.Certificate})
 
 		certOut.Close()
 
@@ -70,16 +67,13 @@ func RetrieveCaCertificate(request SignRequest) []byte {
 			log.Printf("Error calling CA at /api/v1/cert for CA certificate, error: %s", err.Error())
 		}
 
-		//var caCert ClientCertificate
-		var caCert []byte
+		var caCert ClientCertificate
 
-		//json.Unmarshal(response.Body(), &caCert)
-		caCert = response.Body()
+		json.Unmarshal(response.Body(), &caCert)
 
 		//Public key
 		certOut, err := os.Create("ca.crt")
-		//pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: caCert.Certificate})
-		pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: caCert })
+		pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: caCert.Certificate })
 
 		certOut.Close()
 	}
