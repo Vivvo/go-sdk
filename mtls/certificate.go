@@ -33,15 +33,20 @@ func RetrieveMutualAuthCertificate(signRequest SignRequest) tls.Certificate {
 			Post(signRequest.CertificateAuthorityUrl + "/api/v1/sign")
 
 		if err != nil {
-			log.Fatal("Error calling CA for signing certificate, error: ", err.Error())
+			log.Fatal("Error calling CA /api/v1/sign for signing certificate, error: ", err.Error())
 		}
 
-		var signedCert ClientCertificate
-		json.Unmarshal(response.Body(), &signedCert)
+		//var signedCert ClientCertificate
+		var signedCert []byte
+
+		//json.Unmarshal(response.Body(), &signedCert)
+		signedCert = response.Body()
 
 		//Public key
 		certOut, err := os.Create("client.crt")
-		pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: signedCert.Certificate})
+		//pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: signedCert.Certificate})
+		pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: signedCert})
+
 		certOut.Close()
 
 		// Private key
@@ -65,12 +70,17 @@ func RetrieveCaCertificate(request SignRequest) []byte {
 			log.Printf("Error calling CA at /api/v1/cert for CA certificate, error: %s", err.Error())
 		}
 
-		var caCert ClientCertificate
-		json.Unmarshal(response.Body(), &caCert)
+		//var caCert ClientCertificate
+		var caCert []byte
+
+		//json.Unmarshal(response.Body(), &caCert)
+		caCert = response.Body()
 
 		//Public key
 		certOut, err := os.Create("ca.crt")
-		pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: caCert.Certificate})
+		//pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: caCert.Certificate})
+		pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: caCert })
+
 		certOut.Close()
 	}
 	return loadCACert()
