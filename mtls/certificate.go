@@ -5,7 +5,6 @@ import (
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/json"
 	"encoding/pem"
 	"gopkg.in/resty.v1"
 	"io/ioutil"
@@ -19,15 +18,16 @@ func RetrieveMutualAuthCertificate(signRequest SignRequest) tls.Certificate {
 		privateKey, _ := rsa.GenerateKey(rand.Reader, 2048)
 		publicKey := &privateKey.PublicKey
 
-		a := x509.MarshalPKCS1PublicKey(publicKey)
-		certificateToSign := ClientCertificate{
-			Certificate: a,
-		}
+		//a := x509.MarshalPKCS1PublicKey(publicKey)
+		//certificateToSign := ClientCertificate{
+		//	Certificate: a,
+		//}
 
-		requestBody, err := json.Marshal(certificateToSign)
+		//requestBody, err := json.Marshal(certificateToSign)
+
 		response, err := resty.R().
 			SetHeader("Content-Type", "application/json").
-			SetBody(requestBody).
+			SetBody(x509.MarshalPKCS1PublicKey(publicKey)).
 			SetHeader("cn", signRequest.CommonName).
 			SetHeader("Authorization", signRequest.Authorization).
 			Post(signRequest.CertificateAuthorityUrl + "/api/v1/sign")
