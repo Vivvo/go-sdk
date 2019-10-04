@@ -21,7 +21,7 @@ func RetrieveMutualAuthCertificate(signRequest SignRequest) tls.Certificate {
 
 		a := x509.MarshalPKCS1PublicKey(publicKey)
 		b := &pem.Block{
-			Type: "CERTIFICATE",
+			Type: "NEW CERTIFICATE REQUEST",
 			Headers: map[string]string{
 			},
 			Bytes: a,
