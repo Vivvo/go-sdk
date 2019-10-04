@@ -20,12 +20,14 @@ func RetrieveMutualAuthCertificate(signRequest SignRequest) tls.Certificate {
 		publicKey := &privateKey.PublicKey
 
 		a := x509.MarshalPKCS1PublicKey(publicKey)
-		block := &pem.Block{
+		b := &pem.Block{
 			Type: "CERTIFICATE",
 			Headers: map[string]string{
 			},
 			Bytes: a,
 		}
+
+		block := pem.EncodeToMemory(b)
 
 		response, err := resty.R().
 			SetHeader("Content-Type", "application/json").
