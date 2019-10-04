@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"gopkg.in/resty.v1"
-	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -21,12 +20,16 @@ func RetrieveMutualAuthCertificate(signRequest SignRequest) tls.Certificate {
 		publicKey := &privateKey.PublicKey
 
 		a := x509.MarshalPKCS1PublicKey(publicKey)
-		var b io.Writer
-		pem.Encode(b, &pem.Block{Type: "CERTIFICATE", Bytes: a })
+		block := &pem.Block{
+			Type: "CERTIFICATE",
+			Headers: map[string]string{
+			},
+			Bytes: a,
+		}
 
 		response, err := resty.R().
 			SetHeader("Content-Type", "application/json").
-			SetBody(b).
+			SetBody(block).
 			SetHeader("cn", signRequest.CommonName).
 			SetHeader("Authorization", signRequest.Authorization).
 			Post(signRequest.CertificateAuthorityUrl + "/api/v1/sign")
