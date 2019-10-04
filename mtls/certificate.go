@@ -20,15 +20,16 @@ func RetrieveMutualAuthCertificate(signRequest SignRequest) tls.Certificate {
 		publicKey := &privateKey.PublicKey
 
 		a := x509.MarshalPKCS1PublicKey(publicKey)
-		certificateToSign := ClientCertificate{
-			Certificate: a,
-		}
-
-		requestBody, err := json.Marshal(certificateToSign)
+		//certificateToSign := ClientCertificate{
+		//	Certificate: a,
+		//}
+		//
+		//
+		//requestBody, err := json.Marshal(certificateToSign)
 
 		response, err := resty.R().
 			SetHeader("Content-Type", "application/json").
-			SetBody(requestBody).
+			SetBody(a).
 			SetHeader("cn", signRequest.CommonName).
 			SetHeader("Authorization", signRequest.Authorization).
 			Post(signRequest.CertificateAuthorityUrl + "/api/v1/sign")
