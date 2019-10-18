@@ -13,6 +13,8 @@ require (
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/newrelic/go-agent v2.9.0+incompatible
 	github.com/pkg/errors v0.8.1
+	go.uber.org/atomic v1.4.0 // indirect
+	go.uber.org/multierr v1.2.0 // indirect
 	go.uber.org/zap v1.10.0
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
 	gopkg.in/resty.v1 v1.12.0

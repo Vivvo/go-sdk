@@ -1,0 +1,22 @@
+{
+  "name": "go-sdk",
+  "version": "1.1.1",
+  "description": "* [Callback](https://godoc.org/github.com/Vivvo/go-sdk/callback) * [Trust Providers](https://godoc.org/github.com/Vivvo/go-sdk/trust-provider) * [Utils](https://godoc.org/github.com/Vivvo/go-sdk/utils)",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Vivvo/go-sdk.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Vivvo/go-sdk/issues"
+  },
+  "homepage": "https://github.com/Vivvo/go-sdk#readme"
+}

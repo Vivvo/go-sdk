@@ -50,7 +50,7 @@ func TestDataEndpoint(t *testing.T) {
 				}},
 			}
 
-			tp := New(Onboarding{}, nil, nil, data, GetStatus{}, &MockAccountManager{}, &MockResolver{})
+			tp := New(Onboarding{}, nil, nil, data, &MockAccountManager{}, &MockResolver{})
 
 			s := httptest.NewServer(tp.Router)
 			defer s.Close()

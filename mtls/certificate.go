@@ -21,7 +21,7 @@ func RetrieveMutualAuthCertificate(signRequest SignRequest) tls.Certificate {
 
 		a := x509.MarshalPKCS1PublicKey(publicKey)
 		b := &pem.Block{
-			Type: "NEW CERTIFICATE REQUEST",
+			Type:  "NEW CERTIFICATE REQUEST",
 			Bytes: a,
 		}
 
@@ -59,7 +59,7 @@ func RetrieveMutualAuthCertificate(signRequest SignRequest) tls.Certificate {
 func RetrieveCaCertificate(request SignRequest) []byte {
 	if _, err := os.Stat("ca.crt"); os.IsNotExist(err) {
 
-		resty.SetTLSClientConfig(&tls.Config{ InsecureSkipVerify: true })  // No CA certificate yet to verify connection
+		resty.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true}) // No CA certificate yet to verify connection
 		response, err := resty.R().
 			SetHeader("Content-Type", "application/json").
 			Get(request.CertificateAuthorityUrl + "/api/v1/cert")
@@ -74,7 +74,7 @@ func RetrieveCaCertificate(request SignRequest) []byte {
 
 		//Public key
 		certOut, err := os.Create("ca.crt")
-		pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: caCert.Certificate })
+		pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: caCert.Certificate})
 
 		certOut.Close()
 	}

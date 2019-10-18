@@ -6,7 +6,7 @@ type Address struct {
 	AddressLine1 string `json:"addressLine1"`
 	AddressLine2 string `json:"addressLine2"`
 	City         string `json:"city"`
-	ProvinceCode string `json:"provinceCode`
+	ProvinceCode string `json:"provinceCode"`
 	PostalCode   string `json:"postalCode"`
 	CountryCode  string `json:"countryCode"`
 	IsPrimary    bool   `json:"isPrimary"`

@@ -79,35 +79,6 @@ type Data struct {
 	DataFunc func(acct interface{}) (interface{}, error)
 }
 
-type GetStatus struct {
-	GetStatusFunc func(acct interface{}) (StatusResponse, error)
-}
-
-type StatusResponse struct {
-	StatusAction []StatusAction `json:"actions"`
-	StatusLabel  []StatusLabel  `json:"labels"`
-	StatusFile   []StatusFile   `json:"files"`
-}
-
-type StatusAction struct {
-	Label       string `json:"label"`
-	Action      string `json:"action"`
-	Description string `json:"description"`
-}
-
-type StatusLabel struct {
-	Label string `json:"label"`
-	Value string `json:"value"`
-}
-
-type StatusFile struct {
-	Title       string `json:"title"`
-	Action      string `json:"action"`
-	Description string `json:"description"`
-	FileType    string `json:"fileType"`
-	FileSize    string `json:"fileSize"`
-	Date        string `json:"date"`
-}
 type SubscribedObject struct {
 	Name                 string
 	Parameters           []Parameter
@@ -184,7 +155,6 @@ type TrustProvider struct {
 	rules            []Rule
 	subscribedObject []SubscribedObject
 	data             []Data
-	getStatus        GetStatus
 	Router           *mux.Router
 	account          Account
 	port             string
@@ -194,9 +164,9 @@ type TrustProvider struct {
 
 // New will create a new TrustProvider. Based on the onboarding, rules and account objects you pass in
 // this will bootstrap an http server with onboarding and rules endpoints exposed.
-func New(onboarding Onboarding, rules []Rule, subscribedObjects []SubscribedObject, data []Data, getStatus GetStatus, account Account, resolver did.ResolverInterface) TrustProvider {
+func New(onboarding Onboarding, rules []Rule, subscribedObjects []SubscribedObject, data []Data, account Account, resolver did.ResolverInterface) TrustProvider {
 	os.Setenv("STARTED_ON", time.Now().Format(time.RFC3339))
-	t := TrustProvider{onboarding: onboarding, rules: rules, subscribedObject: subscribedObjects, getStatus: getStatus, account: account, Router: mux.NewRouter(), resolver: resolver}
+	t := TrustProvider{onboarding: onboarding, rules: rules, subscribedObject: subscribedObjects, account: account, Router: mux.NewRouter(), resolver: resolver}
 
 	if getWalletConfigValue(WalletConfigDID) != "" {
 		t.initAdapterDid()
@@ -206,18 +176,22 @@ func New(onboarding Onboarding, rules []Rule, subscribedObjects []SubscribedObje
 
 	t.Router.HandleFunc("/api/register", t.register).Methods("POST")
 
-	t.Router.HandleFunc("/api/getstatus/{token}", t.handleGetStatus()).Methods("GET")
-
-	for _, s := range subscribedObjects {
-		t.Router.HandleFunc(fmt.Sprintf("/api/subscriber/%s", s.Name), t.handleSubscribedObject(s)).Methods("POST")
+	if subscribedObjects != nil {
+		for _, s := range subscribedObjects {
+			t.Router.HandleFunc(fmt.Sprintf("/api/subscriber/%s", s.Name), t.handleSubscribedObject(s)).Methods("POST")
+		}
 	}
 
-	for _, r := range rules {
-		t.Router.HandleFunc(fmt.Sprintf("/api/%s/{token}", r.Name), t.handleRule(r)).Methods("POST")
+	if rules != nil {
+		for _, r := range rules {
+			t.Router.HandleFunc(fmt.Sprintf("/api/%s/{token}", r.Name), t.handleRule(r)).Methods("POST")
+		}
 	}
 
-	for _, d := range data {
-		t.Router.HandleFunc(fmt.Sprintf("/api/%s/{token}", d.Name), t.handleData(d)).Methods("GET")
+	if data != nil {
+		for _, d := range data {
+			t.Router.HandleFunc(fmt.Sprintf("/api/%s/{token}", d.Name), t.handleData(d)).Methods("GET")
+		}
 	}
 
 	t.port = os.Getenv(ConfigTrustProviderPort)
@@ -727,30 +701,6 @@ func (t *TrustProvider) generateVerifiableClaim(c map[string]interface{}, subjec
 	}
 
 	return claim.WalletSign(t.Wallet, id, uuid.New().String())
-}
-
-func (t *TrustProvider) handleGetStatus() http.HandlerFunc {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-		logger := utils.Logger(r.Context())
-
-		vars := mux.Vars(r)
-		token := vars["token"]
-
-		acct, err := t.account.Read(token)
-		if err != nil {
-			logger.Error("error", err.Error())
-			utils.SetErrorStatus(err, http.StatusOK, w)
-			return
-		}
-
-		statusResponse, err := t.getStatus.GetStatusFunc(acct)
-		if err != nil {
-			utils.SetErrorStatus(err, http.StatusServiceUnavailable, w)
-		} else {
-			utils.WriteJSON(statusResponse, http.StatusOK, w)
-		}
-	})
 }
 
 func (t *TrustProvider) initAdapterDid() error {

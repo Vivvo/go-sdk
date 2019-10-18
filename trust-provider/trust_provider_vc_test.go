@@ -132,7 +132,7 @@ func TestOnboardingVerifiableClaim(t *testing.T) {
 			os.Setenv("DID", "did:vvo:12H6btMP6hPy32VXbwKvGE")
 
 			resolver := NewMockResolver()
-			tp := New(onboarding, nil, nil, nil, GetStatus{}, &mockAccount, &resolver)
+			tp := New(onboarding, nil, nil, nil, &mockAccount, &resolver)
 
 			executeRequest := func(req *http.Request) *httptest.ResponseRecorder {
 				rr := httptest.NewRecorder()
