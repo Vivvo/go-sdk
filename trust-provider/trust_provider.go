@@ -547,10 +547,19 @@ func (t *TrustProvider) parseRequestBody(w http.ResponseWriter, r *http.Request,
 	var onboardingVC *did.VerifiableClaim
 	var pairwiseDoc *did.Document
 	if t.isDoubleRatchetEncrypted(body) {
-		body, pairwiseDoc, onboardingVC, err = t.decryptAndParseVerifiableCredential(w, r)
+		var decryptedBody map[string]interface{}
+		decryptedBody, pairwiseDoc, onboardingVC, err = t.decryptAndParseVerifiableCredential(w, r)
 		if err != nil {
 			logger.Errorf("Problem decrypting and parsing onboarding request ratchetPayload", "error", err.Error())
 			return err, nil, nil, nil, nil, nil, nil
+		}
+
+		// merge the decryptedBody back in to the "encrypted body" because the body
+		// may contain plaintext onboardingParams such as identityId appended by identity-server
+		for k, v := range decryptedBody {
+			if _, ok := decryptedBody[k]; ok {
+				body[k] = v
+			}
 		}
 	} else if requireVC {
 		err := errors.New("must present a verifiable credential")
