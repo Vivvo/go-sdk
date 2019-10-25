@@ -2,7 +2,6 @@ package did
 
 import (
 	"crypto"
-	"crypto/ed25519"
 	"crypto/rsa"
 	"crypto/sha256"
 	"encoding/base64"
@@ -10,6 +9,7 @@ import (
 	"github.com/Vivvo/go-sdk/utils"
 	"github.com/Vivvo/go-wallet"
 	"github.com/pkg/errors"
+	"golang.org/x/crypto/ed25519"
 	"log"
 	"strings"
 	"time"

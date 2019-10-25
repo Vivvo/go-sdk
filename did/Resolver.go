@@ -2,13 +2,13 @@ package did
 
 import (
 	"crypto"
-	"crypto/ed25519"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
 	"fmt"
 	"github.com/btcsuite/btcutil/base58"
+	"golang.org/x/crypto/ed25519"
 	"gopkg.in/resty.v1"
 	"log"
 	"net/http"
