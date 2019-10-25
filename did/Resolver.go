@@ -1,11 +1,14 @@
 package did
 
 import (
+	"crypto"
+	"crypto/ed25519"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"github.com/btcsuite/btcutil/base58"
 	"gopkg.in/resty.v1"
 	"log"
 	"net/http"
@@ -66,27 +69,33 @@ func (d *Document) GetKeyByType(typ string) (*PublicKey, error) {
 	return key, nil
 }
 
-func (d *Document) GetPublicKeyById(id string) (*rsa.PublicKey, error) {
+func (d *Document) GetPublicKeyById(id string) (crypto.PublicKey, string, error) {
 	for _, v := range d.PublicKey {
 		if strings.Compare(v.Id, id) == 0 {
-			block, _ := pem.Decode([]byte(v.PublicKeyPem))
-			if block == nil {
-				log.Printf("[%s]: %s", id, v.PublicKeyPem)
-				return nil, errors.New("unable to decode public key pem")
-			}
-			rsaPubKey, err := x509.ParsePKIXPublicKey(block.Bytes)
-			if err != nil {
-				return nil, err
-			}
+			if strings.Compare(v.T, "RsaVerificationKey2018") == 0 {
+				block, _ := pem.Decode([]byte(v.PublicKeyPem))
+				if block == nil {
+					log.Printf("[%s]: %s", id, v.PublicKeyPem)
+					return nil, "", errors.New("unable to decode public key pem")
+				}
+				rsaPubKey, err := x509.ParsePKIXPublicKey(block.Bytes)
+				if err != nil {
+					return nil, "", err
+				}
 
-			if pubKey, ok := rsaPubKey.(*rsa.PublicKey); ok {
-				return pubKey, nil
-			} else {
-				return nil, errors.New("expected *rsa.PublicKey")
+				if pubKey, ok := rsaPubKey.(*rsa.PublicKey); ok {
+					return pubKey, v.T, nil
+				} else {
+					return nil, "", errors.New("expected *rsa.PublicKey")
+				}
+			} else if strings.Compare(v.T, "Ed25519VerificationKey2018") == 0 {
+				kbytes := base58.Decode(v.PublicKeyBase58)
+
+				return ed25519.PublicKey(kbytes), v.T, nil
 			}
 		}
 	}
-	return nil, errors.New(fmt.Sprintf("public key [%s] not found in did document", id))
+	return nil, "", errors.New(fmt.Sprintf("public key [%s] not found in did document", id))
 }
 
 func (d *Resolver) Resolve(did string) (*Document, error) {

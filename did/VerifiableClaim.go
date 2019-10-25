@@ -2,6 +2,7 @@ package did
 
 import (
 	"crypto"
+	"crypto/ed25519"
 	"crypto/rsa"
 	"crypto/sha256"
 	"encoding/base64"
@@ -150,7 +151,7 @@ func (vc *VerifiableClaim) Verify(types []string, nonce string, resolver Resolve
 	}
 
 	// Find the public key that the claim is using
-	pubKey, err := didDocument.GetPublicKeyById(vc.Proof.Creator)
+	pubKey, typ, err := didDocument.GetPublicKeyById(vc.Proof.Creator)
 	if err != nil {
 		return err
 	}
@@ -195,9 +196,16 @@ func (vc *VerifiableClaim) Verify(types []string, nonce string, resolver Resolve
 		return err
 	}
 
-	err = rsa.VerifyPKCS1v15(pubKey, crypto.SHA256, h.Sum(nil), decodedSig)
-	if err != nil {
-		return err
+	if strings.Compare(typ, "RSAVerificationKey2018") == 0 {
+		err = rsa.VerifyPKCS1v15(pubKey.(*rsa.PublicKey), crypto.SHA256, h.Sum(nil), decodedSig)
+		if err != nil {
+			return err
+		}
+	} else if strings.Compare(typ, "Ed25519VerificationKey2018") == 0 {
+		valid := ed25519.Verify(pubKey.(ed25519.PublicKey), h.Sum(nil), decodedSig)
+		if !valid {
+			return errors.New("invalid signature")
+		}
 	}
 
 	return nil
