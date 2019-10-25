@@ -93,7 +93,7 @@ func (c *InvokeCapability) verify(resolver ResolverInterface) error {
 	}
 
 	// Find the public key that the claim is using
-	pubKey, err := didDocument.GetPublicKeyById(c.Proof.Creator)
+	pubKey, _, err := didDocument.GetPublicKeyById(c.Proof.Creator)
 	if err != nil {
 		return err
 	}
@@ -138,7 +138,7 @@ func (c *InvokeCapability) verify(resolver ResolverInterface) error {
 		return err
 	}
 
-	err = rsa.VerifyPKCS1v15(pubKey, crypto.SHA256, h.Sum(nil), decodedSig)
+	err = rsa.VerifyPKCS1v15(pubKey.(*rsa.PublicKey), crypto.SHA256, h.Sum(nil), decodedSig)
 	if err != nil {
 		return err
 	}

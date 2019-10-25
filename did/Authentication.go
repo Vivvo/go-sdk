@@ -50,7 +50,7 @@ func AuthenticationMiddleware(resolver ResolverInterface) mux.MiddlewareFunc {
 				return
 			}
 
-			pubkey, err := ddoc.GetPublicKeyById(a.keyId)
+			pubkey, _, err := ddoc.GetPublicKeyById(a.keyId)
 			if err != nil {
 				log.Println(err.Error())
 				utils.SetErrorStatus(err, http.StatusUnauthorized, w)
@@ -83,7 +83,7 @@ func AuthenticationMiddleware(resolver ResolverInterface) mux.MiddlewareFunc {
 
 			h.Write([]byte(signingString))
 
-			err = rsa.VerifyPKCS1v15(pubkey, crypto.SHA256, h.Sum(nil), decodedSig)
+			err = rsa.VerifyPKCS1v15(pubkey.(*rsa.PublicKey), crypto.SHA256, h.Sum(nil), decodedSig)
 			if err != nil {
 				log.Println(err.Error())
 				utils.SetErrorStatus(err, http.StatusUnauthorized, w)
