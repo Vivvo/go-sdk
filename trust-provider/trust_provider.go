@@ -496,18 +496,21 @@ func (t *TrustProvider) decryptAndParseVerifiableCredential(w http.ResponseWrite
 	ourDid := getWalletConfigValue(WalletConfigDID)
 	pairwiseDdoc, err = t.createPairwiseDid(t.Wallet, t.resolver)
 	if err != nil {
+		logger.Errorf("Problem creating pairwiseDid", "error", err.Error())
 		utils.SendError(err, w)
 		return
 	}
 
 	err = messaging.InitDoubleRatchetWithWellKnownPublicKey(ourDid, pairwiseDdoc.Id, ratchetPayload.InitializationKey)
 	if err != nil {
+		logger.Errorf("Problem with messaging.InitDoubleRatchetWithWellKnownPublicKey", "error", err.Error())
 		utils.SendError(err, w)
 		return
 	}
 
 	payload, err := messaging.RatchetDecrypt(pairwiseDdoc.Id, &ratchetPayload)
 	if err != nil {
+		logger.Errorf("Problem with messaging.RatchetDecrypt", "error", err.Error())
 		utils.SendError(err, w)
 		return
 	}
@@ -538,12 +541,16 @@ func (t *TrustProvider) parseRequestBody(w http.ResponseWriter, r *http.Request,
 	var body map[string]interface{}
 
 	logger := utils.Logger(r.Context())
+	logger.Infof("Parsing request body")
 
 	err := utils.ReadBody(&body, r)
 	if err != nil {
 		logger.Errorf("Problem unmarshalling onboarding request body", "error", err.Error())
 		return err, nil, nil, nil, nil, nil, nil
 	}
+
+	logger.Infof("Parsing request body")
+
 	var onboardingVC *did.VerifiableClaim
 	var pairwiseDoc *did.Document
 	if t.isDoubleRatchetEncrypted(body) {
