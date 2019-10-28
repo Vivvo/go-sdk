@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.3.0"></a>
+# [1.3.0](https://github.com/Vivvo/go-sdk/compare/v1.2.1...v1.3.0) (2019-10-28)
+
+
+### Bug Fixes
+
+* Update to work with the more generate public keys ([4cc9a79](https://github.com/Vivvo/go-sdk/commit/4cc9a79))
+* Use the x/crypto package for now ([ac9f5e2](https://github.com/Vivvo/go-sdk/commit/ac9f5e2))
+
+
+### Features
+
+* **DIDAuth:** Support DIDAuth with Ed25519 keys ([5f815db](https://github.com/Vivvo/go-sdk/commit/5f815db))
+
+
+
 <a name="1.2.1"></a>
 ## [1.2.1](https://github.com/Vivvo/go-sdk/compare/v1.2.0...v1.2.1) (2019-10-25)
 
