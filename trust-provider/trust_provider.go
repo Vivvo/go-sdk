@@ -266,7 +266,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 	}
 	var vc *wallet.RatchetPayload
 	if (onboardingVC != nil || stringVars["did"] != "") && len(t.onboarding.Claims) > 0 {
-		vc, err = t.sendVerifiableCredential(t.onboarding.Claims, stringVars, onboardingVC, account, token, pairwiseDoc, r.Context())
+		vc, err = t.SendVerifiableCredential(t.onboarding.Claims, stringVars, onboardingVC, account, token, pairwiseDoc, r.Context())
 		if err != nil {
 			utils.SendError(err, w)
 			return
@@ -363,7 +363,7 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 			}
 		}
 		if status && stringVars["did"] != "" && len(rule.Claims) > 0 {
-			_, err = t.sendVerifiableCredential(rule.Claims, stringVars, onboardingVC, account, token, pairwiseDoc, r.Context())
+			_, err = t.SendVerifiableCredential(rule.Claims, stringVars, onboardingVC, account, token, pairwiseDoc, r.Context())
 			if err != nil {
 				utils.SendError(err, w)
 				return
@@ -581,7 +581,7 @@ func (t *TrustProvider) parseRequestBody(w http.ResponseWriter, r *http.Request,
 	return err, onboardingVC, pairwiseDoc, stringVars, numberVars, boolVars, arrayVars
 }
 
-func (t *TrustProvider) sendVerifiableCredential(claims []string, stringVars map[string]string, onboardingVC *did.VerifiableClaim, account interface{}, token string, pairwiseDoc *did.Document, ctx context.Context) (*wallet.RatchetPayload, error) {
+func (t *TrustProvider) SendVerifiableCredential(claims []string, stringVars map[string]string, onboardingVC *did.VerifiableClaim, account interface{}, token string, pairwiseDoc *did.Document, ctx context.Context) (*wallet.RatchetPayload, error) {
 	logger := utils.Logger(ctx)
 
 	var encryptedVerifiableCredential *wallet.RatchetPayload
