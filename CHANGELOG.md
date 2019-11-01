@@ -1,6 +1,13 @@
-# Change Log
+# Changelog
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
+
+### [1.3.2](https://github.com/Vivvo/go-sdk/compare/v1.3.0...v1.3.2) (2019-11-01)
+
+
+### Bug Fixes
+
+* expose the trust provider send verifiable credential function ([8a0896a](https://github.com/Vivvo/go-sdk/commit/8a0896a8b7411b68fba9e109500264bb22fb84ce))
 
 <a name="1.3.0"></a>
 # [1.3.0](https://github.com/Vivvo/go-sdk/compare/v1.2.1...v1.3.0) (2019-10-28)
