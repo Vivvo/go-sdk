@@ -2,17 +2,13 @@ package trustprovider
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
-	"gopkg.in/resty.v1"
-	"io/ioutil"
-	"log"
-	"net/http"
-	"os"
-	"strings"
-	"time"
-
 	"github.com/Vivvo/go-sdk/did"
 	"github.com/Vivvo/go-sdk/utils"
 	"github.com/Vivvo/go-wallet"
@@ -24,6 +20,13 @@ import (
 	"github.com/newrelic/go-agent"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
+	"gopkg.in/resty.v1"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"os"
+	"strings"
+	"time"
 )
 
 const ErrorOnboardingRequired = "onboarding required"
@@ -33,6 +36,8 @@ const ConfigTrustProviderPort = "TRUST_PROVIDER_PORT"
 const WalletConfigDID = "DID"
 const WalletConfigMasterKey = "MASTER_KEY"
 const WalletConfigMariadbDSN = "MARIADB_DSN"
+const CertName = "tp.cert"
+const CertKey = "tp.key"
 
 type OnboardingFunc func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}) (account interface{}, err error, token string)
 
@@ -203,9 +208,87 @@ func New(onboarding Onboarding, rules []Rule, subscribedObjects []SubscribedObje
 
 func (t *TrustProvider) ListenAndServe() error {
 	http.Handle(applyNewRelic("/", handlers.LoggingHandler(os.Stdout, utils.CorrelationIdMiddleware(t.Router))))
-
 	log.Printf("Listening on port: %s", t.port)
 	return http.ListenAndServe(":"+t.port, nil)
+}
+
+func (t *TrustProvider) ListenAndServeTLS(hostname string) error {
+	http.Handle(applyNewRelic("/", handlers.LoggingHandler(os.Stdout, utils.CorrelationIdMiddleware(t.Router))))
+
+	log.Printf("Creating a new CA for this environment")
+	err := setSSLContext(hostname)
+	if err != nil {
+		log.Println("create cert failed", err.Error())
+		return err
+	}
+
+	log.Printf("Listening on port: %s", t.port)
+	return http.ListenAndServeTLS(":" + t.port, CertName, CertKey, nil)
+}
+
+func setSSLContext(hostname string) error {
+	privateKey, err := rsa.GenerateKey(rand.Reader, 4096)
+	if err != nil {
+		return err
+	}
+
+	der, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
+	if err != nil {
+		log.Fatalf("Error marshalling public key to DER format: %s", err)
+	}
+
+	publicKeyBlock := pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: der,
+	}
+
+	//publicKeyPem := pem.EncodeToMemory(&publicKeyBlock)
+
+	var cert *certificate
+	url := fmt.Sprintf("%s/api/v1/sign", os.Getenv("VIVVO_CA_BASEURL"))
+	resp, err := resty.R().
+		SetHeader("cn", hostname).
+		SetHeader("Authorization", os.Getenv("VIVVO_CA_KEY")).
+		SetBody(publicKeyBlock.Bytes).
+		SetResult(&cert).
+		Post(url)
+
+	if err != nil {
+		log.Println("unable to sign certificate", err.Error())
+		return err
+	}
+
+	if resp.StatusCode() != http.StatusOK {
+		msg := fmt.Sprintf("unable to sign certificate, got response code [%d]", resp.StatusCode())
+		log.Println(msg)
+		return errors.New(msg)
+	}
+
+	ca, err := x509.ParseCertificate(cert.Certificate)
+	if err != nil {
+		log.Printf("error parsing certificate: %s", err.Error())
+		return err
+	}
+
+	certBytes, err := x509.CreateCertificate(rand.Reader, ca, ca, privateKey.Public(), privateKey)
+	if err != nil {
+		log.Println("create ca failed", err.Error())
+		return err
+	}
+
+	certOut, err := os.Create(CertName)
+	_ = pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: certBytes})
+	_ = certOut.Close()
+
+	keyOut, err := os.OpenFile(CertKey, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	_ = pem.Encode(keyOut, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privateKey)})
+	_ = keyOut.Close()
+
+	return err
+}
+
+type certificate struct {
+	Certificate []byte `json:"certificate"`
 }
 
 func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
