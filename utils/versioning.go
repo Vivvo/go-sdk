@@ -18,5 +18,5 @@ func GetReleaseInfo(w http.ResponseWriter, r *http.Request) {
 		TenantName:    os.Getenv("TENANT_NAME"),
 		StartedOn:     os.Getenv("STARTED_ON"),
 	}
-	WriteJSON(releaseInformation, http.StatusCreated, w)
+	WriteJSON(releaseInformation, http.StatusOK, w)
 }

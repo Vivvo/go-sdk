@@ -1,11 +1,13 @@
 package trustprovider
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"errors"
+	"github.com/Vivvo/go-sdk/mtls"
 	"github.com/Vivvo/go-sdk/utils"
 	"gopkg.in/resty.v1"
 	"io/ioutil"
@@ -18,6 +20,7 @@ import (
 	"testing"
 	"time"
 )
+var readyChannel = make(chan bool)
 
 type ClientCertificate struct {
 	Certificate []byte `json:"certificate"`
@@ -74,17 +77,27 @@ var mockCaServer = httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWrit
 	}
 }))
 
-var setupComplete = false
-
-func waitForTrustProvider() (*resty.Response, error) {
+func waitForTrustProvider(boundByCertificate bool) (*resty.Response, error) {
 	var resp *resty.Response
 	var err error
 
+	startTime := time.Now()
 	for {
-		resp, err = resty.R().
-			Get("https://127.0.0.1:3000/api/v1/version")
+		var restyClient *resty.Request
+		if boundByCertificate {
+			restyClient = utils.Resty(context.Background()).R()
+		} else {
+			restyClient = resty.R()
+		}
 
-		if err != nil && strings.Contains(err.Error(), "connection refused"){
+		resp, err = restyClient.
+			Get("https://localhost.vivvocloud.com:3000/api/v1/version")
+
+		if time.Now().Sub(startTime) >= 10 * time.Second {
+			break
+		}
+
+		if err != nil && strings.Contains(err.Error(), "connection refused") {
 			continue
 		}
 		break
@@ -94,9 +107,10 @@ func waitForTrustProvider() (*resty.Response, error) {
 
 func TestListenAndServerTlsReturnsErrorOnUnsignedRequest(t *testing.T) {
 	go setup()
+	<- readyChannel
 
 	t.Logf("calling out to trust provider")
-	_, err := waitForTrustProvider()
+	_, err := waitForTrustProvider(false)
 
 	if err == nil {
 		t.Fatalf("retrieved version for unsigned request")
@@ -105,10 +119,12 @@ func TestListenAndServerTlsReturnsErrorOnUnsignedRequest(t *testing.T) {
 
 func TestListenAndServerTlsReturnsSuccessfully(t *testing.T) {
 	go setup()
+	<- readyChannel
 
 	t.Logf("calling out to trust provider")
-	resp, err := waitForTrustProvider()
+	resp, err := waitForTrustProvider(true)
 
+	t.Log(resp)
 	if err != nil {
 		t.Fatalf("failed to get version: %s", err.Error())
 	}
@@ -120,26 +136,58 @@ func TestListenAndServerTlsReturnsSuccessfully(t *testing.T) {
 
 func setup() {
 	cleanup()
-	_ = os.Setenv("VIVVO_CA_BASEURL", mockCaServer.URL)
+	_ = os.Setenv("VIVVO_CA_BASEURL", "https://vivvo-ca.c1.svc.cluster.local")
+	_ = os.Setenv("VIVVO_CA_AUTHORIZATION_TOKEN", "abc123")
+	_ = os.Setenv("VIVVO_CA_COMMONNAME", "localhost.vivvocloud.com")
+	_ = os.Setenv("CONSUL_HTTP_ADDR", "consul.service.consul")
+
+	consul, err := utils.NewConsulService(os.Getenv("CONSUL_HTTP_ADDR") + ":8500")
+	if err != nil {
+		panic(err)
+	}
+	signRequest := mtls.SignRequest{Authorization:"",CertificateAuthorityUrl:"",CommonName:""}
+	utils.InitResty(consul, signRequest)
+
+
 	http.DefaultServeMux = new(http.ServeMux)
 
-	onboardingFunc := func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}) (interface{}, error, string) {
-		return nil, errors.New("error"), ""
-	}
+	// start trust provider server first because it's certificate is needed to sign the clients cert
+	go func() {
+		onboardingFunc := func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}) (interface{}, error, string) {
+			return nil, errors.New("error"), ""
+		}
 
-	onboarding := Onboarding{
-		Parameters:     []Parameter{},
-		OnboardingFunc: onboardingFunc,
-	}
+		onboarding := Onboarding{
+			Parameters:     []Parameter{},
+			OnboardingFunc: onboardingFunc,
+		}
 
-	tp := New(onboarding, nil, nil, nil, nil, nil)
-	err := tp.ListenAndServeTLS("127.0.0.1")
-	if err != nil {
-		log.Fatalf("Error initializing trust provider: %s", err.Error())
+		tp := New(onboarding, nil, nil, nil, nil, nil)
+		err = tp.ListenAndServeTLS("localhost.vivvocloud.com")
+		if err != nil {
+			log.Fatalf("Error initializing trust provider: %s", err.Error())
+		}
+	}()
+
+	var attempts = 0
+	// sleep until trust provider generates it's test keys
+	for {
+		if _, err := os.Stat("tp.key"); os.IsNotExist(err) {
+			time.Sleep(1 * time.Second)
+			attempts++
+			continue
+		}
+		if attempts >= 10 {
+			panic(errors.New("trust provider was unable to create it's cert in time"))
+		}
+		readyChannel <- true
 	}
 }
 
-func cleanup () {
+func cleanup() {
 	os.Remove(CertKey)
 	os.Remove(CertName)
+	os.Remove("ca.crt")
+	os.Remove("client.crt")
+	os.Remove("client.key")
 }

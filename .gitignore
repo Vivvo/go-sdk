@@ -1,2 +1,5 @@
 **/trust-provider/db.json
 .idea
+*.crt
+*.key
+*.cert
