@@ -2,13 +2,10 @@ package trustprovider
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
-	"encoding/pem"
 	"fmt"
 	"github.com/Vivvo/go-sdk/did"
 	"github.com/Vivvo/go-sdk/mtls"
@@ -230,7 +227,6 @@ func (t *TrustProvider) ListenAndServeTLS(hostname string) error {
 		signRequest.CommonName = os.Getenv("VIVVO_CA_COMMONNAME")
 	}
 
-	log.Printf("Creating a new CA for this environment")
 	caCert := mtls.RetrieveCaCertificate(signRequest)
 	caCertPool := x509.NewCertPool()
 	ok := caCertPool.AppendCertsFromPEM(caCert)
@@ -248,8 +244,9 @@ func (t *TrustProvider) ListenAndServeTLS(hostname string) error {
 		}
 		tlsConfig.BuildNameToCertificate()
 
+		log.Printf("Listening on port: %s", t.port)
 		server := &http.Server{
-			Addr:      ":3000",
+			Addr:      ":"+t.port,
 			TLSConfig: tlsConfig,
 		}
 

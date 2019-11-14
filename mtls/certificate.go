@@ -90,7 +90,7 @@ func RetrieveMutualAuthCertificate(signRequest SignRequest, certName string, cer
 
 func RetrieveCaCertificate(request SignRequest) []byte {
 	if _, err := os.Stat("ca.crt"); os.IsNotExist(err) {
-
+		log.Printf("Creating a new CA for this environment")
 		resty.SetTLSClientConfig(&tls.Config{ InsecureSkipVerify: true })  // No CA certificate yet to verify connection
 		response, err := resty.R().
 			SetHeader("Content-Type", "application/json").
