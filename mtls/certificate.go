@@ -13,14 +13,14 @@ import (
 	"os"
 )
 
-func RetrieveMutualAuthCertificate(signRequest SignRequest, certName string, certKey string) (*tls.Certificate,error) {
+func RetrieveMutualAuthCertificate(signRequest SignRequest, certName string, certKey string) (*tls.Certificate, error) {
 	if _, err := os.Stat(certName); os.IsNotExist(err) {
 		var signedCert ClientCertificate
 
 		certPrivKey, err := rsa.GenerateKey(rand.Reader, 4096)
 		if err != nil {
 			log.Printf("Unable to generate RSA key: %s", err.Error())
-			return nil,err
+			return nil, err
 		}
 
 		response, err := resty.R().
@@ -32,9 +32,8 @@ func RetrieveMutualAuthCertificate(signRequest SignRequest, certName string, cer
 
 		if err != nil {
 			log.Fatal("Error calling CA /api/v1/sign for signing certificate, error: ", err.Error())
-			return nil,err
+			return nil, err
 		}
-
 
 		json.Unmarshal(response.Body(), &signedCert)
 
@@ -42,7 +41,7 @@ func RetrieveMutualAuthCertificate(signRequest SignRequest, certName string, cer
 		certOut, err := os.Create(certName)
 		if err != nil {
 			log.Printf("Unable to create client cert file: %s", err.Error())
-			return nil,err
+			return nil, err
 		}
 
 		err = pem.Encode(certOut, &pem.Block{
@@ -53,19 +52,19 @@ func RetrieveMutualAuthCertificate(signRequest SignRequest, certName string, cer
 
 		if err != nil {
 			log.Printf("Unable to create client cert: %s", err.Error())
-			return nil,err
+			return nil, err
 		}
 
 		err = certOut.Close()
 		if err != nil {
 			log.Printf("Unable to close cert file: %s", err.Error())
-			return nil,err
+			return nil, err
 		}
 
 		keyOut, err := os.OpenFile(certKey, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 		if err != nil {
 			log.Printf("Unable to open %s: %s", certKey, err.Error())
-			return nil,err
+			return nil, err
 		}
 
 		err = pem.Encode(keyOut, &pem.Block{
@@ -75,23 +74,23 @@ func RetrieveMutualAuthCertificate(signRequest SignRequest, certName string, cer
 
 		if err != nil {
 			log.Printf("Unable to PEM encode %s cert: %s", certKey, err.Error())
-			return nil,err
+			return nil, err
 		}
 		err = keyOut.Close()
 		if err != nil {
 			log.Printf("Unable to close %s: %s", certKey, err.Error())
-			return nil,err
+			return nil, err
 		}
 	}
-	tlsCertificate,err := loadSignedClientCert(certName, certKey)
-	return &tlsCertificate,err
+	tlsCertificate, err := loadSignedClientCert(certName, certKey)
+	return &tlsCertificate, err
 
 }
 
 func RetrieveCaCertificate(request SignRequest) []byte {
 	if _, err := os.Stat("ca.crt"); os.IsNotExist(err) {
 		log.Printf("Creating a new CA for this environment")
-		resty.SetTLSClientConfig(&tls.Config{ InsecureSkipVerify: true })  // No CA certificate yet to verify connection
+		resty.SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true}) // No CA certificate yet to verify connection
 		response, err := resty.R().
 			SetHeader("Content-Type", "application/json").
 			Get(request.CertificateAuthorityUrl + "/api/v1/cert")
@@ -106,7 +105,7 @@ func RetrieveCaCertificate(request SignRequest) []byte {
 
 		//Public key
 		certOut, err := os.Create("ca.crt")
-		pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: caCert.Certificate })
+		pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: caCert.Certificate})
 
 		certOut.Close()
 	}
@@ -116,9 +115,9 @@ func RetrieveCaCertificate(request SignRequest) []byte {
 func loadSignedClientCert(certName string, certKey string) (tls.Certificate, error) {
 	catls, err := tls.LoadX509KeyPair(certName, certKey)
 	if err != nil {
-		return catls,err
+		return catls, err
 	}
-	return catls,nil
+	return catls, nil
 }
 
 func loadCACert() []byte {

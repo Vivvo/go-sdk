@@ -2,13 +2,10 @@ package trustprovider
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/Vivvo/go-sdk/did"
-	"github.com/Vivvo/go-sdk/mtls"
 	"github.com/Vivvo/go-sdk/utils"
 	"github.com/Vivvo/go-wallet"
 	"github.com/Vivvo/go-wallet/storage/mariadb"
@@ -213,47 +210,7 @@ func (t *TrustProvider) ListenAndServe() error {
 
 func (t *TrustProvider) ListenAndServeTLS(hostname string) error {
 	http.Handle(applyNewRelic("/", handlers.LoggingHandler(os.Stdout, utils.CorrelationIdMiddleware(t.Router))))
-
-	var signRequest mtls.SignRequest
-	if signRequest.Authorization == "" {
-		signRequest.Authorization = os.Getenv("VIVVO_CA_AUTHORIZATION_TOKEN")
-	}
-
-	if signRequest.CertificateAuthorityUrl == "" {
-		signRequest.CertificateAuthorityUrl = os.Getenv("VIVVO_CA_BASEURL")
-	}
-
-	if signRequest.CommonName == "" {
-		signRequest.CommonName = os.Getenv("VIVVO_CA_COMMONNAME")
-	}
-
-	caCert := mtls.RetrieveCaCertificate(signRequest)
-	caCertPool := x509.NewCertPool()
-	ok := caCertPool.AppendCertsFromPEM(caCert)
-	if !ok {
-		log.Printf("Unable to load CA into the cert pool")
-	}
-
-	tlsCert,err := mtls.RetrieveMutualAuthCertificate(signRequest, CertName, CertKey)
-
-	if err == nil {
-		tlsConfig := &tls.Config{
-			ClientCAs:    caCertPool,
-			Certificates: []tls.Certificate{*tlsCert},
-			ClientAuth:   tls.RequireAndVerifyClientCert,
-		}
-		tlsConfig.BuildNameToCertificate()
-
-		log.Printf("Listening on port: %s", t.port)
-		server := &http.Server{
-			Addr:      ":"+t.port,
-			TLSConfig: tlsConfig,
-		}
-
-		return server.ListenAndServeTLS(CertName, CertKey) //private cert
-	} else {
-		panic(err)
-	}
+	return utils.ListenAndServeTLS(t.port, CertName, CertKey)
 }
 
 func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
