@@ -171,7 +171,7 @@ func setup() {
 		panic(err)
 	}
 	signRequest := mtls.SignRequest{Authorization: "", CertificateAuthorityUrl: "", CommonName: ""}
-	utils.InitResty(consul, signRequest)
+	utils.InitRestyTLS(consul, signRequest)
 
 	http.DefaultServeMux = new(http.ServeMux)
 

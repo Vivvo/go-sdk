@@ -210,7 +210,7 @@ func (t *TrustProvider) ListenAndServe() error {
 
 func (t *TrustProvider) ListenAndServeTLS(hostname string) error {
 	http.Handle(applyNewRelic("/", handlers.LoggingHandler(os.Stdout, utils.CorrelationIdMiddleware(t.Router))))
-	return utils.ListenAndServeTLS(t.port, CertName, CertKey)
+	return utils.ListenAndServeTLS(t.port, CertName, CertKey, nil)
 }
 
 func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {

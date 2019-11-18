@@ -16,7 +16,11 @@ const CorrelationId = "correlation-id"
 var consul ConsulServiceInterface
 var tlsConfiguration tls.Config
 
-func InitResty(c ConsulServiceInterface, signRequest mtls.SignRequest) {
+func InitResty(c ConsulServiceInterface) {
+	consul = c
+}
+
+func InitRestyTLS(c ConsulServiceInterface, signRequest mtls.SignRequest) {
 	consul = c
 
 	if signRequest.Authorization == "" {
