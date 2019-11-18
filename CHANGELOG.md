@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.4.0](https://github.com/Vivvo/go-sdk/compare/v1.3.3...v1.4.0) (2019-11-18)
+
+
+### Features
+
+* **rdng-225:** trust provider and resty tls ([0d64f49](https://github.com/Vivvo/go-sdk/commit/0d64f49e5a20715588411d1842e4d6d6f3f24173))
+
 ### [1.3.3](https://github.com/Vivvo/go-sdk/compare/v1.3.2...v1.3.3) (2019-11-03)
 
 ### [1.3.2](https://github.com/Vivvo/go-sdk/compare/v1.3.0...v1.3.2) (2019-11-01)
