@@ -202,8 +202,8 @@ func New(onboarding Onboarding, rules []Rule, subscribedObjects []SubscribedObje
 		t.port = "3000"
 	}
 
-	t.port = os.Getenv(ConfigTrustProviderPortTls)
-	if t.port == "" {
+	t.tlsPort = os.Getenv(ConfigTrustProviderPortTls)
+	if t.tlsPort == "" {
 		t.tlsPort = "8443"
 	}
 	return t
