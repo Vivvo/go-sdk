@@ -1,22 +1,16 @@
-# Changelog
+# Change Log
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-## [1.4.0](https://github.com/Vivvo/go-sdk/compare/v1.3.3...v1.4.0) (2019-11-18)
-
-
-### Features
-
-* **rdng-225:** trust provider and resty tls ([0d64f49](https://github.com/Vivvo/go-sdk/commit/0d64f49e5a20715588411d1842e4d6d6f3f24173))
-
-### [1.3.3](https://github.com/Vivvo/go-sdk/compare/v1.3.2...v1.3.3) (2019-11-03)
-
-### [1.3.2](https://github.com/Vivvo/go-sdk/compare/v1.3.0...v1.3.2) (2019-11-01)
+<a name="1.4.1"></a>
+## [1.4.1](https://github.com/Vivvo/go-sdk/compare/v1.4.0...v1.4.1) (2019-11-19)
 
 
 ### Bug Fixes
 
-* expose the trust provider send verifiable credential function ([8a0896a](https://github.com/Vivvo/go-sdk/commit/8a0896a8b7411b68fba9e109500264bb22fb84ce))
+* **tls:** add configurable tls port and listenAndServe uses tp router now ([a306221](https://github.com/Vivvo/go-sdk/commit/a306221))
+
+
 
 <a name="1.3.0"></a>
 # [1.3.0](https://github.com/Vivvo/go-sdk/compare/v1.2.1...v1.3.0) (2019-10-28)
