@@ -29,6 +29,7 @@ const ErrorOnboardingRequired = "onboarding required"
 const ErrorCredentialAlreadySent = "credential already sent"
 
 const ConfigTrustProviderPort = "TRUST_PROVIDER_PORT"
+const ConfigTrustProviderPortTls = "TRUST_PROVIDER_PORT_TLS"
 const WalletConfigDID = "DID"
 const WalletConfigMasterKey = "MASTER_KEY"
 const WalletConfigMariadbDSN = "MARIADB_DSN"
@@ -159,6 +160,7 @@ type TrustProvider struct {
 	Router           *mux.Router
 	account          Account
 	port             string
+	tlsPort          string
 	resolver         did.ResolverInterface
 	Wallet           *wallet.Wallet
 }
@@ -199,6 +201,11 @@ func New(onboarding Onboarding, rules []Rule, subscribedObjects []SubscribedObje
 	if t.port == "" {
 		t.port = "3000"
 	}
+
+	t.port = os.Getenv(ConfigTrustProviderPortTls)
+	if t.port == "" {
+		t.tlsPort = "8443"
+	}
 	return t
 }
 
@@ -209,8 +216,7 @@ func (t *TrustProvider) ListenAndServe() error {
 }
 
 func (t *TrustProvider) ListenAndServeTLS(hostname string) error {
-	http.Handle(applyNewRelic("/", handlers.LoggingHandler(os.Stdout, utils.CorrelationIdMiddleware(t.Router))))
-	return utils.ListenAndServeTLS(t.port, CertName, CertKey, nil)
+	return utils.ListenAndServeTLS(t.tlsPort, CertName, CertKey, handlers.LoggingHandler(os.Stdout, utils.CorrelationIdMiddleware(t.Router)))
 }
 
 func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
