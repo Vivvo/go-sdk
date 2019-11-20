@@ -52,6 +52,9 @@ func (c *ConsulService) GetService(service string, _tag ...string) string {
 		tag = _tag[0]
 	} else {
 		tag = os.Getenv("TAG")
+		if tag == "" {
+			tag = os.Getenv("TENANT_NAME")
+		}
 	}
 
 	var newHost string
@@ -77,11 +80,19 @@ func (c *ConsulService) GetService(service string, _tag ...string) string {
 		randomService := services[c.rng.Intn(len(services))].Service
 		newHost = fmt.Sprintf("%s:%d", randomService.Address, randomService.Port)
 	} else {
-		_, addrs, err := net.LookupSRV(service, tag, "service.consul")
+		// K8s Lookup
+		_, addrs, err := net.LookupSRV("", "", fmt.Sprintf("_https._tcp.%s.%s.svc.cluster.local", service, tag))
 		if err != nil || len(addrs) == 0 {
-			log.Println("No matching srv record found.", "service", service)
-			return service
+			log.Println("No matching srv record found. Falling back to Consul lookup", "service", service)
+
+			// Consul Lookup
+			_, addrs, err = net.LookupSRV(service, tag, "service.consul")
+			if err != nil || len(addrs) == 0 {
+				log.Println("No matching srv record found.", "service", service)
+				return service
+			}
 		}
+
 		newHost = fmt.Sprintf("%s:%d", addrs[0].Target, addrs[0].Port)
 	}
 
