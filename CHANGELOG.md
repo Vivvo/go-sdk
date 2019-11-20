@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.5.0"></a>
+# [1.5.0](https://github.com/Vivvo/go-sdk/compare/v1.4.3...v1.5.0) (2019-11-20)
+
+
+### Features
+
+* **RDNG-267:** add k8 srv lookup, fall back to consul ([310d1c6](https://github.com/Vivvo/go-sdk/commit/310d1c6))
+
+
+
 <a name="1.4.3"></a>
 ## [1.4.3](https://github.com/Vivvo/go-sdk/compare/v1.4.2...v1.4.3) (2019-11-20)
 
