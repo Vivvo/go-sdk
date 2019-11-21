@@ -36,7 +36,11 @@ func InitRestyTLS(c ConsulServiceInterface, signRequest mtls.SignRequest) {
 	}
 
 	caCert := mtls.RetrieveCaCertificate(signRequest)
-	caCertPool := x509.NewCertPool()
+	caCertPool, err := x509.SystemCertPool()
+	if err != nil {
+		log.Printf("Unable to load system cert pool")
+		panic(err)
+	}
 	ok := caCertPool.AppendCertsFromPEM(caCert)
 	if !ok {
 		log.Printf("Unable to load CA into the cert pool")
