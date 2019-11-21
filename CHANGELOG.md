@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.5.1"></a>
+## [1.5.1](https://github.com/Vivvo/go-sdk/compare/v1.5.0...v1.5.1) (2019-11-21)
+
+
+### Bug Fixes
+
+* **tls:** derive resty certPool from system cert pool ([1b8e3bd](https://github.com/Vivvo/go-sdk/commit/1b8e3bd))
+
+
+
 <a name="1.5.0"></a>
 # [1.5.0](https://github.com/Vivvo/go-sdk/compare/v1.4.3...v1.5.0) (2019-11-20)
 
