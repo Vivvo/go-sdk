@@ -14,10 +14,15 @@ import (
 const CorrelationId = "correlation-id"
 
 var consul ConsulServiceInterface
-var tlsConfiguration tls.Config
+var tlsConfiguration *tls.Config
 
 func InitResty(c ConsulServiceInterface) {
 	consul = c
+}
+
+func InitRestyWithTLSConfig(c ConsulServiceInterface, tlsConfig *tls.Config) {
+	consul = c
+	tlsConfiguration = tlsConfig
 }
 
 func InitRestyTLS(c ConsulServiceInterface, signRequest mtls.SignRequest) {
@@ -50,10 +55,10 @@ func InitRestyTLS(c ConsulServiceInterface, signRequest mtls.SignRequest) {
 		panic(err)
 	}
 
-	tlsConfiguration = tls.Config{
-		Certificates:       []tls.Certificate{*tlsCert},
-		RootCAs:            caCertPool,
-		ClientCAs:          caCertPool,
+	tlsConfiguration = &tls.Config{
+		Certificates: []tls.Certificate{*tlsCert},
+		RootCAs:      caCertPool,
+		ClientCAs:    caCertPool,
 	}
 	tlsConfiguration.BuildNameToCertificate()
 }
@@ -64,7 +69,7 @@ func Resty(ctx context.Context) *resty.Client {
 
 	//RGC: Init a new resty client and add MTLS
 	client := resty.New()
-	client.SetTLSClientConfig(&tlsConfiguration)
+	client.SetTLSClientConfig(tlsConfiguration)
 
 	client.OnBeforeRequest(func(c *resty.Client, r *resty.Request) error {
 		logger.Infow("Outbound Request", "method", r.Method, "url", r.URL)
