@@ -11,6 +11,10 @@ import (
 
 func ListenAndServeTLS(port string, certName, certKey string, handler http.Handler) error {
 	var signRequest mtls.SignRequest
+	if os.Getenv("SERVICE_NAME") != "" {
+		signRequest = mtls.BuildSignRequest()
+	}
+
 	if signRequest.Authorization == "" {
 		signRequest.Authorization = os.Getenv("VIVVO_CA_AUTHORIZATION_TOKEN")
 	}
