@@ -1,21 +1,16 @@
-# Changelog
+# Change Log
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-## [1.7.0](https://github.com/Vivvo/go-sdk/compare/v1.6.0...v1.7.0) (2019-12-27)
+<a name="1.8.0"></a>
+# [1.8.0](https://github.com/Vivvo/go-sdk/compare/v1.7.0...v1.8.0) (2019-12-27)
 
 
 ### Features
 
-* **logging:** always use JSON logging ([1347e5f](https://github.com/Vivvo/go-sdk/commit/1347e5f1debcc0509c3676869fe3e92664c5a3e0))
+* **configless:** add functions to build tls SignRequest and Consul TLS automagically ([ac24cbe](https://github.com/Vivvo/go-sdk/commit/ac24cbe))
 
 
-## [1.6.0](https://github.com/Vivvo/go-sdk/compare/v1.5.1...v1.6.0) (2019-11-26)
-
-
-### Features
-
-* **rdng-322:** resty accepts tls.Config directly instead of building it itself ([3dfa2fe](https://github.com/Vivvo/go-sdk/commit/3dfa2fe34abd7ae8549765beb2f2fa784b36e44e))
 
 <a name="1.5.1"></a>
 ## [1.5.1](https://github.com/Vivvo/go-sdk/compare/v1.5.0...v1.5.1) (2019-11-21)
