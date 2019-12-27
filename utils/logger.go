@@ -22,6 +22,7 @@ func getLogger() *zap.Logger {
 		} else {
 			config = zap.NewProductionConfig()
 		}
+		config.Encoding = "json"
 		config.OutputPaths = []string{"stdout"}
 		logger, _ = config.Build()
 	}
