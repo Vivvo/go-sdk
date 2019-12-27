@@ -36,6 +36,27 @@ func NewConsulService(address string) (ConsulServiceInterface, error) {
 	return &service, err
 }
 
+func NewConsulTLSService() (ConsulServiceInterface, error) {
+	service := ConsulService{}
+	// My intent is for this to be configless but maybe in the future this will need to be configurable
+	consulAddr := os.Getenv("CONSUL_TLS_ADDRESS")
+	if consulAddr == "" {
+		consulAddr = "https://consul.service.consul:8501"
+	}
+	client, err := api.NewClient(&api.Config{
+		Address:   consulAddr,
+		TLSConfig: api.TLSConfig{InsecureSkipVerify: true},
+	})
+	if err == nil {
+		service.health = client.Health()
+
+		s := rand.NewSource(time.Now().Unix())
+		service.rng = rand.New(s)
+	}
+
+	return &service, err
+}
+
 func (c *ConsulService) filterByUntagged(services []*api.ServiceEntry) []*api.ServiceEntry {
 	var filteredServices []*api.ServiceEntry
 	for _, service := range services {

@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"fmt"
 	"gopkg.in/resty.v1"
 	"io/ioutil"
 	"log"
@@ -136,4 +137,12 @@ type SignRequest struct {
 	CommonName              string
 	CertificateAuthorityUrl string
 	Authorization           string
+}
+
+func BuildSignRequest() SignRequest {
+	return SignRequest{
+		CommonName:              fmt.Sprintf("%s.%s.svc.cluster.local.", os.Getenv("SERVICE_NAME"), os.Getenv("TAG")),
+		CertificateAuthorityUrl: fmt.Sprintf("vivvo-ca.%s.svc.cluster.local", os.Getenv("TAG")),
+		Authorization:           os.Getenv("VIVVO_CA_AUTHORIZATION_TOKEN"),
+	}
 }
