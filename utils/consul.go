@@ -38,13 +38,8 @@ func NewConsulService(address string) (ConsulServiceInterface, error) {
 
 func NewConsulTLSService() (ConsulServiceInterface, error) {
 	service := ConsulService{}
-	// My intent is for this to be configless but maybe in the future this will need to be configurable
-	consulAddr := os.Getenv("CONSUL_TLS_ADDRESS")
-	if consulAddr == "" {
-		consulAddr = "https://consul.service.consul:8501"
-	}
 	client, err := api.NewClient(&api.Config{
-		Address:   consulAddr,
+		Address:   "https://consul.service.consul:8501",
 		TLSConfig: api.TLSConfig{InsecureSkipVerify: true},
 	})
 	if err == nil {
