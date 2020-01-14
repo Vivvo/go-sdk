@@ -3,7 +3,7 @@ module github.com/Vivvo/go-sdk
 go 1.12
 
 require (
-	github.com/Vivvo/go-wallet v1.1.3
+	github.com/Vivvo/go-wallet v1.1.5
 	github.com/apex/log v1.1.1
 	github.com/btcsuite/btcutil v0.0.0-20190425235716-9e5f4b9a998d
 	github.com/google/uuid v1.1.1
