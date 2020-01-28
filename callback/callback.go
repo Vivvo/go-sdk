@@ -10,6 +10,7 @@ const (
 	PublishEventTypeCreate PublishEventType = "CREATE"
 	PublishEventTypeUpdate PublishEventType = "UPDATE"
 	PublishEventTypeDelete PublishEventType = "DELETE"
+	PublishEventTypeBundle PublishEventType = "BUNDLE"
 )
 
 type IdentityPublishDto struct {
