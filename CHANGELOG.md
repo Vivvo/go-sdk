@@ -1,8 +1,16 @@
-# Changelog
+# Change Log
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-### [1.9.2](https://github.com/Vivvo/go-sdk/compare/v1.9.1...v1.9.2) (2020-01-28)
+<a name="1.10.0"></a>
+# [1.10.0](https://github.com/Vivvo/go-sdk/compare/v1.9.2...v1.10.0) (2020-01-30)
+
+
+### Features
+
+* **[RDNG-488]:** added functions for publishing encrypted data bundles and decrypting them ([4ff5968](https://github.com/Vivvo/go-sdk/commit/4ff5968))
+
+
 
 <a name="1.9.1"></a>
 ## [1.9.1](https://github.com/Vivvo/go-sdk/compare/v1.9.0...v1.9.1) (2020-01-14)
