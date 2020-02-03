@@ -1,6 +1,13 @@
-# Change Log
+# Changelog
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
+
+### [1.10.3](https://github.com/Vivvo/go-sdk/compare/v1.10.2...v1.10.3) (2020-02-03)
+
+
+### Bug Fixes
+
+* **[rdng-504]:** remove logging ([fb42652](https://github.com/Vivvo/go-sdk/commit/fb426525a7caac9b7b590c9d01a55f2e865ab5dc))
 
 <a name="1.10.2"></a>
 ## [1.10.2](https://github.com/Vivvo/go-sdk/compare/v1.10.1...v1.10.2) (2020-02-03)
