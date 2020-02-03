@@ -7,6 +7,7 @@ import (
 	"github.com/Vivvo/go-sdk/models"
 	"github.com/Vivvo/go-sdk/utils"
 	"github.com/google/uuid"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -58,6 +59,10 @@ func TestDataBundleService_mimicPublishDataBundle(t *testing.T) {
 		t.Fatalf("failed to encryptDataBundleWithPublicKeys: %s", err)
 	}
 
+	for _, v := range bundles.Bundles {
+		log.Printf("bundle: %+v", v)
+	}
+
 	pkOne := parsePrivateKey(rsaPrivateKeyOne)
 	pkTwo := parsePrivateKey(rsaPrivateKeyTwo)
 
@@ -65,7 +70,7 @@ func TestDataBundleService_mimicPublishDataBundle(t *testing.T) {
 	for _, v := range bundles.Bundles {
 		// check that consumer 1 can decrypt their bundle
 		if v.PolicyId == policyIdOne {
-			err = d.DecryptDataBundle(bundles.Bundles[0], pkOne, &dst)
+			err = d.DecryptDataBundle(bundles.Bundles[0].EncryptedBundle, pkOne, &dst)
 			if err != nil {
 				panic(err)
 			}
@@ -81,7 +86,7 @@ func TestDataBundleService_mimicPublishDataBundle(t *testing.T) {
 
 		// check consumer two can decrypt their bundle
 		if v.PolicyId == policyIdTwo {
-			err = d.DecryptDataBundle(bundles.Bundles[1], pkTwo, &dst)
+			err = d.DecryptDataBundle(bundles.Bundles[1].EncryptedBundle, pkTwo, &dst)
 			if err != nil {
 				panic(err)
 			}
@@ -97,7 +102,7 @@ func TestDataBundleService_mimicPublishDataBundle(t *testing.T) {
 	}
 
 	// ensure bundles are independently encrypted
-	err = d.DecryptDataBundle(bundles.Bundles[0], pkTwo, dst)
+	err = d.DecryptDataBundle(bundles.Bundles[0].EncryptedBundle, pkTwo, dst)
 	if err == nil {
 		t.Fatalf("looks like consumer 2's private key was able to decrypt the bundle meant for consumer 1")
 	}

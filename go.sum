@@ -1,5 +1,3 @@
-github.com/Vivvo/go-wallet v1.1.3 h1:t6rmFTKwya09embIjSeZazUety2ciGg7HnD64q2hOM4=
-github.com/Vivvo/go-wallet v1.1.3/go.mod h1:GtdFno9mcx6rEEO2no/CzWo0ac9q0Z8sp4aqicNHth4=
 github.com/Vivvo/go-wallet v1.1.5 h1:BpmiORW2QNsnEzB0LxFnsCWV1Hp3UwRQPymWHx3N4Ok=
 github.com/Vivvo/go-wallet v1.1.5/go.mod h1:GtdFno9mcx6rEEO2no/CzWo0ac9q0Z8sp4aqicNHth4=
 github.com/apex/log v1.1.1 h1:BwhRZ0qbjYtTob0I+2M+smavV0kOC8XgcnGZcyL9liA=

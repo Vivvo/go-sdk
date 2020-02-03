@@ -71,14 +71,11 @@ func (d *DataBundleService) encryptDataBundleWithPublicKeys(dataBundle interface
 			continue
 		}
 
-		log.Printf("encrypt - encrypted bundle: %s", enc)
 		encodedString := base64.StdEncoding.EncodeToString(enc)
-		log.Printf("encrypt - encrypted encoded string: %s", encodedString)
 		dataBundlesDto.Bundles = append(dataBundlesDto.Bundles, &models.DataBundleDto{
 			PolicyId:        v.PolicyId,
 			EncryptedBundle: encodedString,
 		})
-		log.Printf("decrypt - dataBundlesDto: %+v", dataBundlesDto)
 	}
 
 	return dataBundlesDto, nil
@@ -111,13 +108,11 @@ func (d *DataBundleService) PublishDataBundle(identityId uuid.UUID, dataBundleTy
 	return nil
 }
 
-func (d *DataBundleService) DecryptDataBundle(dto *models.DataBundleDto, privateKey *rsa.PrivateKey, destination interface{}) error {
-	decodedBundle, err := base64.StdEncoding.DecodeString(dto.EncryptedBundle)
+func (d *DataBundleService) DecryptDataBundle(encryptedData string, privateKey *rsa.PrivateKey, destination interface{}) error {
+	decodedBundle, err := base64.StdEncoding.DecodeString(encryptedData)
 	if err != nil {
 		return fmt.Errorf("failed to base64 decode encryptedBundle: %w", err)
 	}
-
-	log.Printf("decrypt - decoded bundle: %+v", decodedBundle)
 
 	dec, err := rsa.DecryptPKCS1v15(rand.Reader, privateKey, decodedBundle)
 	if err != nil {
