@@ -112,8 +112,6 @@ func (d *DataBundleService) PublishDataBundle(identityId uuid.UUID, dataBundleTy
 }
 
 func (d *DataBundleService) DecryptDataBundle(dto *models.DataBundleDto, privateKey *rsa.PrivateKey, destination interface{}) error {
-	log.Printf("decrypt - dataBundleDto: %+v", dto)
-	log.Printf("decrypt - encoded encrypted string: %s", dto.EncryptedBundle)
 	decodedBundle, err := base64.StdEncoding.DecodeString(dto.EncryptedBundle)
 	if err != nil {
 		return fmt.Errorf("failed to base64 decode encryptedBundle: %w", err)
