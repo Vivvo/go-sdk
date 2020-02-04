@@ -19,6 +19,13 @@ type DataBundleService struct {
 	IdentityServerUrl string
 }
 
+type DataBundleServiceInterface interface {
+	GetPublicKeysForDataBundleConsumers(identityId uuid.UUID, dataBundleType string) (*models.PublicKeysDto, error)
+	EncryptDataBundleWithPublicKeys(dataBundle interface{}, publicKeysDto *models.PublicKeysDto) (*models.DataBundlesDto, error)
+	PublishDataBundle(identityId uuid.UUID, dataBundleType string, dataBundle interface{}) error
+	DecryptDataBundle(encryptedData string, privateKey *rsa.PrivateKey, destination interface{}) error
+}
+
 func (d *DataBundleService) GetPublicKeysForDataBundleConsumers(identityId uuid.UUID, dataBundleType string) (*models.PublicKeysDto, error) {
 	url := fmt.Sprintf("%s/id1/api/v1/identities/%s/policies/callbacks/%s/publicKeys", d.IdentityServerUrl, identityId, dataBundleType)
 
