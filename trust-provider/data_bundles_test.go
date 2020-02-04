@@ -40,9 +40,7 @@ func setupMockIdentityServer() string {
 // This test covers almost all of the business logic, the other functions are simply rest calls
 func TestDataBundleService_mimicPublishDataBundle(t *testing.T) {
 	mockIdentityServerUrl := setupMockIdentityServer()
-	d := DataBundleService{
-		IdentityServerUrl: mockIdentityServerUrl,
-	}
+	d := NewDataBundleService(mockIdentityServerUrl)
 
 	dataBundle := &MockDataBundle{
 		LegalName: "Tester guy",
