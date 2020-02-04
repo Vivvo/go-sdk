@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.11.3"></a>
+## [1.11.3](https://github.com/Vivvo/go-sdk/compare/v1.11.2...v1.11.3) (2020-02-04)
+
+
+### Bug Fixes
+
+* **[RDNG-515]:** added missing "New" method to DataBundleService ([7c2dd19](https://github.com/Vivvo/go-sdk/commit/7c2dd19))
+
+
+
 <a name="1.11.2"></a>
 ## [1.11.2](https://github.com/Vivvo/go-sdk/compare/v1.11.1...v1.11.2) (2020-02-04)
 
