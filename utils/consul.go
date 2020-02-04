@@ -39,7 +39,7 @@ func NewConsulService(address string) (ConsulServiceInterface, error) {
 func NewConsulTLSService() (ConsulServiceInterface, error) {
 	service := ConsulService{}
 	client, err := api.NewClient(&api.Config{
-		Address:   "https://consul.service.consul:8501",
+		Address:   "https://consul-consul-server.sd.svc.cluster.local:8501",
 		TLSConfig: api.TLSConfig{InsecureSkipVerify: true},
 	})
 	if err == nil {
