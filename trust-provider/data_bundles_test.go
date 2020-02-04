@@ -49,14 +49,14 @@ func TestDataBundleService_mimicPublishDataBundle(t *testing.T) {
 		BankAccountNumber: "123456789",
 	}
 
-	pubKeysDto, err := d.getPublicKeysForDataBundleConsumers(uuid.New(), "TAX_BUNDLE")
+	pubKeysDto, err := d.GetPublicKeysForDataBundleConsumers(uuid.New(), "TAX_BUNDLE")
 	if err != nil {
 		t.Fatalf("error getting public keys: %s", err)
 	}
 
-	bundles, err := d.encryptDataBundleWithPublicKeys(dataBundle, pubKeysDto)
+	bundles, err := d.EncryptDataBundleWithPublicKeys(dataBundle, pubKeysDto)
 	if err != nil {
-		t.Fatalf("failed to encryptDataBundleWithPublicKeys: %s", err)
+		t.Fatalf("failed to EncryptDataBundleWithPublicKeys: %s", err)
 	}
 
 	for _, v := range bundles.Bundles {

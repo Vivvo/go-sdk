@@ -19,7 +19,7 @@ type DataBundleService struct {
 	IdentityServerUrl string
 }
 
-func (d *DataBundleService) getPublicKeysForDataBundleConsumers(identityId uuid.UUID, dataBundleType string) (*models.PublicKeysDto, error) {
+func (d *DataBundleService) GetPublicKeysForDataBundleConsumers(identityId uuid.UUID, dataBundleType string) (*models.PublicKeysDto, error) {
 	url := fmt.Sprintf("%s/id1/api/v1/identities/%s/policies/callbacks/%s/publicKeys", d.IdentityServerUrl, identityId, dataBundleType)
 
 	var publicKeysDto models.PublicKeysDto
@@ -28,7 +28,7 @@ func (d *DataBundleService) getPublicKeysForDataBundleConsumers(identityId uuid.
 		Get(url)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to request publickeys from identity-server: %w", err)
+		return nil, fmt.Errorf("failed to request publickeys from identity-server: %s", err.Error())
 	}
 
 	if resp.StatusCode() != 200 {
@@ -38,10 +38,10 @@ func (d *DataBundleService) getPublicKeysForDataBundleConsumers(identityId uuid.
 	return &publicKeysDto, nil
 }
 
-func (d *DataBundleService) encryptDataBundleWithPublicKeys(dataBundle interface{}, publicKeysDto *models.PublicKeysDto) (*models.DataBundlesDto, error) {
+func (d *DataBundleService) EncryptDataBundleWithPublicKeys(dataBundle interface{}, publicKeysDto *models.PublicKeysDto) (*models.DataBundlesDto, error) {
 	b, err := json.Marshal(dataBundle)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal dataBundle: %w", err)
+		return nil, fmt.Errorf("failed to marshal dataBundle: %s", err.Error())
 	}
 
 	dataBundlesDto := &models.DataBundlesDto{
@@ -82,12 +82,12 @@ func (d *DataBundleService) encryptDataBundleWithPublicKeys(dataBundle interface
 }
 
 func (d *DataBundleService) PublishDataBundle(identityId uuid.UUID, dataBundleType string, dataBundle interface{}) error {
-	publicKeysDto, err := d.getPublicKeysForDataBundleConsumers(identityId, dataBundleType)
+	publicKeysDto, err := d.GetPublicKeysForDataBundleConsumers(identityId, dataBundleType)
 	if err != nil {
 		return err
 	}
 
-	dataBundlesDto, err := d.encryptDataBundleWithPublicKeys(dataBundle, publicKeysDto)
+	dataBundlesDto, err := d.EncryptDataBundleWithPublicKeys(dataBundle, publicKeysDto)
 	if err != nil {
 		return err
 	}
@@ -98,7 +98,7 @@ func (d *DataBundleService) PublishDataBundle(identityId uuid.UUID, dataBundleTy
 		Post(url)
 
 	if err != nil {
-		return fmt.Errorf("PublishDataBundle: failed to make request to identity-server: %w", err)
+		return fmt.Errorf("PublishDataBundle: failed to make request to identity-server: %s", err.Error())
 	}
 
 	if resp.StatusCode() != 200 {
@@ -111,17 +111,17 @@ func (d *DataBundleService) PublishDataBundle(identityId uuid.UUID, dataBundleTy
 func (d *DataBundleService) DecryptDataBundle(encryptedData string, privateKey *rsa.PrivateKey, destination interface{}) error {
 	decodedBundle, err := base64.StdEncoding.DecodeString(encryptedData)
 	if err != nil {
-		return fmt.Errorf("failed to base64 decode encryptedBundle: %w", err)
+		return fmt.Errorf("failed to base64 decode encryptedBundle: %s", err.Error())
 	}
 
 	dec, err := rsa.DecryptPKCS1v15(rand.Reader, privateKey, decodedBundle)
 	if err != nil {
-		return fmt.Errorf("failed to decrypt bundle: %w", err)
+		return fmt.Errorf("failed to decrypt bundle: %s", err.Error())
 	}
 
 	err = json.Unmarshal(dec, destination)
 	if err != nil {
-		return fmt.Errorf("failed to unmarshal dataBundle into destination interface: %s", err)
+		return fmt.Errorf("failed to unmarshal dataBundle into destination interface: %s", err.Error())
 	}
 
 	return nil
