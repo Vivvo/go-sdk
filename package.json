@@ -1,6 +1,6 @@
 {
   "name": "go-sdk",
-  "version": "1.12.1",
+  "version": "1.12.2",
   "description": "* [Callback](https://godoc.org/github.com/Vivvo/go-sdk/callback) * [Trust Providers](https://godoc.org/github.com/Vivvo/go-sdk/trust-provider) * [Utils](https://godoc.org/github.com/Vivvo/go-sdk/utils)",
   "main": "index.js",
   "directories": {
