@@ -320,10 +320,11 @@ func (t *TrustProvider) handleData(data Data) http.HandlerFunc {
 			return
 		}
 
-		pubKey := r.Header.Get("rsa-public-key")
-		if pubKey != "" {
+		pubKeyEncoded := r.Header.Get("rsa-public-key")
+		pubKey, _ := base64.StdEncoding.DecodeString(pubKeyEncoded)
+		if string(pubKey) != "" {
 			dataBundleService := DataBundleService{IdentityServerUrl: "https://identity-server"}
-			pubKeyDto := models.PublicKeyDto{PolicyId: uuid.Nil, PublicKey: pubKey}
+			pubKeyDto := models.PublicKeyDto{PolicyId: uuid.Nil, PublicKey: string(pubKey)}
 			pubKeysDto := models.PublicKeysDto{PublicKeys: []models.PublicKeyDto{pubKeyDto}}
 			dataBundleDto, err := dataBundleService.EncryptDataBundleWithPublicKeys(resp, &pubKeysDto)
 			if err != nil {
