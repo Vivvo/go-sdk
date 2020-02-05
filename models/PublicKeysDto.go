@@ -7,8 +7,6 @@ type PublicKeysDto struct {
 }
 
 type PublicKeyDto struct {
-	PolicyId uuid.UUID `json:"policyId"`
-	PublicKey string `json:"publicKey"`
+	PolicyId  uuid.UUID `json:"policyId,omitempty"`
+	PublicKey string    `json:"publicKey"`
 }
-
-

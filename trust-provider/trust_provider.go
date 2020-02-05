@@ -324,7 +324,7 @@ func (t *TrustProvider) handleData(data Data) http.HandlerFunc {
 		pubKey, _ := base64.StdEncoding.DecodeString(pubKeyEncoded)
 		if string(pubKey) != "" {
 			dataBundleService := DataBundleService{IdentityServerUrl: "https://identity-server"}
-			pubKeyDto := models.PublicKeyDto{PolicyId: uuid.Nil, PublicKey: string(pubKey)}
+			pubKeyDto := models.PublicKeyDto{PublicKey: string(pubKey)}
 			pubKeysDto := models.PublicKeysDto{PublicKeys: []models.PublicKeyDto{pubKeyDto}}
 			dataBundleDto, err := dataBundleService.EncryptDataBundleWithPublicKeys(resp, &pubKeysDto)
 			if err != nil {
@@ -335,18 +335,19 @@ func (t *TrustProvider) handleData(data Data) http.HandlerFunc {
 
 			if dataBundleDto.Bundles[0] == nil {
 				utils.SetErrorStatus(err, http.StatusServiceUnavailable, w)
+				return
 			}
 
 			utils.WriteJSON(dataBundleDto.Bundles[0], http.StatusOK, w)
+			return
 		}
 
 		utils.WriteJSON(resp, http.StatusOK, w)
-
 	}
 }
 
 func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 
 		logger := utils.Logger(r.Context())
 
@@ -400,7 +401,7 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 		}
 
 		utils.WriteJSON(trustProviderResponse{Status: status}, http.StatusOK, w)
-	})
+	}
 }
 
 func (t *TrustProvider) handleSubscribedObject(subscribedObject SubscribedObject) http.HandlerFunc {
