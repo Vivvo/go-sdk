@@ -163,13 +163,7 @@ func (d *DataBundleService) DecryptDataBundle(encryptedData string, privateKey *
 	return nil
 }
 
-func EncryptPayloadRandomAES256(payload interface{}, key []byte) ([]byte, []byte, error) {
-	payloadBytes, err := json.Marshal(payload)
-	if err != nil {
-		fmt.Printf("unable to json marshal payload: %s", err.Error())
-		return nil, nil, err
-	}
-
+func EncryptPayloadRandomAES256(payload []byte, key []byte) ([]byte, []byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		fmt.Printf("unable to create aes cipher: %s", err.Error())
@@ -188,12 +182,12 @@ func EncryptPayloadRandomAES256(payload interface{}, key []byte) ([]byte, []byte
 		return nil, nil, err
 	}
 
-	encryptedPayload := aesgcm.Seal(nil, nonce, payloadBytes, nil)
+	encryptedPayload := aesgcm.Seal(nil, nonce, payload, nil)
 
 	return encryptedPayload, nonce, nil
 }
 
-func DecryptPayloadAES(encryptedPayload []byte, nonce []byte, key []byte, res interface{}) error {
+func decryptPayloadAES(encryptedPayload []byte, nonce []byte, key []byte, res interface{}) error {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		fmt.Printf("unable to use key to generate block cipher: %s", err.Error())
@@ -217,5 +211,65 @@ func DecryptPayloadAES(encryptedPayload []byte, nonce []byte, key []byte, res in
 		fmt.Printf("unable to unmarshal unencrypted payload: %s", err.Error())
 		return err
 	}
+
 	return nil
+}
+
+func DecryptPayload(dataBundle *models.DataBundleDto, privateKey string, res interface{}) error {
+	encryptedPayload, err := base64.StdEncoding.DecodeString(dataBundle.AESEncryptedBundle)
+	if err != nil {
+		fmt.Printf("unable to decode payload: %s", err.Error())
+		return err
+	}
+	encryptedNonce, err := base64.StdEncoding.DecodeString(dataBundle.RSAEncryptedAESNonce)
+	if err != nil {
+		fmt.Printf("unable to decode nonce: %s", err.Error())
+		return err
+	}
+	encryptedKey, err := base64.StdEncoding.DecodeString(dataBundle.RSAEncryptedAESKey)
+	if err != nil {
+		fmt.Printf("unable to decode key: %s", err.Error())
+		return err
+	}
+
+	rsaPrivateKey, err := parsePrivateKey(privateKey)
+	if err != nil {
+		fmt.Printf("unable to parse private key: %s", err.Error())
+		return err
+	}
+
+	nonce, err := rsa.DecryptPKCS1v15(rand.Reader, rsaPrivateKey, encryptedNonce)
+	if err != nil {
+		fmt.Printf("failed to decrypt nonce: %s", err.Error())
+		return err
+	}
+
+	key, err := rsa.DecryptPKCS1v15(rand.Reader, rsaPrivateKey, encryptedKey)
+	if err != nil {
+		fmt.Printf("failed to decrypt key: %s", err.Error())
+		return err
+	}
+
+	err = decryptPayloadAES(encryptedPayload, nonce, key, res)
+	if err != nil {
+		fmt.Printf("failed to decrypt payload: %s", err.Error())
+		return err
+	}
+
+	return nil
+}
+
+func parsePrivateKey(pkPem string) (*rsa.PrivateKey, error) {
+	block, _ := pem.Decode([]byte(pkPem))
+	if block == nil {
+		log.Printf("failed to pem.Decode privateKey string: block is nil")
+		return nil, fmt.Errorf("failed to pem.Decode privateKey string: block is nil")
+	}
+
+	pk, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	if err != nil {
+		log.Printf("failed to x509.ParsePKCS1PrivateKey: %s", err.Error())
+		return nil, err
+	}
+	return pk, nil
 }

@@ -1,7 +1,6 @@
 package trustprovider
 
 import (
-	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
@@ -62,22 +61,11 @@ func TestDataBundleService_mimicPublishDataBundle(t *testing.T) {
 		log.Printf("bundle: %+v", v)
 	}
 
-	pkOne := parsePrivateKey(rsaPrivateKeyOne)
-	pkTwo := parsePrivateKey(rsaPrivateKeyTwo)
-
 	var dst MockDataBundle
 	for _, v := range bundles.Bundles {
 		// check that consumer 1 can decrypt their bundle
 		if v.PolicyId == policyIdOne {
-			decNonce, err := rsa.DecryptPKCS1v15(rand.Reader, pkOne, []byte(bundles.Bundles[0].RSAEncryptedAESNonce))
-			if err != nil {
-				t.Fatalf("failed to decrypt RSAEncryptedAESNonce: %s", err.Error())
-			}
-			decKey, err := rsa.DecryptPKCS1v15(rand.Reader, pkOne, []byte(bundles.Bundles[0].RSAEncryptedAESKey))
-			if err != nil {
-				t.Fatalf("failed to decrypt RSAEncryptedAESKey: %s", err.Error())
-			}
-			err = DecryptPayloadAES([]byte(bundles.Bundles[0].AESEncryptedBundle), decNonce, decKey, &dst)
+			err = DecryptPayload(v, rsaPrivateKeyOne, &dst)
 			if err != nil {
 				panic(err)
 			}
@@ -93,15 +81,7 @@ func TestDataBundleService_mimicPublishDataBundle(t *testing.T) {
 
 		// check consumer two can decrypt their bundle
 		if v.PolicyId == policyIdTwo {
-			decNonce, err := rsa.DecryptPKCS1v15(rand.Reader, pkTwo, []byte(bundles.Bundles[1].RSAEncryptedAESNonce))
-			if err != nil {
-				t.Fatalf("failed to decrypt RSAEncryptedAESNonce: %s", err.Error())
-			}
-			decKey, err := rsa.DecryptPKCS1v15(rand.Reader, pkTwo, []byte(bundles.Bundles[1].RSAEncryptedAESKey))
-			if err != nil {
-				t.Fatalf("failed to decrypt RSAEncryptedAESKey: %s", err.Error())
-			}
-			err = DecryptPayloadAES([]byte(bundles.Bundles[1].AESEncryptedBundle), decNonce, decKey, &dst)
+			err = DecryptPayload(v, rsaPrivateKeyTwo, &dst)
 			if err != nil {
 				panic(err)
 			}
@@ -123,7 +103,7 @@ func TestDataBundleService_mimicPublishDataBundle(t *testing.T) {
 	//}
 }
 
-func parsePrivateKey(pkPem string) *rsa.PrivateKey {
+func readPrivateKey(pkPem string) *rsa.PrivateKey {
 	block, _ := pem.Decode([]byte(pkPem))
 	if block == nil {
 		panic("block was nil")
