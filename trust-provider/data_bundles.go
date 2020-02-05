@@ -193,25 +193,29 @@ func EncryptPayloadRandomAES256(payload interface{}, key []byte) ([]byte, []byte
 	return encryptedPayload, nonce, nil
 }
 
-func DecryptPayloadAES(encryptedPayload []byte, nonce []byte, key []byte, result interface{}) (interface{}, error) {
+func DecryptPayloadAES(encryptedPayload []byte, nonce []byte, key []byte, res interface{}) error {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		fmt.Printf("unable to use key to generate block cipher: %s", err.Error())
-		return nil, err
+		return err
 	}
 
 	aesgcm, err := cipher.NewGCM(block)
 	if err != nil {
 		fmt.Printf("unable to wrap block cipher: %s", err.Error())
-		return nil, err
+		return err
 	}
 
 	data, err := aesgcm.Open(nil, nonce, encryptedPayload, nil)
 	if err != nil {
 		fmt.Printf("unable to decrypt payload: %s", err.Error())
-		return nil, err
+		return err
 	}
 
-	payload := json.Unmarshal(data, &result)
-	return payload, nil
+	err = json.Unmarshal(data, &res)
+	if err != nil {
+		fmt.Printf("unable to unmarshal unencrypted payload: %s", err.Error())
+		return err
+	}
+	return nil
 }
