@@ -1,6 +1,14 @@
-# Change Log
+# Changelog
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
+
+### [1.14.3](https://github.com/Vivvo/go-sdk/compare/v1.14.2...v1.14.3) (2020-02-05)
+
+
+### Bug Fixes
+
+* **[rdng-517]:** base64 decode pubkey ([cc8cdf6](https://github.com/Vivvo/go-sdk/commit/cc8cdf65b659d2f7e54374233a7d9cafb59e58b9))
+* **[rdng-517]:** quick error check ([536ec65](https://github.com/Vivvo/go-sdk/commit/536ec6585da155c11492ce3b1f04e215ecfaa5ca))
 
 <a name="1.14.2"></a>
 ## [1.14.2](https://github.com/Vivvo/go-sdk/compare/v1.14.1...v1.14.2) (2020-02-05)
