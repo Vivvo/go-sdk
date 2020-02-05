@@ -69,7 +69,7 @@ func (d *DataBundleService) EncryptDataBundleWithPublicKeys(dataBundle interface
 	for _, v := range publicKeysDto.PublicKeys {
 		block, _ := pem.Decode([]byte(v.PublicKey))
 		if block == nil {
-			log.Printf("failed to pem.Decode for policyId %s: %s", v.PolicyId, err.Error())
+			log.Printf("failed to pem.Decode for policyId %s", v.PolicyId)
 			continue
 		}
 		rsaPubKey, err := x509.ParsePKIXPublicKey(block.Bytes)
