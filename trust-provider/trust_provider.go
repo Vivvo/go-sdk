@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Vivvo/go-sdk/did"
+	"github.com/Vivvo/go-sdk/models"
 	"github.com/Vivvo/go-sdk/utils"
 	"github.com/Vivvo/go-wallet"
 	"github.com/Vivvo/go-wallet/storage/mariadb"
@@ -290,7 +291,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 }
 
 func (t *TrustProvider) handleData(data Data) http.HandlerFunc {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 
 		logger := utils.Logger(r.Context())
 
@@ -319,12 +320,24 @@ func (t *TrustProvider) handleData(data Data) http.HandlerFunc {
 			return
 		}
 
-		// Inside the rule function they can update the account object and we will persist it for them!
-		t.account.Update(account, token)
+		pubKey := r.Header.Get("rsa-public-key")
+		if pubKey != "" {
+			dataBundleService := DataBundleService{IdentityServerUrl: "https://identity-server"}
+			pubKeyDto := models.PublicKeyDto{PolicyId: nil, PublicKey: pubKey}
+			pubKeysDto := models.PublicKeysDto{PublicKeys: []models.PublicKeyDto{pubKeyDto}}
+			dataBundleDto, err := dataBundleService.EncryptDataBundleWithPublicKeys(resp, &pubKeysDto)
+			if err != nil {
+				logger.Error("error", err.Error())
+				utils.SetErrorStatus(err, http.StatusServiceUnavailable, w)
+				return
+			}
+
+			utils.WriteJSON(dataBundleDto.Bundles[0], http.StatusOK, w)
+		}
 
 		utils.WriteJSON(resp, http.StatusOK, w)
 
-	})
+	}
 }
 
 func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
