@@ -61,12 +61,12 @@ func (d *DataBundleService) EncryptDataBundleWithPublicKeys(dataBundle interface
 	for _, v := range publicKeysDto.PublicKeys {
 		block, _ := pem.Decode([]byte(v.PublicKey))
 		if block == nil {
-			log.Printf("failed to pem.Decode for policyId %s", v.PolicyId)
+			log.Printf("failed to pem.Decode for policyId %s: %s", v.PolicyId, err.Error())
 			continue
 		}
 		rsaPubKey, err := x509.ParsePKIXPublicKey(block.Bytes)
 		if err != nil {
-			log.Printf("failed to ParsePKIXPublicKey for policyId %s", v.PolicyId)
+			log.Printf("failed to ParsePKIXPublicKey for policyId %s: %s", v.PolicyId, err.Error())
 			continue
 		}
 
@@ -78,7 +78,7 @@ func (d *DataBundleService) EncryptDataBundleWithPublicKeys(dataBundle interface
 
 		enc, err := rsa.EncryptPKCS1v15(rand.Reader, pubKey, b)
 		if err != nil {
-			log.Printf("failed to rsa.EncryptPKCS1v15 for policyId %s", v.PolicyId)
+			log.Printf("failed to rsa.EncryptPKCS1v15 for policyId %s: %s", v.PolicyId, err.Error())
 			continue
 		}
 
