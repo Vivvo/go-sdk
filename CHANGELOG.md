@@ -1,6 +1,13 @@
-# Change Log
+# Changelog
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
+
+## [1.13.0](https://github.com/Vivvo/go-sdk/compare/v1.12.1...v1.13.0) (2020-02-05)
+
+
+### Features
+
+* **[rdng-517]:** encrypt data with private key if provided ([8102d00](https://github.com/Vivvo/go-sdk/commit/8102d007f97a2a0a12a216d9f01ce2c6d69c34cc))
 
 <a name="1.12.1"></a>
 ## [1.12.1](https://github.com/Vivvo/go-sdk/compare/v1.12.0...v1.12.1) (2020-02-05)
