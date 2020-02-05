@@ -2,6 +2,8 @@ package trustprovider
 
 import (
 	"context"
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -12,6 +14,7 @@ import (
 	"github.com/Vivvo/go-sdk/models"
 	"github.com/Vivvo/go-sdk/utils"
 	"github.com/google/uuid"
+	"io"
 	"log"
 )
 
@@ -58,6 +61,11 @@ func (d *DataBundleService) EncryptDataBundleWithPublicKeys(dataBundle interface
 	dataBundlesDto := &models.DataBundlesDto{
 		Bundles: make([]*models.DataBundleDto, 0),
 	}
+
+	// Generate Random Key to AES Encrypt the payloads
+	key := make([]byte, 32)
+	rand.Read(key)
+
 	for _, v := range publicKeysDto.PublicKeys {
 		block, _ := pem.Decode([]byte(v.PublicKey))
 		if block == nil {
@@ -76,16 +84,33 @@ func (d *DataBundleService) EncryptDataBundleWithPublicKeys(dataBundle interface
 			continue
 		}
 
-		enc, err := rsa.EncryptPKCS1v15(rand.Reader, pubKey, b)
+		aesEncryptedPayload, nonce, err := EncryptPayloadRandomAES256(b, key)
 		if err != nil {
-			log.Printf("failed to rsa.EncryptPKCS1v15 for policyId %s: %s", v.PolicyId, err.Error())
+			log.Printf("failed to AES-265 encrypt payload for policyId %s: %s", v.PolicyId, err.Error())
 			continue
 		}
 
-		encodedString := base64.StdEncoding.EncodeToString(enc)
+		rsaEncryptedNonce, err := rsa.EncryptPKCS1v15(rand.Reader, pubKey, nonce)
+		if err != nil {
+			log.Printf("failed to rsa.EncryptPKCS1v15 nonce for policyId %s: %s", v.PolicyId, err.Error())
+			continue
+		}
+
+		rsaEncryptedKey, err := rsa.EncryptPKCS1v15(rand.Reader, pubKey, key)
+		if err != nil {
+			log.Printf("failed to rsa.EncryptPKCS1v15 nonce for policyId %s: %s", v.PolicyId, err.Error())
+			continue
+		}
+
+		encodedPayload := base64.StdEncoding.EncodeToString(aesEncryptedPayload)
+		encodedNonce := base64.StdEncoding.EncodeToString(rsaEncryptedNonce)
+		encodedKey := base64.StdEncoding.EncodeToString(rsaEncryptedKey)
+
 		dataBundlesDto.Bundles = append(dataBundlesDto.Bundles, &models.DataBundleDto{
-			PolicyId:        v.PolicyId,
-			EncryptedBundle: encodedString,
+			PolicyId:             v.PolicyId,
+			AESEncryptedBundle:   encodedPayload,
+			RSAEncryptedAESNonce: encodedNonce,
+			RSAEncryptedAESKey:   encodedKey,
 		})
 	}
 
@@ -136,4 +161,57 @@ func (d *DataBundleService) DecryptDataBundle(encryptedData string, privateKey *
 	}
 
 	return nil
+}
+
+func EncryptPayloadRandomAES256(payload interface{}, key []byte) ([]byte, []byte, error) {
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		fmt.Printf("unable to json marshal payload: %s", err.Error())
+		return nil, nil, err
+	}
+
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		fmt.Printf("unable to create aes cipher: %s", err.Error())
+		return nil, nil, err
+	}
+
+	nonce := make([]byte, 12)
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		fmt.Printf("unable to generate nonce: %s", err.Error())
+		return nil, nil, err
+	}
+
+	aesgcm, err := cipher.NewGCM(block)
+	if err != nil {
+		fmt.Printf("unable to wrap block cipher: %s", err.Error())
+		return nil, nil, err
+	}
+
+	encryptedPayload := aesgcm.Seal(nil, nonce, payloadBytes, nil)
+
+	return encryptedPayload, nonce, nil
+}
+
+func DecryptPayloadAES(encryptedPayload []byte, nonce []byte, key []byte, result interface{}) (interface{}, error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		fmt.Printf("unable to use key to generate block cipher: %s", err.Error())
+		return nil, err
+	}
+
+	aesgcm, err := cipher.NewGCM(block)
+	if err != nil {
+		fmt.Printf("unable to wrap block cipher: %s", err.Error())
+		return nil, err
+	}
+
+	data, err := aesgcm.Open(nil, nonce, encryptedPayload, nil)
+	if err != nil {
+		fmt.Printf("unable to decrypt payload: %s", err.Error())
+		return nil, err
+	}
+
+	payload := json.Unmarshal(data, &result)
+	return payload, nil
 }

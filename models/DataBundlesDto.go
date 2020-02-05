@@ -7,6 +7,8 @@ type DataBundlesDto struct {
 }
 
 type DataBundleDto struct {
-	PolicyId uuid.UUID `json:"policyId"`
-	EncryptedBundle string `json:"encryptedBundle"`
+	PolicyId             uuid.UUID `json:"policyId"`
+	AESEncryptedBundle   string    `json:"aesEncryptedBundle"`
+	RSAEncryptedAESNonce string    `json:"rsaEncryptedAesNonce"`
+	RSAEncryptedAESKey   string    `json:"rsaEncryptedAESKey"`
 }
