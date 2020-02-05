@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.12.0"></a>
+# [1.12.0](https://github.com/Vivvo/go-sdk/compare/v1.11.4...v1.12.0) (2020-02-05)
+
+
+### Features
+
+* **[RDNG-515]:** AES-256 encrypt payload, then rsa encode the nonce and key to the payload with the ([d42a6c9](https://github.com/Vivvo/go-sdk/commit/d42a6c9))
+
+
+
 <a name="1.11.4"></a>
 ## [1.11.4](https://github.com/Vivvo/go-sdk/compare/v1.11.3...v1.11.4) (2020-02-05)
 
