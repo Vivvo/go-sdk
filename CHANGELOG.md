@@ -1,27 +1,16 @@
-# Changelog
+# Change Log
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-### [1.14.1](https://github.com/Vivvo/go-sdk/compare/v1.14.0...v1.14.1) (2020-02-05)
+<a name="1.14.2"></a>
+## [1.14.2](https://github.com/Vivvo/go-sdk/compare/v1.14.1...v1.14.2) (2020-02-05)
 
 
 ### Bug Fixes
 
-* **[rdng-517]:** use uuid.Nil instead of nil ([8be71fb](https://github.com/Vivvo/go-sdk/commit/8be71fb5794c0d4d77c1548f31e1613133b5b6c8))
-
-## [1.14.0](https://github.com/Vivvo/go-sdk/compare/v1.12.1...v1.14.0) (2020-02-05)
+* **[RDNG-515]:** made DecryptPayload method smarter, decodes the b64 payload and keys ([af4d072](https://github.com/Vivvo/go-sdk/commit/af4d072))
 
 
-### Features
-
-* **[rdng-517]:** encrypt data with private key if provided ([824ae20](https://github.com/Vivvo/go-sdk/commit/824ae20e0c092645c8e2f171065578f05cc2b6c7))
-
-## [1.13.0](https://github.com/Vivvo/go-sdk/compare/v1.12.1...v1.13.0) (2020-02-05)
-
-
-### Features
-
-* **[rdng-517]:** encrypt data with private key if provided ([8102d00](https://github.com/Vivvo/go-sdk/commit/8102d007f97a2a0a12a216d9f01ce2c6d69c34cc))
 
 <a name="1.12.1"></a>
 ## [1.12.1](https://github.com/Vivvo/go-sdk/compare/v1.12.0...v1.12.1) (2020-02-05)
