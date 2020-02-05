@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.12.1"></a>
+## [1.12.1](https://github.com/Vivvo/go-sdk/compare/v1.12.0...v1.12.1) (2020-02-05)
+
+
+### Bug Fixes
+
+* **[RDNG-515]:** unmarshal into passed in interface ([233d470](https://github.com/Vivvo/go-sdk/commit/233d470))
+
+
+
 <a name="1.12.0"></a>
 # [1.12.0](https://github.com/Vivvo/go-sdk/compare/v1.11.4...v1.12.0) (2020-02-05)
 
