@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.14.4](https://github.com/Vivvo/go-sdk/compare/v1.14.3...v1.14.4) (2020-02-05)
+
+
+### Bug Fixes
+
+* **[rdng-517]:** add returnd after writing responses ([f28678f](https://github.com/Vivvo/go-sdk/commit/f28678ff2aee577f07fa218e8ae8863e7cd94e5c))
+
 ### [1.14.3](https://github.com/Vivvo/go-sdk/compare/v1.14.2...v1.14.3) (2020-02-05)
 
 
