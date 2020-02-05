@@ -333,6 +333,10 @@ func (t *TrustProvider) handleData(data Data) http.HandlerFunc {
 				return
 			}
 
+			if dataBundleDto.Bundles[0] == nil {
+				utils.SetErrorStatus(err, http.StatusServiceUnavailable, w)
+			}
+
 			utils.WriteJSON(dataBundleDto.Bundles[0], http.StatusOK, w)
 		}
 
