@@ -216,7 +216,7 @@ func decryptPayloadAES(encryptedPayload []byte, nonce []byte, key []byte, res in
 }
 
 func DecryptPayload(data models.PublishWrapperDto, privateKey string, res interface{}) error {
-	encryptedPayload, err := base64.StdEncoding.DecodeString(data.Data.(string))
+	encryptedPayload, err := base64.StdEncoding.DecodeString(data.Data)
 	if err != nil {
 		fmt.Printf("unable to decode payload: %s", err.Error())
 		return err
@@ -250,7 +250,7 @@ func DecryptPayload(data models.PublishWrapperDto, privateKey string, res interf
 		return err
 	}
 
-	err = decryptPayloadAES(encryptedPayload, nonce, key, res)
+	err = decryptPayloadAES(encryptedPayload, nonce, key, &res)
 	if err != nil {
 		fmt.Printf("failed to decrypt payload: %s", err.Error())
 		return err
