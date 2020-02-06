@@ -215,18 +215,18 @@ func decryptPayloadAES(encryptedPayload []byte, nonce []byte, key []byte, res in
 	return nil
 }
 
-func DecryptPayload(encodedPayload string, encodedNonce string, encodedKey string, privateKey string, res interface{}) error {
-	encryptedPayload, err := base64.StdEncoding.DecodeString(encodedPayload)
+func DecryptPayload(data models.PublishWrapperDto, privateKey string, res interface{}) error {
+	encryptedPayload, err := base64.StdEncoding.DecodeString(data.Data.(string))
 	if err != nil {
 		fmt.Printf("unable to decode payload: %s", err.Error())
 		return err
 	}
-	encryptedNonce, err := base64.StdEncoding.DecodeString(encodedNonce)
+	encryptedNonce, err := base64.StdEncoding.DecodeString(data.EncryptedNonce)
 	if err != nil {
 		fmt.Printf("unable to decode nonce: %s", err.Error())
 		return err
 	}
-	encryptedKey, err := base64.StdEncoding.DecodeString(encodedKey)
+	encryptedKey, err := base64.StdEncoding.DecodeString(data.EncryptedKey)
 	if err != nil {
 		fmt.Printf("unable to decode key: %s", err.Error())
 		return err
