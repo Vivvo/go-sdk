@@ -215,18 +215,18 @@ func decryptPayloadAES(encryptedPayload []byte, nonce []byte, key []byte, res in
 	return nil
 }
 
-func DecryptPayload(dataBundle *models.DataBundleDto, privateKey string, res interface{}) error {
-	encryptedPayload, err := base64.StdEncoding.DecodeString(dataBundle.AESEncryptedBundle)
+func DecryptPayload(encodedPayload string, encodedNonce string, encodedKey string, privateKey string, res interface{}) error {
+	encryptedPayload, err := base64.StdEncoding.DecodeString(encodedPayload)
 	if err != nil {
 		fmt.Printf("unable to decode payload: %s", err.Error())
 		return err
 	}
-	encryptedNonce, err := base64.StdEncoding.DecodeString(dataBundle.RSAEncryptedAESNonce)
+	encryptedNonce, err := base64.StdEncoding.DecodeString(encodedNonce)
 	if err != nil {
 		fmt.Printf("unable to decode nonce: %s", err.Error())
 		return err
 	}
-	encryptedKey, err := base64.StdEncoding.DecodeString(dataBundle.RSAEncryptedAESKey)
+	encryptedKey, err := base64.StdEncoding.DecodeString(encodedKey)
 	if err != nil {
 		fmt.Printf("unable to decode key: %s", err.Error())
 		return err

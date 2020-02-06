@@ -65,7 +65,7 @@ func TestDataBundleService_mimicPublishDataBundle(t *testing.T) {
 	for _, v := range bundles.Bundles {
 		// check that consumer 1 can decrypt their bundle
 		if v.PolicyId == policyIdOne {
-			err = DecryptPayload(v, rsaPrivateKeyOne, &dst)
+			err = DecryptPayload(v.AESEncryptedBundle, v.RSAEncryptedAESNonce, v.RSAEncryptedAESKey, rsaPrivateKeyOne, &dst)
 			if err != nil {
 				panic(err)
 			}
@@ -81,7 +81,7 @@ func TestDataBundleService_mimicPublishDataBundle(t *testing.T) {
 
 		// check consumer two can decrypt their bundle
 		if v.PolicyId == policyIdTwo {
-			err = DecryptPayload(v, rsaPrivateKeyTwo, &dst)
+			err = DecryptPayload(v.AESEncryptedBundle, v.RSAEncryptedAESNonce, v.RSAEncryptedAESKey, rsaPrivateKeyTwo, &dst)
 			if err != nil {
 				panic(err)
 			}
