@@ -1,21 +1,16 @@
-# Changelog
+# Change Log
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-### [1.14.4](https://github.com/Vivvo/go-sdk/compare/v1.14.3...v1.14.4) (2020-02-05)
+<a name="1.14.6"></a>
+## [1.14.6](https://github.com/Vivvo/go-sdk/compare/v1.14.5...v1.14.6) (2020-02-06)
 
 
-### Bug Fixes
 
-* **[rdng-517]:** add returnd after writing responses ([f28678f](https://github.com/Vivvo/go-sdk/commit/f28678ff2aee577f07fa218e8ae8863e7cd94e5c))
-
-### [1.14.3](https://github.com/Vivvo/go-sdk/compare/v1.14.2...v1.14.3) (2020-02-05)
+<a name="1.14.5"></a>
+## [1.14.5](https://github.com/Vivvo/go-sdk/compare/v1.14.4...v1.14.5) (2020-02-06)
 
 
-### Bug Fixes
-
-* **[rdng-517]:** base64 decode pubkey ([cc8cdf6](https://github.com/Vivvo/go-sdk/commit/cc8cdf65b659d2f7e54374233a7d9cafb59e58b9))
-* **[rdng-517]:** quick error check ([536ec65](https://github.com/Vivvo/go-sdk/commit/536ec6585da155c11492ce3b1f04e215ecfaa5ca))
 
 <a name="1.14.2"></a>
 ## [1.14.2](https://github.com/Vivvo/go-sdk/compare/v1.14.1...v1.14.2) (2020-02-05)

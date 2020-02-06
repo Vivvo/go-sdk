@@ -63,9 +63,15 @@ func TestDataBundleService_mimicPublishDataBundle(t *testing.T) {
 
 	var dst MockDataBundle
 	for _, v := range bundles.Bundles {
+		data := models.PublishWrapperDto{
+			EventType:      "",
+			Data:           v.AESEncryptedBundle,
+			EncryptedNonce: v.RSAEncryptedAESNonce,
+			EncryptedKey:   v.RSAEncryptedAESKey,
+		}
 		// check that consumer 1 can decrypt their bundle
 		if v.PolicyId == policyIdOne {
-			err = DecryptPayload(v, rsaPrivateKeyOne, &dst)
+			err = DecryptPayload(data, rsaPrivateKeyOne, &dst)
 			if err != nil {
 				panic(err)
 			}
@@ -81,7 +87,7 @@ func TestDataBundleService_mimicPublishDataBundle(t *testing.T) {
 
 		// check consumer two can decrypt their bundle
 		if v.PolicyId == policyIdTwo {
-			err = DecryptPayload(v, rsaPrivateKeyTwo, &dst)
+			err = DecryptPayload(data, rsaPrivateKeyTwo, &dst)
 			if err != nil {
 				panic(err)
 			}
