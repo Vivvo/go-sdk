@@ -5,9 +5,9 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/Vivvo/go-sdk/did"
-	"github.com/Vivvo/go-sdk/models"
-	"github.com/Vivvo/go-sdk/utils"
+	"../did"
+	"../models"
+	"../utils"
 	"github.com/Vivvo/go-wallet"
 	"github.com/Vivvo/go-wallet/storage/mariadb"
 	"github.com/btcsuite/btcutil/base58"
@@ -412,7 +412,7 @@ func (t *TrustProvider) handleSubscribedObject(subscribedObject SubscribedObject
 
 		log.Printf("Body = \n\n%s", body)
 
-		var subscriber Subscriber
+		var subscriber models.PublishWrapperDto
 		err = json.Unmarshal(body, &subscriber)
 		if err != nil {
 			logger.Error("error", err.Error())
@@ -420,7 +420,22 @@ func (t *TrustProvider) handleSubscribedObject(subscribedObject SubscribedObject
 			return
 		}
 
-		stringVars, numberVars, boolVars, arrayVars, err := t.parseParameters(subscriber.Data, subscribedObject.Parameters, r)
+		privateKey := os.Getenv("DATA_BUNDLE_PRIVATE_KEY")
+		if privateKey == "" {
+			message := "Missing private key"
+			logger.Error(message)
+			utils.SetErrorStatus(errors.New(message), http.StatusInternalServerError, w)
+		}
+
+		var decryptedData interface{}
+		err = DecryptPayload(subscriber, privateKey, &decryptedData)
+		if err != nil {
+			logger.Error("error", err.Error())
+			utils.SetErrorStatus(err, http.StatusInternalServerError, w)
+		}
+
+
+		stringVars, numberVars, boolVars, arrayVars, err := t.parseParameters(decryptedData, subscribedObject.Parameters, r)
 		if err != nil {
 			logger.Error("error", err.Error())
 			utils.SetErrorStatus(err, http.StatusBadRequest, w)
@@ -436,7 +451,6 @@ func (t *TrustProvider) handleSubscribedObject(subscribedObject SubscribedObject
 		}
 
 		utils.WriteJSON(trustProviderResponse{Status: status}, http.StatusOK, w)
-
 	})
 }
 
