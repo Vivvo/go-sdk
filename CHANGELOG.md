@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.15.1"></a>
+## [1.15.1](https://github.com/Vivvo/go-sdk/compare/v1.15.0...v1.15.1) (2020-02-10)
+
+
+
 <a name="1.15.0"></a>
 # [1.15.0](https://github.com/Vivvo/go-sdk/compare/v1.14.8...v1.15.0) (2020-02-10)
 
