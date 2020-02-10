@@ -1,6 +1,6 @@
 module github.com/Vivvo/go-sdk
 
-go 1.12
+go 1.13
 
 require (
 	github.com/Vivvo/go-wallet v1.1.5
