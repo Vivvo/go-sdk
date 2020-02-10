@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.15.0"></a>
+# [1.15.0](https://github.com/Vivvo/go-sdk/compare/v1.14.8...v1.15.0) (2020-02-10)
+
+
+### Features
+
+* **redisAccount:** add a redis account manager for more persistent mock adapterrs ([f643610](https://github.com/Vivvo/go-sdk/commit/f643610))
+
+
+
 <a name="1.14.8"></a>
 ## [1.14.8](https://github.com/Vivvo/go-sdk/compare/v1.14.7...v1.14.8) (2020-02-06)
 
