@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.15.3"></a>
+## [1.15.3](https://github.com/Vivvo/go-sdk/compare/v1.15.2...v1.15.3) (2020-02-10)
+
+
+### Bug Fixes
+
+* **redisAccountManager:** add json marshalling and unmarshalling to redisAccountManager ([4909488](https://github.com/Vivvo/go-sdk/commit/4909488))
+
+
+
 <a name="1.15.2"></a>
 ## [1.15.2](https://github.com/Vivvo/go-sdk/compare/v1.15.1...v1.15.2) (2020-02-10)
 
