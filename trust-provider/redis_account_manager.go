@@ -1,6 +1,7 @@
 package trustprovider
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/go-redis/redis"
 	"log"
@@ -31,9 +32,15 @@ func NewRedisAccount(connectionString string, namespacePrefix string) (*RedisAcc
 
 func (r *RedisAccount) Update(account interface{}, token string) error {
 
-	err := r.redisClient.Set(fmt.Sprintf("%s:%s", r.namespacePrefix, token), account, 0).Err()
+	b, err := json.Marshal(account)
 	if err != nil {
-		log.Printf("Error creating file: %s", err)
+		log.Printf("Error marshalling account: %s", err)
+		return err
+	}
+
+	err = r.redisClient.Set(fmt.Sprintf("%s:%s", r.namespacePrefix, token), b, 0).Err()
+	if err != nil {
+		log.Printf("Error setting account: %s", err)
 		return err
 	}
 
@@ -47,5 +54,11 @@ func (r *RedisAccount) Read(token string) (interface{}, error) {
 		return nil, fmt.Errorf("error reading account: %w", err)
 	}
 
-	return val, nil
+	var account interface{}
+	err = json.Unmarshal([]byte(val), &account)
+	if err != nil {
+		return nil, fmt.Errorf("error unmarshalling result: %w", err)
+	}
+
+	return account, nil
 }
