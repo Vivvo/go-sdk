@@ -38,6 +38,7 @@ type EmailDto struct {
 }
 
 type AddressDto struct {
+	AddressId    int    `json:"addressId,omitempty"`
 	IdentityId   string `json:"identityId,omitempty"`
 	AddressType  string `json:"addressType,omitempty"`
 	AddressLine1 string `json:"addressLine1,omitempty"`
