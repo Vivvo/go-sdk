@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.16.0"></a>
+# [1.16.0](https://github.com/Vivvo/go-sdk/compare/v1.15.4...v1.16.0) (2020-02-13)
+
+
+### Features
+
+* **redisAccountManager:** add ReadInto function ([5138362](https://github.com/Vivvo/go-sdk/commit/5138362))
+
+
+
 <a name="1.15.4"></a>
 ## [1.15.4](https://github.com/Vivvo/go-sdk/compare/v1.15.3...v1.15.4) (2020-02-12)
 
