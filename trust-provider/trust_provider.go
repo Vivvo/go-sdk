@@ -425,6 +425,7 @@ func (t *TrustProvider) handleSubscribedObject(subscribedObject SubscribedObject
 			message := "Missing private key"
 			logger.Error(message)
 			utils.SetErrorStatus(errors.New(message), http.StatusInternalServerError, w)
+			return
 		}
 
 		var decryptedData interface{}
@@ -432,8 +433,8 @@ func (t *TrustProvider) handleSubscribedObject(subscribedObject SubscribedObject
 		if err != nil {
 			logger.Error("error", err.Error())
 			utils.SetErrorStatus(err, http.StatusInternalServerError, w)
+			return
 		}
-
 
 		stringVars, numberVars, boolVars, arrayVars, err := t.parseParameters(decryptedData, subscribedObject.Parameters, r)
 		if err != nil {

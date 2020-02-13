@@ -62,3 +62,18 @@ func (r *RedisAccount) Read(token string) (interface{}, error) {
 
 	return account, nil
 }
+
+func (r *RedisAccount) ReadInto(token string, dst interface{}) error {
+
+	val, err := r.redisClient.Get(fmt.Sprintf("%s:%s", r.namespacePrefix, token)).Result()
+	if err != nil {
+		return fmt.Errorf("error reading account: %w", err)
+	}
+
+	err = json.Unmarshal([]byte(val), &dst)
+	if err != nil {
+		return fmt.Errorf("error unmarshalling result: %w", err)
+	}
+
+	return nil
+}
