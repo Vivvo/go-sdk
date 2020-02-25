@@ -203,9 +203,6 @@ func setup() {
 		} else {
 			break
 		}
-		if attempts >= 10 {
-			panic(errors.New("trust provider was unable to create it's cert in time"))
-		}
 	}
 }
 

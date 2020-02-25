@@ -405,7 +405,7 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 }
 
 func (t *TrustProvider) handleSubscribedObject(subscribedObject SubscribedObject) http.HandlerFunc {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 
 		logger := utils.Logger(r.Context())
 		body, err := ioutil.ReadAll(r.Body)
@@ -420,23 +420,24 @@ func (t *TrustProvider) handleSubscribedObject(subscribedObject SubscribedObject
 			return
 		}
 
-		privateKey := os.Getenv("DATA_BUNDLE_PRIVATE_KEY")
-		if privateKey == "" {
-			message := "Missing private key"
-			logger.Error(message)
-			utils.SetErrorStatus(errors.New(message), http.StatusInternalServerError, w)
-			return
+		if subscriber.EncryptedKey != "" {
+			privateKey := os.Getenv("DATA_BUNDLE_PRIVATE_KEY")
+			if privateKey == "" {
+				message := "Missing private key"
+				logger.Error(message)
+				utils.SetErrorStatus(errors.New(message), http.StatusInternalServerError, w)
+				return
+			}
+
+			err = DecryptPayload(subscriber, privateKey, &subscriber.Data)
+			if err != nil {
+				logger.Error("error", err.Error())
+				utils.SetErrorStatus(err, http.StatusInternalServerError, w)
+				return
+			}
 		}
 
-		var decryptedData interface{}
-		err = DecryptPayload(subscriber, privateKey, &decryptedData)
-		if err != nil {
-			logger.Error("error", err.Error())
-			utils.SetErrorStatus(err, http.StatusInternalServerError, w)
-			return
-		}
-
-		stringVars, numberVars, boolVars, arrayVars, err := t.parseParameters(decryptedData, subscribedObject.Parameters, r)
+		stringVars, numberVars, boolVars, arrayVars, err := t.parseParameters(subscriber.Data, subscribedObject.Parameters)
 		if err != nil {
 			logger.Error("error", err.Error())
 			utils.SetErrorStatus(err, http.StatusBadRequest, w)
@@ -452,10 +453,10 @@ func (t *TrustProvider) handleSubscribedObject(subscribedObject SubscribedObject
 		}
 
 		utils.WriteJSON(trustProviderResponse{Status: status}, http.StatusOK, w)
-	})
+	}
 }
 
-func (t *TrustProvider) parseParameters(body interface{}, params []Parameter, r *http.Request) (map[string]string, map[string]float64, map[string]bool, map[string]interface{}, error) {
+func (t *TrustProvider) parseParameters(body interface{}, params []Parameter) (map[string]string, map[string]float64, map[string]bool, map[string]interface{}, error) {
 	var ve []string
 
 	strs := make(map[string]string, 0)
@@ -618,7 +619,7 @@ func (t *TrustProvider) parseRequestBody(w http.ResponseWriter, r *http.Request,
 		logger.Errorf(err.Error())
 		return err, nil, nil, nil, nil, nil, nil
 	}
-	stringVars, numberVars, boolVars, arrayVars, err := t.parseParameters(body, parameters, r)
+	stringVars, numberVars, boolVars, arrayVars, err := t.parseParameters(body, parameters)
 	if err != nil {
 		logger.Errorf("Problem parsing onboarding request parameters", "error", err.Error())
 		return err, nil, nil, nil, nil, nil, nil

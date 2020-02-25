@@ -15,7 +15,7 @@ import (
 )
 
 type MockDataBundle struct {
-	LegalName string `json:"legalName"`
+	LegalName         string `json:"legalName"`
 	BankAccountNumber string `json:"bankAccountNumber"`
 }
 
@@ -25,8 +25,8 @@ func setupMockIdentityServer() string {
 	mockIdentityServer := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		if strings.Contains(r.URL.Path, "publicKeys") {
 			pubKeys := []models.PublicKeyDto{
-				{ PolicyId: policyIdOne, PublicKey: rsaPublicKeyOne },
-				{ PolicyId: policyIdTwo, PublicKey: rsaPublicKeyTwo },
+				{PolicyId: policyIdOne, PublicKey: rsaPublicKeyOne},
+				{PolicyId: policyIdTwo, PublicKey: rsaPublicKeyTwo},
 			}
 			utils.WriteJSON(&models.PublicKeysDto{
 				PublicKeys: pubKeys,
@@ -43,7 +43,7 @@ func TestDataBundleService_mimicPublishDataBundle(t *testing.T) {
 	d := NewDataBundleService(mockIdentityServerUrl)
 
 	dataBundle := &MockDataBundle{
-		LegalName: "Tester guy",
+		LegalName:         "Tester guy",
 		BankAccountNumber: "123456789",
 	}
 
@@ -123,6 +123,7 @@ func readPrivateKey(pkPem string) *rsa.PrivateKey {
 }
 
 var policyIdOne = uuid.MustParse("aafff2fe-c96e-44e4-b6e2-1836eeb9f53e")
+
 const rsaPrivateKeyOne = `-----BEGIN RSA PRIVATE KEY-----
 MIIJKgIBAAKCAgEAtmQ7Lt/iLnZQg6pEdHEiOecEKNnKr9oPOya+ItXr3+4ckBJT
 r9wFr623RFBjuFt9bSPV6Oxjy+UZ6JLc7PIJ6W+1BCBwWThjNlKlXiyStDEz+C2G
@@ -177,6 +178,7 @@ z/G7gv4Pv6ZI4jaGf5SQ5PanTsY2xWARXYJ9Rfb2qmoC+IOUTUJ2b/d/Zw+OAQ==
 const rsaPublicKeyOne = "-----BEGIN PUBLIC KEY-----\nMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAtmQ7Lt/iLnZQg6pEdHEi\nOecEKNnKr9oPOya+ItXr3+4ckBJTr9wFr623RFBjuFt9bSPV6Oxjy+UZ6JLc7PIJ\n6W+1BCBwWThjNlKlXiyStDEz+C2GYqs0GwGOh/iAlSUbjxBKaDPVVa6FeLSW3V0f\nOFrHw6poG3KGnH1Gkw/hN66UN6aIJIh2IrK67PlsXaqzWO+Z15Xcs6l3fZiP0HKi\n5slTO27EYo9PJe4T3BLZw22hcRZCspZLSQQQVSpo9TuErx/Zgv+oRhNJFgZVJHrK\ntLtBrbE9z5EYzb/qIYXcmt+B2XIvWYKJ9jYmnob6e9C3u3RmJ5kLXkjJpCThaNG2\nRKgf7G0Io5WD3ZgzUFCdcLBZMMR8tyWlqrEMj53ugrR4/F/Lcm4+uCX9jfEDBv0o\n2nJw/YaeYffCreh1TVrbwc67oY4Vl6QDx7DLjIc6yI13N2B+bzmoE3a5NZeMECe5\n5q5eTkjeyOzGGhVs5dm0mKYQ5/X4lIG8JQpw7/QmesD7vdx97n/FkLjU+U9d6SZh\nB9mw3WbGceyGL0PS9M9lKvWfcOV19Gf7aLxcUot1U6CvY3QIhyrHJFhxPVDNcc73\nrcxx1QBPUXcS7MyFRTGk47zKgDLdtw3uvkK23pm4ZXtiXBKejCLE7i370NOjo85h\nJrBb8IV36tksog7VbXRewE8CAwEAAQ==\n-----END PUBLIC KEY-----"
 
 var policyIdTwo = uuid.MustParse("b92cf8df-1276-496d-b1c6-2ca99a97d276")
+
 const rsaPrivateKeyTwo = `-----BEGIN RSA PRIVATE KEY-----
 MIIJJwIBAAKCAgEAzrDG+UoxV/u7nLEyGl19DTD8nDRIW0CU54O0mYIDbCoU+IJn
 XkU9C1NIUmSVLH7VyaqWUQaoGPIrca7jxJzzfjetw/03QGjWl1xaFT4P3YYTT7Ma

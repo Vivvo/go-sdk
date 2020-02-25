@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"github.com/Vivvo/go-sdk/models"
 	"github.com/Vivvo/go-sdk/utils"
@@ -216,7 +217,11 @@ func decryptPayloadAES(encryptedPayload []byte, nonce []byte, key []byte, res in
 }
 
 func DecryptPayload(data models.PublishWrapperDto, privateKey string, res interface{}) error {
-	encryptedPayload, err := base64.StdEncoding.DecodeString(data.Data)
+	if _, ok := data.Data.(string); !ok {
+		return errors.New("encrypted data should be a base64 encoded string")
+	}
+
+	encryptedPayload, err := base64.StdEncoding.DecodeString(data.Data.(string))
 	if err != nil {
 		fmt.Printf("unable to decode payload: %s", err.Error())
 		return err
