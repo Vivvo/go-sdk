@@ -23,6 +23,7 @@ func InitResty(c ConsulServiceInterface) {
 func InitRestyWithTLSConfig(c ConsulServiceInterface, tlsConfig *tls.Config) {
 	consul = c
 	tlsConfiguration = tlsConfig
+	resty.SetTLSClientConfig(tlsConfig)
 }
 
 func InitRestyTLS(c ConsulServiceInterface, signRequest mtls.SignRequest) {
@@ -61,15 +62,14 @@ func InitRestyTLS(c ConsulServiceInterface, signRequest mtls.SignRequest) {
 		ClientCAs:    caCertPool,
 	}
 	tlsConfiguration.BuildNameToCertificate()
+	resty.SetTLSClientConfig(tlsConfiguration)
 }
 
 func Resty(ctx context.Context) *resty.Client {
 	logger := Logger(ctx)
 	defer logger.Sync()
 
-	//RGC: Init a new resty client and add MTLS
-	client := resty.New()
-	client.SetTLSClientConfig(tlsConfiguration)
+	client := resty.NewWithClient(resty.GetClient())
 
 	client.OnBeforeRequest(func(c *resty.Client, r *resty.Request) error {
 		logger.Infow("Outbound Request", "method", r.Method, "url", r.URL)
