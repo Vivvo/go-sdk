@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.16.2](https://github.com/Vivvo/go-sdk/compare/v1.16.1...v1.16.2) (2020-02-25)
+
+
+### Bug Fixes
+
+* **rdng-561:** support unencrypted data bundles ([e724205](https://github.com/Vivvo/go-sdk/commit/e72420544c0b43e06df968e89dddd021a5f18989))
+
 ### [1.16.1](https://github.com/Vivvo/go-sdk/compare/v1.16.0...v1.16.1) (2020-02-25)
 
 
