@@ -1,6 +1,13 @@
-# Change Log
+# Changelog
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
+
+### [1.16.1](https://github.com/Vivvo/go-sdk/compare/v1.16.0...v1.16.1) (2020-02-25)
+
+
+### Bug Fixes
+
+* **rdng-561:** reuse the same http client for new resty clients ([a2dda9b](https://github.com/Vivvo/go-sdk/commit/a2dda9b780b4a92ce27d7a085ef37f65d0848fd1))
 
 <a name="1.16.0"></a>
 # [1.16.0](https://github.com/Vivvo/go-sdk/compare/v1.15.4...v1.16.0) (2020-02-13)
