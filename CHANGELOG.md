@@ -1,20 +1,16 @@
-# Changelog
+# Change Log
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-### [1.16.2](https://github.com/Vivvo/go-sdk/compare/v1.16.1...v1.16.2) (2020-02-25)
+<a name="1.16.3"></a>
+## [1.16.3](https://github.com/Vivvo/go-sdk/compare/v1.16.2...v1.16.3) (2020-03-02)
 
 
 ### Bug Fixes
 
-* **rdng-561:** support unencrypted data bundles ([e724205](https://github.com/Vivvo/go-sdk/commit/e72420544c0b43e06df968e89dddd021a5f18989))
-
-### [1.16.1](https://github.com/Vivvo/go-sdk/compare/v1.16.0...v1.16.1) (2020-02-25)
+* **config:** move two env configs to const names ([85c4403](https://github.com/Vivvo/go-sdk/commit/85c4403))
 
 
-### Bug Fixes
-
-* **rdng-561:** reuse the same http client for new resty clients ([a2dda9b](https://github.com/Vivvo/go-sdk/commit/a2dda9b780b4a92ce27d7a085ef37f65d0848fd1))
 
 <a name="1.16.0"></a>
 # [1.16.0](https://github.com/Vivvo/go-sdk/compare/v1.15.4...v1.16.0) (2020-02-13)
