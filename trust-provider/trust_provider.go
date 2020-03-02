@@ -32,10 +32,13 @@ const ErrorCredentialAlreadySent = "credential already sent"
 const ConfigTrustProviderPort = "TRUST_PROVIDER_PORT"
 const ConfigTrustProviderPortTls = "TRUST_PROVIDER_PORT_TLS"
 const WalletConfigDID = "DID"
-const WalletConfigMasterKey = "MASTER_KEY"
+const WalletConfigMasterKey = "MASTER_KEY" // encrypts the wallet rows
+const WalletConfigPrivateKey = "PRIVATE_KEY" // used to initialize double ratchet
 const WalletConfigMariadbDSN = "MARIADB_DSN"
 const CertName = "tp.crt"
 const CertKey = "tp.key"
+
+const DataBundlePrivateKey = "DATA_BUNDLE_PRIVATE_KEY"
 
 type OnboardingFunc func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}) (account interface{}, err error, token string)
 
@@ -421,7 +424,7 @@ func (t *TrustProvider) handleSubscribedObject(subscribedObject SubscribedObject
 		}
 
 		if subscriber.EncryptedKey != "" {
-			privateKey := os.Getenv("DATA_BUNDLE_PRIVATE_KEY")
+			privateKey := os.Getenv(DataBundlePrivateKey)
 			if privateKey == "" {
 				message := "Missing private key"
 				logger.Error(message)
@@ -783,9 +786,9 @@ func (t *TrustProvider) initAdapterDid() error {
 	if err == nil {
 		log.Println("DID already published")
 
-		if getWalletConfigValue("PRIVATE_KEY") != "" {
+		if getWalletConfigValue(WalletConfigPrivateKey) != "" {
 			log.Println("Adding private key to Wallet from env variable.")
-			pk := strings.Replace(getWalletConfigValue("PRIVATE_KEY"), "\\n", "\n", -1)
+			pk := strings.Replace(getWalletConfigValue(WalletConfigPrivateKey), "\\n", "\n", -1)
 			err = t.Wallet.Add(wallet.TypeRsaVerificationKey2018, getWalletConfigValue(WalletConfigDID), pk, nil)
 			if err != nil {
 				log.Println(err.Error())
