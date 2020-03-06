@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.17.0"></a>
+# [1.17.0](https://github.com/Vivvo/go-sdk/compare/v1.16.3...v1.17.0) (2020-03-06)
+
+
+### Features
+
+* **[RDNG-593]:** add userOverrideConsent to DataBundlesDto ([00c9dd8](https://github.com/Vivvo/go-sdk/commit/00c9dd8))
+
+
+
 <a name="1.16.3"></a>
 ## [1.16.3](https://github.com/Vivvo/go-sdk/compare/v1.16.2...v1.16.3) (2020-03-02)
 
