@@ -8,6 +8,7 @@ type DataBundlesDto struct {
 
 type DataBundleDto struct {
 	PolicyId             uuid.UUID `json:"policyId,omitempty"`
+	UserOverrideConsent  bool      `json:"userOverrideConsent"`
 	AESEncryptedBundle   string    `json:"aesEncryptedBundle"`
 	RSAEncryptedAESNonce string    `json:"rsaEncryptedAesNonce"`
 	RSAEncryptedAESKey   string    `json:"rsaEncryptedAESKey"`
