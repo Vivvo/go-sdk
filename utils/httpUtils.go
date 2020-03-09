@@ -25,6 +25,8 @@ func (se StatusError) Status() int {
 type ErrorDto struct {
 	StatusCode int    `json:"statusCode"`
 	Message    string `json:"message"`
+	Hint       string `json:"hint,omitempty"`
+	Error      string `json:"error,omitempty"`
 }
 
 func SetErrorStatus(e error, s int, w http.ResponseWriter) {
@@ -34,6 +36,17 @@ func SetErrorStatus(e error, s int, w http.ResponseWriter) {
 		Message:    e.Error(),
 	}
 
+	WriteJSON(b, s, w)
+}
+
+func SetDetailedErrorStatus(name string, msg string, details string, s int, w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json")
+	b := ErrorDto{
+		StatusCode: s,
+		Error:      name,
+		Message:    msg,
+		Hint:       details,
+	}
 	WriteJSON(b, s, w)
 }
 

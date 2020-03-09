@@ -6,6 +6,7 @@ require (
 	github.com/Vivvo/go-wallet v1.1.5
 	github.com/apex/log v1.1.1
 	github.com/btcsuite/btcutil v0.0.0-20190425235716-9e5f4b9a998d
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/go-redis/redis v6.15.7+incompatible
 	github.com/google/uuid v1.1.1
 	github.com/gorilla/handlers v1.4.2
@@ -18,5 +19,6 @@ require (
 	go.uber.org/multierr v1.2.0 // indirect
 	go.uber.org/zap v1.10.0
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
+	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	gopkg.in/resty.v1 v1.12.0
 )

@@ -179,6 +179,11 @@ func New(onboarding Onboarding, rules []Rule, subscribedObjects []SubscribedObje
 		t.initAdapterDid()
 	}
 
+	//e.g.: "https://vivvo-idp/oauth/v2/.well-known/jwks.json"
+	if os.Getenv("IDP_JWKS_URL") != "" {
+		t.Router.Use(utils.NewOAuth2AuthorizationMiddleware(os.Getenv("CLIENT_ID"), strings.Split(os.Getenv("REQUIRED_SCOPES"), ",")...).Middleware)
+	}
+
 	t.Router.HandleFunc("/api/v1/version", utils.GetReleaseInfo).Methods("GET")
 
 	t.Router.HandleFunc("/api/register", t.register).Methods("POST")
