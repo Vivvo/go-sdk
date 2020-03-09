@@ -1,6 +1,13 @@
-# Change Log
+# Changelog
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
+
+## [1.18.0](https://github.com/Vivvo/go-sdk/compare/v1.17.0...v1.18.0) (2020-03-09)
+
+
+### Features
+
+* **rdng-600:** add service card dtos to go-sdk ([acf5471](https://github.com/Vivvo/go-sdk/commit/acf547104b97b0dadb957db81b125fdfc25325a2))
 
 <a name="1.17.0"></a>
 # [1.17.0](https://github.com/Vivvo/go-sdk/compare/v1.16.3...v1.17.0) (2020-03-06)
