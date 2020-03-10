@@ -53,7 +53,18 @@ func (d *DefaultAccount) Update(account interface{}, token string) error {
 		Token:   token,
 	}
 
-	records = append(records, record)
+	existingRecord := false
+	for i, dbRecord := range records {
+		if dbRecord.Token == record.Token {
+			records[i] = record
+			existingRecord = true
+		}
+	}
+
+	if !existingRecord {
+		records = append(records, record)
+	}
+
 	r, err := json.Marshal(records)
 	_, err = file.Write(r)
 	if err != nil {
