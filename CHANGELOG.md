@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.19.1"></a>
+## [1.19.1](https://github.com/Vivvo/go-sdk/compare/v1.19.0...v1.19.1) (2020-03-11)
+
+
+### Bug Fixes
+
+* **rdng-601:** look for scp not scopes in the access token ([3a0f5b8](https://github.com/Vivvo/go-sdk/commit/3a0f5b8))
+
+
+
 <a name="1.19.0"></a>
 # [1.19.0](https://github.com/Vivvo/go-sdk/compare/v1.18.0...v1.19.0) (2020-03-10)
 
