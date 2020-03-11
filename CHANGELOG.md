@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.19.2"></a>
+## [1.19.2](https://github.com/Vivvo/go-sdk/compare/v1.19.1...v1.19.2) (2020-03-11)
+
+
+### Bug Fixes
+
+* **rdng-601:** handle OAuth2.0 scopes properly ([5b9f698](https://github.com/Vivvo/go-sdk/commit/5b9f698))
+
+
+
 <a name="1.19.1"></a>
 ## [1.19.1](https://github.com/Vivvo/go-sdk/compare/v1.19.0...v1.19.1) (2020-03-11)
 
