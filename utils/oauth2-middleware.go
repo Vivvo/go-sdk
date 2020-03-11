@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rsa"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
@@ -127,6 +128,7 @@ func (o *OAuth2AuthorizationMiddleware) Middleware(handler http.Handler) http.Ha
 		}
 
 		if o.scopes != nil && len(o.scopes) > 0 {
+			log.Println("Made it!")
 			missingScopes := make([]string, 0)
 			if scopes, ok := claims["scp"].([]interface{}); len(o.scopes) > 0 && ok && len(scopes) > 0 {
 				s := toMap(scopes)
@@ -135,7 +137,10 @@ func (o *OAuth2AuthorizationMiddleware) Middleware(handler http.Handler) http.Ha
 						missingScopes = append(missingScopes, requiredScope)
 					}
 				}
-			} else {
+			} else if len(o.scopes) > 0 {
+				b, _ := json.MarshalIndent(o.scopes, "", "\t")
+				log.Println(string(b))
+				log.Println("missing scopes")
 				missingScopes = o.scopes
 			}
 

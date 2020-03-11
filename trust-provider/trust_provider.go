@@ -32,7 +32,7 @@ const ErrorCredentialAlreadySent = "credential already sent"
 const ConfigTrustProviderPort = "TRUST_PROVIDER_PORT"
 const ConfigTrustProviderPortTls = "TRUST_PROVIDER_PORT_TLS"
 const WalletConfigDID = "DID"
-const WalletConfigMasterKey = "MASTER_KEY" // encrypts the wallet rows
+const WalletConfigMasterKey = "MASTER_KEY"   // encrypts the wallet rows
 const WalletConfigPrivateKey = "PRIVATE_KEY" // used to initialize double ratchet
 const WalletConfigMariadbDSN = "MARIADB_DSN"
 const CertName = "tp.crt"
@@ -181,7 +181,11 @@ func New(onboarding Onboarding, rules []Rule, subscribedObjects []SubscribedObje
 
 	//e.g.: "https://vivvo-idp/oauth/v2/.well-known/jwks.json"
 	if os.Getenv("IDP_JWKS_URL") != "" {
-		t.Router.Use(utils.NewOAuth2AuthorizationMiddleware(os.Getenv("CLIENT_ID"), strings.Split(os.Getenv("REQUIRED_SCOPES"), ",")...).Middleware)
+		scopes := []string{}
+		if os.Getenv("REQUIRED_SCOPES") != "" {
+			scopes = strings.Split(os.Getenv("REQUIRED_SCOPES"), ",")
+		}
+		t.Router.Use(utils.NewOAuth2AuthorizationMiddleware(os.Getenv("CLIENT_ID"), scopes...).Middleware)
 	}
 
 	t.Router.HandleFunc("/api/v1/version", utils.GetReleaseInfo).Methods("GET")
