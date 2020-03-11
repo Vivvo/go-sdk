@@ -128,7 +128,7 @@ func (o *OAuth2AuthorizationMiddleware) Middleware(handler http.Handler) http.Ha
 
 		if o.scopes != nil && len(o.scopes) > 0 {
 			missingScopes := make([]string, 0)
-			if scopes, ok := claims["scope"].([]interface{}); len(o.scopes) > 0 && ok && len(scopes) > 0 {
+			if scopes, ok := claims["scp"].([]interface{}); len(o.scopes) > 0 && ok && len(scopes) > 0 {
 				s := toMap(scopes)
 				for _, requiredScope := range o.scopes {
 					if _, ok := s[requiredScope]; !ok {

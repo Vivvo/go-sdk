@@ -43,7 +43,7 @@ func TestOAuth2AuthorizationMiddleware(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
 				"aud":    tt.audience,
-				"scope": tt.scopes,
+				"scp": tt.scopes,
 			})
 
 			signed, err := token.SignedString(tt.signWith)
