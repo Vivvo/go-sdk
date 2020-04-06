@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.21.0"></a>
+# [1.21.0](https://github.com/Vivvo/go-sdk/compare/v1.20.0...v1.21.0) (2020-04-06)
+
+
+### Features
+
+* **[RDNG-753]:** added new Business Director Credential ([4de3951](https://github.com/Vivvo/go-sdk/commit/4de3951))
+
+
+
 <a name="1.20.0"></a>
 # [1.20.0](https://github.com/Vivvo/go-sdk/compare/v1.19.2...v1.20.0) (2020-04-06)
 
