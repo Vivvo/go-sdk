@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.20.0"></a>
+# [1.20.0](https://github.com/Vivvo/go-sdk/compare/v1.19.2...v1.20.0) (2020-04-06)
+
+
+### Features
+
+* **trustprovider:** default_account_manager add mux lock around file ops ([9184456](https://github.com/Vivvo/go-sdk/commit/9184456))
+
+
+
 <a name="1.19.2"></a>
 ## [1.19.2](https://github.com/Vivvo/go-sdk/compare/v1.19.1...v1.19.2) (2020-03-11)
 
