@@ -7,12 +7,15 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sync"
 )
 
 // DefaultAccount is the default implementation of the Account interface that the TrustProvider will
 // use to save tokens associated with accounts and retrieve accounts by those tokens. This implementation
 // is NOT suitable for production use.
-type DefaultAccount struct{}
+type DefaultAccount struct{
+	mux sync.Mutex
+}
 
 // Update implementation stores accounts and tokens in a CSV file.
 func (d *DefaultAccount) Update(account interface{}, token string) error {
@@ -23,13 +26,15 @@ func (d *DefaultAccount) Update(account interface{}, token string) error {
 		return err
 	}
 
+	d.mux.Lock()
+	defer d.mux.Unlock()
+
 	path, err := filepath.Abs(DefaultCsvFilePath)
 	file, err := os.OpenFile(path, os.O_RDWR|os.O_APPEND, 0644)
 	if err != nil {
 		log.Printf("Error opening file: %s", err)
 		return err
 	}
-
 	defer file.Close()
 
 	var records []DefaultDBRecord
@@ -81,6 +86,9 @@ func (d *DefaultAccount) Update(account interface{}, token string) error {
 // to the appropriate struct using something like http://github.com/mitchellh/mapstructure
 // (examples: https://godoc.org/github.com/mitchellh/mapstructure#Decode)
 func (d *DefaultAccount) Read(token string) (interface{}, error) {
+
+	d.mux.Lock()
+	defer d.mux.Unlock()
 
 	path, err := filepath.Abs(DefaultCsvFilePath)
 	file, err := os.OpenFile(path, os.O_RDWR|os.O_APPEND, 0644)
