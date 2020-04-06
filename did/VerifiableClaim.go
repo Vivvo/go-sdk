@@ -27,6 +27,7 @@ const TokenizedConnectionCredential = "TokenizedConnectionCredential"
 const VerifiableCredential = "VerifiableCredential"
 const InviteCredential = "InviteCredential"
 const VerifiedPersonCredential = "VerifiedPersonCredential"
+const BusinessDirectorCredential = "BusinessDirectorCredential"
 
 const AuthenticationChallengeClaim = "challenge"
 const CallbackClaim = "callback"
