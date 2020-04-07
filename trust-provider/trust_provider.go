@@ -282,7 +282,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if stringVars["did"] != "" {
-		pairwiseDoc, err = t.initializeEncryption(stringVars, w, pairwiseDoc)
+		pairwiseDoc, err = t.InitializeEncryption(stringVars, w, pairwiseDoc)
 		if err != nil {
 			utils.SendError(err, w)
 			return
@@ -398,7 +398,7 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 		t.account.Update(account, token)
 
 		if stringVars["did"] != "" {
-			pairwiseDoc, err = t.initializeEncryption(stringVars, w, pairwiseDoc)
+			pairwiseDoc, err = t.InitializeEncryption(stringVars, w, pairwiseDoc)
 			if err != nil {
 				utils.SendError(err, w)
 				return
@@ -671,7 +671,7 @@ func (t *TrustProvider) SendVerifiableCredential(claims []string, stringVars map
 	return encryptedVerifiableCredential, nil
 }
 
-func (t *TrustProvider) initializeEncryption(s map[string]string, w http.ResponseWriter, pairwiseDoc *did.Document) (*did.Document, error) {
+func (t *TrustProvider) InitializeEncryption(s map[string]string, w http.ResponseWriter, pairwiseDoc *did.Document) (*did.Document, error) {
 	messaging := t.Wallet.Messaging()
 	contactDoc, err := t.resolver.Resolve(s["did"])
 	if err != nil {
