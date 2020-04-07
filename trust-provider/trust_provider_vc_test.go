@@ -186,7 +186,7 @@ func TestOnboardingVerifiableClaim(t *testing.T) {
 				t.Errorf("Error reading response body: %s", err.Error())
 			}
 
-			var response = trustProviderResponse{}
+			var response = TrustProviderResponse{}
 			err = json.Unmarshal(b, &response)
 			if err != nil {
 				t.Errorf("Error unmarshalling response body: %s", err.Error())
@@ -303,7 +303,7 @@ func buildIAmMeCredential(w *wallet.Wallet, ddoc *did.Document) did.VerifiableCl
 //
 //			ac := make(map[string]interface{})
 //			ac[did.TokenClaim] = uuid.New().String()
-//			vc, _ := tp.generateVerifiableClaim(ac, "did:vvo:12H6btMP6hPy32VXbwKvGE", ac[did.TokenClaim].(string), []string{did.VerifiableCredential, did.TokenizedConnectionCredential})
+//			vc, _ := tp.GenerateVerifiableClaim(ac, "did:vvo:12H6btMP6hPy32VXbwKvGE", ac[did.TokenClaim].(string), []string{did.VerifiableCredential, did.TokenizedConnectionCredential})
 //
 //			body := struct {
 //				Age             float64             `json:"age"`
@@ -323,7 +323,7 @@ func buildIAmMeCredential(w *wallet.Wallet, ddoc *did.Document) did.VerifiableCl
 //				t.Errorf("Error reading response body: %s", err.Error())
 //			}
 //
-//			var response trustProviderResponse
+//			var response TrustProviderResponse
 //			err = json.Unmarshal(b, &response)
 //			if err != nil {
 //				t.Errorf("Error unmarshalling response body: %s", err.Error())

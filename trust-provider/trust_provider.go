@@ -91,7 +91,7 @@ type SubscribedObject struct {
 	SubscribedObjectFunc func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}) (bool, error)
 }
 
-type trustProviderResponse struct {
+type TrustProviderResponse struct {
 	Status             bool                   `json:"value"`
 	Message            string                 `json:"message,omitempty"`
 	OnBoardingRequired bool                   `json:"onBoardingRequired"`
@@ -238,7 +238,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 
 	err, onboardingVC, pairwiseDoc, stringVars, numberVars, boolVars, arrayVars := t.parseRequestBody(w, r, t.onboarding.Parameters, t.onboarding.VerifiableCredential)
 	if err != nil {
-		res := trustProviderResponse{Status: false, OnBoardingRequired: true, Message: err.Error()}
+		res := TrustProviderResponse{Status: false, OnBoardingRequired: true, Message: err.Error()}
 		utils.WriteJSON(res, http.StatusBadRequest, w)
 		return
 	}
@@ -254,7 +254,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 	//log.Print("Account - ", account)
 	if err != nil {
 		if e, ok := err.(TrustProviderErrorResponse); ok {
-			res := trustProviderResponse{
+			res := TrustProviderResponse{
 				Status:             e.OnboardingStatus,
 				OnBoardingRequired: e.OnboardingRequired,
 				IgnoreAttempt:      e.HttpStatus >= 500,
@@ -263,7 +263,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 			utils.WriteJSON(res, http.StatusOK, w)
 			return
 		} else {
-			res := trustProviderResponse{Status: false, OnBoardingRequired: true, Message: err.Error()}
+			res := TrustProviderResponse{Status: false, OnBoardingRequired: true, Message: err.Error()}
 			utils.WriteJSON(res, http.StatusOK, w)
 			return
 		}
@@ -276,7 +276,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 
 	err = t.account.Update(account, token)
 	if err != nil {
-		res := trustProviderResponse{Status: false, OnBoardingRequired: true}
+		res := TrustProviderResponse{Status: false, OnBoardingRequired: true}
 		utils.WriteJSON(res, http.StatusInternalServerError, w)
 		return
 	}
@@ -297,7 +297,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	res := trustProviderResponse{Status: true, OnBoardingRequired: false, Token: token, VerifiableClaim: vc}
+	res := TrustProviderResponse{Status: true, OnBoardingRequired: false, Token: token, VerifiableClaim: vc}
 	utils.WriteJSON(res, http.StatusCreated, w)
 
 }
@@ -365,7 +365,7 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 
 		err, onboardingVC, pairwiseDoc, stringVars, numberVars, boolVars, arrayVars := t.parseRequestBody(w, r, rule.Parameters, rule.VerifiableCredential)
 		if err != nil {
-			utils.WriteJSON(trustProviderResponse{Status: false, OnBoardingRequired: true}, http.StatusBadRequest, w)
+			utils.WriteJSON(TrustProviderResponse{Status: false, OnBoardingRequired: true}, http.StatusBadRequest, w)
 			return
 		}
 
@@ -382,11 +382,11 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 		status, err := rule.RuleFunc(stringVars, numberVars, boolVars, arrayVars, account)
 		if err != nil {
 			if err.Error() == ErrorOnboardingRequired {
-				utils.WriteJSON(trustProviderResponse{Status: false, OnBoardingRequired: true}, http.StatusOK, w)
+				utils.WriteJSON(TrustProviderResponse{Status: false, OnBoardingRequired: true}, http.StatusOK, w)
 				return
 			}
 			if err.Error() == ErrorCredentialAlreadySent {
-				utils.WriteJSON(trustProviderResponse{Status: status}, http.StatusOK, w)
+				utils.WriteJSON(TrustProviderResponse{Status: status}, http.StatusOK, w)
 				return
 			}
 			logger.Error("error: ", err.Error())
@@ -412,7 +412,7 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 			}
 		}
 
-		utils.WriteJSON(trustProviderResponse{Status: status}, http.StatusOK, w)
+		utils.WriteJSON(TrustProviderResponse{Status: status}, http.StatusOK, w)
 	}
 }
 
@@ -464,7 +464,7 @@ func (t *TrustProvider) handleSubscribedObject(subscribedObject SubscribedObject
 			return
 		}
 
-		utils.WriteJSON(trustProviderResponse{Status: status}, http.StatusOK, w)
+		utils.WriteJSON(TrustProviderResponse{Status: status}, http.StatusOK, w)
 	}
 }
 
@@ -653,7 +653,7 @@ func (t *TrustProvider) SendVerifiableCredential(claims []string, stringVars map
 	c := make(map[string]interface{})
 	acctJson, _ := json.Marshal(account)
 	json.Unmarshal(acctJson, &c)
-	claim, err := t.generateVerifiableClaim(c, subject, token, append([]string{did.VerifiableCredential}, claims...))
+	claim, err := t.GenerateVerifiableClaim(c, subject, token, append([]string{did.VerifiableCredential}, claims...))
 	if err != nil {
 		logger.Errorf("Problem generating a verifiable credential response", "error", err.Error())
 		return nil, err
@@ -675,7 +675,7 @@ func (t *TrustProvider) InitializeEncryption(s map[string]string, w http.Respons
 	messaging := t.Wallet.Messaging()
 	contactDoc, err := t.resolver.Resolve(s["did"])
 	if err != nil {
-		res := trustProviderResponse{Status: false, OnBoardingRequired: true}
+		res := TrustProviderResponse{Status: false, OnBoardingRequired: true}
 		utils.WriteJSON(res, http.StatusBadRequest, w)
 	}
 	pairwiseDoc, err = t.createPairwiseDid(t.Wallet, t.resolver)
@@ -760,7 +760,7 @@ func (t *TrustProvider) parseVerifiableCredential(body interface{}, logger *zap.
 	return vc, ve
 }
 
-func (t *TrustProvider) generateVerifiableClaim(c map[string]interface{}, subject string, token string, types []string) (did.VerifiableClaim, error) {
+func (t *TrustProvider) GenerateVerifiableClaim(c map[string]interface{}, subject string, token string, types []string) (did.VerifiableClaim, error) {
 	id := getWalletConfigValue(WalletConfigDID)
 
 	c[did.SubjectClaim] = subject

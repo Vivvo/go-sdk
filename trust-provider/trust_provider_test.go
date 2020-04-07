@@ -134,7 +134,7 @@ func TestOnboarding(t *testing.T) {
 				t.Errorf("Error reading response body: %s", err.Error())
 			}
 
-			var response trustProviderResponse
+			var response TrustProviderResponse
 			err = json.Unmarshal(b, &response)
 			if err != nil {
 				t.Errorf("Error unmarshalling response body: %s", err.Error())
@@ -519,7 +519,7 @@ func TestRules(t *testing.T) {
 				t.Errorf("Error reading response body: %s", err.Error())
 			}
 
-			var response trustProviderResponse
+			var response TrustProviderResponse
 			err = json.Unmarshal(b, &response)
 			if err != nil {
 				t.Errorf("Error unmarshalling response body: %s", err.Error())
