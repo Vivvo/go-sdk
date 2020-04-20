@@ -107,6 +107,16 @@ type TrustProviderErrorResponse struct {
 	HttpStatus         int
 }
 
+type TrustProviderConfig struct {
+	Onboarding Onboarding
+	Revocation interface{}
+	Rules []Rule
+	SubscribedObjects []SubscribedObject
+	Data []Data
+	Account Account
+	Resolver did.ResolverInterface
+}
+
 func (t TrustProviderErrorResponse) Error() string {
 	return t.Message
 }
@@ -172,8 +182,20 @@ type TrustProvider struct {
 // New will create a new TrustProvider. Based on the onboarding, rules and account objects you pass in
 // this will bootstrap an http server with onboarding and rules endpoints exposed.
 func New(onboarding Onboarding, rules []Rule, subscribedObjects []SubscribedObject, data []Data, account Account, resolver did.ResolverInterface) TrustProvider {
+	return Create(&TrustProviderConfig{
+		Onboarding:        onboarding,
+		Rules:             rules,
+		SubscribedObjects: subscribedObjects,
+		Data:              data,
+		Account:           account,
+		Resolver:          resolver,
+		Revocation:		   nil,
+	})
+}
+
+func Create(config *TrustProviderConfig) TrustProvider {
 	os.Setenv("STARTED_ON", time.Now().Format(time.RFC3339))
-	t := TrustProvider{onboarding: onboarding, rules: rules, subscribedObject: subscribedObjects, account: account, Router: mux.NewRouter(), resolver: resolver}
+	t := TrustProvider{onboarding: config.Onboarding, rules: config.Rules, subscribedObject: config.SubscribedObjects, account: config.Account, Router: mux.NewRouter(), resolver: config.Resolver}
 
 	if getWalletConfigValue(WalletConfigDID) != "" {
 		t.initAdapterDid()
@@ -192,20 +214,20 @@ func New(onboarding Onboarding, rules []Rule, subscribedObjects []SubscribedObje
 
 	t.Router.HandleFunc("/api/register", t.register).Methods("POST")
 
-	if subscribedObjects != nil {
-		for _, s := range subscribedObjects {
+	if config.SubscribedObjects != nil {
+		for _, s := range config.SubscribedObjects {
 			t.Router.HandleFunc(fmt.Sprintf("/api/subscriber/%s", s.Name), t.handleSubscribedObject(s)).Methods("POST")
 		}
 	}
 
-	if rules != nil {
-		for _, r := range rules {
+	if config.Rules != nil {
+		for _, r := range config.Rules {
 			t.Router.HandleFunc(fmt.Sprintf("/api/%s/{token}", r.Name), t.handleRule(r)).Methods("POST")
 		}
 	}
 
-	if data != nil {
-		for _, d := range data {
+	if config.Data != nil {
+		for _, d := range config.Data {
 			t.Router.HandleFunc(fmt.Sprintf("/api/%s/{token}", d.Name), t.handleData(d)).Methods("GET")
 		}
 	}
