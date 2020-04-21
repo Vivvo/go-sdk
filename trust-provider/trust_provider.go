@@ -41,6 +41,8 @@ const CertKey = "tp.key"
 const DataBundlePrivateKey = "DATA_BUNDLE_PRIVATE_KEY"
 
 type OnboardingFunc func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}) (account interface{}, err error, token string)
+type RevocationFunc func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}, wallet *wallet.Wallet) (did string, pairwiseDid string, err error)
+type RevocationStatusFunc func(s map[string]string) (bool, error)
 
 // Parameters:
 //     An array of required/optional parameters that the onboarding function will have access to. Validation will automatically
@@ -49,12 +51,22 @@ type OnboardingFunc func(s map[string]string, n map[string]float64, b map[string
 //    The types of the verifiable credential that will be issued when onboarding succeeds.
 // OnboardingFunc:
 //    This function should execute the required business logic to ensure that the person onboarding is tied to
-//    and account in your system. The interface{} that is returned from here should be your implementation of an account.
+//    an account in your system. The interface{} that is returned from here should be your implementation of an account.
 type Onboarding struct {
 	Parameters           []Parameter
 	Claims               []string
 	OnboardingFunc       OnboardingFunc
 	VerifiableCredential bool
+}
+
+// RevocationFunc:
+//    This function should execute the required business logic to ensure that the person having their credential revoked is tied to
+//    an account in your system. The interface{} that is passed into here should be your implementation of an account.
+type Revocation struct {
+	Parameters       []Parameter
+	RevocationFunc   RevocationFunc
+	RevocationStatusFunc RevocationStatusFunc
+	RevocationStatusUrl string
 }
 
 type ParameterType int
@@ -108,13 +120,13 @@ type TrustProviderErrorResponse struct {
 }
 
 type TrustProviderConfig struct {
-	Onboarding Onboarding
-	Revocation interface{}
-	Rules []Rule
+	Onboarding        Onboarding
+	Revocation        Revocation
+	Rules             []Rule
 	SubscribedObjects []SubscribedObject
-	Data []Data
-	Account Account
-	Resolver did.ResolverInterface
+	Data              []Data
+	Account           Account
+	Resolver          did.ResolverInterface
 }
 
 func (t TrustProviderErrorResponse) Error() string {
@@ -138,6 +150,10 @@ type MessageDto struct {
 type Subscriber struct {
 	EventType string      `json:"eventType"`
 	Data      interface{} `json:"data"`
+}
+
+type Status struct {
+	Revoked bool `json:"revoked"`
 }
 
 const DefaultCsvFilePath = "./db.json"
@@ -168,6 +184,7 @@ type Account interface {
 //     /api/{Rule.Name}/{token}
 type TrustProvider struct {
 	onboarding       Onboarding
+	revocation       Revocation
 	rules            []Rule
 	subscribedObject []SubscribedObject
 	data             []Data
@@ -189,13 +206,13 @@ func New(onboarding Onboarding, rules []Rule, subscribedObjects []SubscribedObje
 		Data:              data,
 		Account:           account,
 		Resolver:          resolver,
-		Revocation:		   nil,
+		Revocation:        Revocation{},
 	})
 }
 
 func Create(config *TrustProviderConfig) TrustProvider {
 	os.Setenv("STARTED_ON", time.Now().Format(time.RFC3339))
-	t := TrustProvider{onboarding: config.Onboarding, rules: config.Rules, subscribedObject: config.SubscribedObjects, account: config.Account, Router: mux.NewRouter(), resolver: config.Resolver}
+	t := TrustProvider{onboarding: config.Onboarding, revocation: config.Revocation, rules: config.Rules, subscribedObject: config.SubscribedObjects, account: config.Account, Router: mux.NewRouter(), resolver: config.Resolver}
 
 	if getWalletConfigValue(WalletConfigDID) != "" {
 		t.initAdapterDid()
@@ -213,6 +230,14 @@ func Create(config *TrustProviderConfig) TrustProvider {
 	t.Router.HandleFunc("/api/v1/version", utils.GetReleaseInfo).Methods("GET")
 
 	t.Router.HandleFunc("/api/register", t.register).Methods("POST")
+
+	if t.revocation.RevocationFunc != nil {
+		t.Router.HandleFunc("/api/revoke", t.revoke).Methods("POST")
+	}
+
+	if t.revocation.RevocationStatusUrl != "" && t.revocation.RevocationStatusFunc != nil {
+		t.Router.HandleFunc(t.revocation.RevocationStatusUrl, t.getRevocationStatus).Methods("GET")
+	}
 
 	if config.SubscribedObjects != nil {
 		for _, s := range config.SubscribedObjects {
@@ -272,6 +297,21 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if onboardingVC != nil {
+		isRevoked, err := t.isRevoked(onboardingVC, r.Context())
+		if err != nil {
+			res := TrustProviderResponse{Status: false, OnBoardingRequired: true, Message: err.Error()}
+			utils.WriteJSON(res, http.StatusInternalServerError, w)
+			return
+		}
+
+		if isRevoked {
+			res := TrustProviderResponse{Status: false, OnBoardingRequired: true, Message: "credential is revoked"}
+			utils.WriteJSON(res, http.StatusUnauthorized, w)
+			return
+		}
+	}
+
 	account, err, token := t.onboarding.OnboardingFunc(stringVars, numberVars, boolVars, arrayVars)
 	//log.Print("Account - ", account)
 	if err != nil {
@@ -322,6 +362,39 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 	res := TrustProviderResponse{Status: true, OnBoardingRequired: false, Token: token, VerifiableClaim: vc}
 	utils.WriteJSON(res, http.StatusCreated, w)
 
+}
+
+func (t *TrustProvider) getRevocationStatus(w http.ResponseWriter, r *http.Request) {
+	pathParams := mux.Vars(r)
+	revoked, err := t.revocation.RevocationStatusFunc(pathParams)
+
+	if err != nil {
+		utils.SetErrorStatus(fmt.Errorf("error getting revocation status: %s", err.Error()), http.StatusInternalServerError, w)
+		return
+	}
+
+	utils.WriteJSON(Status{Revoked: revoked}, http.StatusOK, w)
+}
+
+func (t *TrustProvider) isRevoked(claim *did.VerifiableClaim, ctx context.Context) (bool, error) {
+	if claim.CredentialStatus.Id != "" {
+		return false, nil
+	}
+	var status Status
+
+	resp, err := utils.Resty(ctx).R().
+		SetResult(status).
+		Get(claim.CredentialStatus.Id)
+
+	if err != nil {
+		return false, err
+	}
+
+	if resp.StatusCode() != http.StatusOK {
+		return false, fmt.Errorf("invalid respose from revocation url: %d", resp.StatusCode())
+	}
+
+	return status.Revoked, nil
 }
 
 func (t *TrustProvider) handleData(data Data) http.HandlerFunc {
@@ -435,6 +508,37 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 		}
 
 		utils.WriteJSON(TrustProviderResponse{Status: status}, http.StatusOK, w)
+	}
+}
+
+func (t *TrustProvider) revoke(w http.ResponseWriter, r *http.Request) {
+	logger := utils.Logger(r.Context())
+
+	err, _, _, stringVars, numberVars, boolVars, arrayVars := t.parseRequestBody(w, r, t.revocation.Parameters, false)
+	if err != nil {
+		utils.SetErrorStatus(err, http.StatusBadRequest, w)
+		return
+	}
+
+	if t.revocation.RevocationFunc == nil {
+		err := errors.New("TrustProvider.revocation.RevocationFunc not implemented!")
+		logger.Errorf("TrustProvider.revocation.RevocationFunc not implemented!")
+		utils.SetErrorStatus(err, http.StatusInternalServerError, w)
+		return
+	}
+
+	did, pairwiseDid, err := t.revocation.RevocationFunc(stringVars, numberVars, boolVars, arrayVars, t.Wallet)
+	if err != nil {
+		utils.SetErrorStatus(err, http.StatusInternalServerError, w)
+		return
+	}
+
+	if did != "" && pairwiseDid != "" {
+		err = t.RevokeCredential(did, pairwiseDid, r.Context())
+		if err != nil {
+			utils.SetErrorStatus(err, http.StatusInternalServerError, w)
+			return
+		}
 	}
 }
 
@@ -693,6 +797,22 @@ func (t *TrustProvider) SendVerifiableCredential(claims []string, stringVars map
 	return encryptedVerifiableCredential, nil
 }
 
+func (t *TrustProvider) RevokeCredential(did string, pairwiseDid string, ctx context.Context) error {
+	logger := utils.Logger(ctx)
+	var encryptedCredentialRevocation *wallet.RatchetPayload
+	message := MessageDto{Type: "revocation"}
+	m, _ := json.Marshal(message)
+	rp, err := t.Wallet.Messaging().RatchetEncrypt(pairwiseDid, string(m))
+	if err != nil {
+		logger.Error(err)
+		return err
+	}
+	rp.Sender = getWalletConfigValue(WalletConfigDID)
+	encryptedCredentialRevocation = rp
+	t.pushNotification(did, encryptedCredentialRevocation)
+	return nil
+}
+
 func (t *TrustProvider) InitializeEncryption(s map[string]string, w http.ResponseWriter, pairwiseDoc *did.Document) (*did.Document, error) {
 	messaging := t.Wallet.Messaging()
 	contactDoc, err := t.resolver.Resolve(s["did"])
@@ -783,17 +903,41 @@ func (t *TrustProvider) parseVerifiableCredential(body interface{}, logger *zap.
 }
 
 func (t *TrustProvider) GenerateVerifiableClaim(c map[string]interface{}, subject string, token string, types []string) (did.VerifiableClaim, error) {
+	return t.CreateVerifiableClaim(VerifiableClaimConfig{
+		Claims:     c,
+		Subject:    subject,
+		Token:      token,
+		Types:      types,
+		StatusUrl:  "",
+		StatusType: "",
+	})
+}
+
+type VerifiableClaimConfig struct {
+	Claims     map[string]interface{}
+	Subject    string
+	Token      string
+	Types      []string
+	StatusUrl  string
+	StatusType string
+}
+
+func (t *TrustProvider) CreateVerifiableClaim(config VerifiableClaimConfig) (did.VerifiableClaim, error) {
 	id := getWalletConfigValue(WalletConfigDID)
 
-	c[did.SubjectClaim] = subject
-	c[did.PublicKeyClaim] = fmt.Sprintf("%s#keys-1", token)
+	config.Claims[did.SubjectClaim] = config.Subject
+	config.Claims[did.PublicKeyClaim] = fmt.Sprintf("%s#keys-1", config.Token)
 
 	var claim = did.Claim{
 		Id:     uuid.New().String(),
-		Type:   types,
+		Type:   config.Types,
 		Issuer: id,
 		Issued: time.Now().Format("2006-01-02"),
-		Claim:  c,
+		Claim:  config.Claims,
+		CredentialStatus: did.CredentialStatus{
+			Id:   config.StatusUrl,
+			Type: config.StatusType,
+		},
 	}
 
 	return claim.WalletSign(t.Wallet, id, uuid.New().String())

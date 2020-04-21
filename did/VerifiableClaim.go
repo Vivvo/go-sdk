@@ -47,15 +47,22 @@ type Claim struct {
 	Issuer string                 `json:"issuer"`
 	Issued string                 `json:"issued"`
 	Claim  map[string]interface{} `json:"claim"`
+	CredentialStatus CredentialStatus 	`json:"credentialStatus"`
 }
 
 type VerifiableClaim struct {
-	Id     string                 `json:"id"`
-	Type   []string               `json:"type"`
-	Issuer string                 `json:"issuer"`
-	Issued string                 `json:"issued"`
-	Claim  map[string]interface{} `json:"claim"`
-	Proof  *utils.Proof           `json:"proof,omitempty"`
+	Id     string                 		`json:"id"`
+	Type   []string               		`json:"type"`
+	Issuer string                 		`json:"issuer"`
+	Issued string                 		`json:"issued"`
+	Claim  map[string]interface{} 		`json:"claim"`
+	Proof  *utils.Proof           		`json:"proof,omitempty"`
+	CredentialStatus CredentialStatus 	`json:"credentialStatus"`
+}
+
+type CredentialStatus struct {
+	Id     	string                 		`json:"id"`
+	Type 	string						`json:"type"`
 }
 
 type ChallengeResponse struct {

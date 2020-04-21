@@ -47,3 +47,12 @@ func (wam *WalletAccountManager) Read(token string) (interface{}, error) {
 	}
 	return account, err
 }
+
+func (wam *WalletAccountManager) Delete(token string) error {
+	err := wam.TrustProvider.Wallet.Accounts().Delete(token)
+	if err != nil {
+		log.Printf("Error deleting account object: %s", err.Error())
+		return err
+	}
+	return nil
+}
