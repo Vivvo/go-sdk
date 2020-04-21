@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.22.0"></a>
+# [1.22.0](https://github.com/Vivvo/go-sdk/compare/v1.21.2...v1.22.0) (2020-04-21)
+
+
+### Features
+
+* **[RDNG-775]:** revoking and getting revocation status ([c66bc60](https://github.com/Vivvo/go-sdk/commit/c66bc60))
+
+
+
 <a name="1.21.2"></a>
 ## [1.21.2](https://github.com/Vivvo/go-sdk/compare/v1.21.1...v1.21.2) (2020-04-07)
 
