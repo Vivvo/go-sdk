@@ -109,6 +109,7 @@ func (vc *Claim) WalletSign(w *wallet.Wallet, id string, nonce string) (Verifiab
 		Issuer: vc.Issuer,
 		Issued: vc.Issued,
 		Claim:  vc.Claim,
+		CredentialStatus: vc.CredentialStatus,
 	}
 
 	proof := utils.Proof{
