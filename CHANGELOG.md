@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.22.3"></a>
+## [1.22.3](https://github.com/Vivvo/go-sdk/compare/v1.22.2...v1.22.3) (2020-04-22)
+
+
+### Bug Fixes
+
+* **[RDNG-775]:** add credentialStatus to verifiableClaim in WalletSign ([6001400](https://github.com/Vivvo/go-sdk/commit/6001400))
+
+
+
 <a name="1.22.2"></a>
 ## [1.22.2](https://github.com/Vivvo/go-sdk/compare/v1.22.1...v1.22.2) (2020-04-22)
 
