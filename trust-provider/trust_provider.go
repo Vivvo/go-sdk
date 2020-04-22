@@ -377,7 +377,7 @@ func (t *TrustProvider) getRevocationStatus(w http.ResponseWriter, r *http.Reque
 }
 
 func (t *TrustProvider) isRevoked(claim *did.VerifiableClaim, ctx context.Context) (bool, error) {
-	if claim.CredentialStatus.Id != "" {
+	if claim.CredentialStatus.Id == "" {
 		return false, nil
 	}
 	var status Status
