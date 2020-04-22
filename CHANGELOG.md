@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.22.2"></a>
+## [1.22.2](https://github.com/Vivvo/go-sdk/compare/v1.22.1...v1.22.2) (2020-04-22)
+
+
+### Bug Fixes
+
+* **[RDNG-775]:** fix check for empty credentialStatus ID ([995486f](https://github.com/Vivvo/go-sdk/commit/995486f))
+
+
+
 <a name="1.22.1"></a>
 ## [1.22.1](https://github.com/Vivvo/go-sdk/compare/v1.22.0...v1.22.1) (2020-04-22)
 
