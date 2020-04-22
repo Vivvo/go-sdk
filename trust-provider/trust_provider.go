@@ -779,7 +779,14 @@ func (t *TrustProvider) SendVerifiableCredential(claims []string, stringVars map
 	c := make(map[string]interface{})
 	acctJson, _ := json.Marshal(account)
 	json.Unmarshal(acctJson, &c)
-	claim, err := t.GenerateVerifiableClaim(c, subject, token, append([]string{did.VerifiableCredential}, claims...))
+	claim, err := t.CreateVerifiableClaim(VerifiableClaimConfig{
+		Claims:     c,
+		Subject:    subject,
+		Token:      token,
+		Types:      append([]string{did.VerifiableCredential}, claims...),
+		StatusUrl:  onboardingVC.CredentialStatus.Id,
+		StatusType: onboardingVC.CredentialStatus.Type,
+	})
 	if err != nil {
 		logger.Errorf("Problem generating a verifiable credential response", "error", err.Error())
 		return nil, err

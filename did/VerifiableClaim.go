@@ -57,7 +57,7 @@ type VerifiableClaim struct {
 	Issued string                 		`json:"issued"`
 	Claim  map[string]interface{} 		`json:"claim"`
 	Proof  *utils.Proof           		`json:"proof,omitempty"`
-	CredentialStatus CredentialStatus 	`json:"credentialStatus"`
+	CredentialStatus CredentialStatus 	`json:"credentialStatus,omitempty"`
 }
 
 type CredentialStatus struct {
