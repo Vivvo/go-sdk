@@ -28,6 +28,7 @@ const VerifiableCredential = "VerifiableCredential"
 const InviteCredential = "InviteCredential"
 const VerifiedPersonCredential = "VerifiedPersonCredential"
 const BusinessDirectorCredential = "BusinessDirectorCredential"
+const ArticlesOfIncorporationCredential = "ArticlesOfIncorporationCredential"
 
 const AuthenticationChallengeClaim = "challenge"
 const CallbackClaim = "callback"
