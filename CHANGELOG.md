@@ -1,6 +1,10 @@
-# Change Log
+# Changelog
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
+
+### [1.22.5](https://github.com/Vivvo/go-sdk/compare/v1.22.4...v1.22.5) (2020-04-22)
+
+### [1.22.4](https://github.com/Vivvo/go-sdk/compare/v1.22.3...v1.22.4) (2020-04-22)
 
 <a name="1.22.3"></a>
 ## [1.22.3](https://github.com/Vivvo/go-sdk/compare/v1.22.2...v1.22.3) (2020-04-22)

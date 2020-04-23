@@ -479,11 +479,11 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 		status, err := rule.RuleFunc(stringVars, numberVars, boolVars, arrayVars, account)
 		if err != nil {
 			if err.Error() == ErrorOnboardingRequired {
-				utils.WriteJSON(TrustProviderResponse{Status: false, OnBoardingRequired: true}, http.StatusOK, w)
+				utils.WriteJSON(TrustProviderResponse{Status: false, OnBoardingRequired: true}, http.StatusBadRequest, w)
 				return
 			}
 			if err.Error() == ErrorCredentialAlreadySent {
-				utils.WriteJSON(TrustProviderResponse{Status: status}, http.StatusOK, w)
+				utils.WriteJSON(TrustProviderResponse{Status: status}, http.StatusBadRequest, w)
 				return
 			}
 			logger.Error("error: ", err.Error())
