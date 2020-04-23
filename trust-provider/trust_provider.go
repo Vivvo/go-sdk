@@ -305,6 +305,8 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		logger.Infow("checked credential status", "isRevoked", isRevoked)
+
 		if isRevoked {
 			res := TrustProviderResponse{Status: false, OnBoardingRequired: true, Message: "credential is revoked"}
 			utils.WriteJSON(res, http.StatusUnauthorized, w)
@@ -383,7 +385,7 @@ func (t *TrustProvider) isRevoked(claim *did.VerifiableClaim, ctx context.Contex
 	var status Status
 
 	resp, err := utils.Resty(ctx).R().
-		SetResult(status).
+		SetResult(&status).
 		Get(claim.CredentialStatus.Id)
 
 	if err != nil {
