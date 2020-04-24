@@ -63,10 +63,15 @@ type Onboarding struct {
 //    This function should execute the required business logic to ensure that the person having their credential revoked is tied to
 //    an account in your system. The interface{} that is passed into here should be your implementation of an account.
 type Revocation struct {
-	Parameters       []Parameter
-	RevocationFunc   RevocationFunc
+	Parameters           []Parameter
+	ClaimsToRevoke       []string
+	RevocationFunc       RevocationFunc
 	RevocationStatusFunc RevocationStatusFunc
-	RevocationStatusUrl string
+	RevocationStatusUrl  string
+}
+
+type RevocationPayload struct {
+	ClaimsToRevoke []string `json:"claimsToRevoke"`
 }
 
 type ParameterType int
@@ -536,7 +541,7 @@ func (t *TrustProvider) revoke(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if did != "" && pairwiseDid != "" {
-		err = t.RevokeCredential(did, pairwiseDid, r.Context())
+		err = t.RevokeCredential(did, pairwiseDid, t.revocation.ClaimsToRevoke, r.Context())
 		if err != nil {
 			utils.SetErrorStatus(err, http.StatusInternalServerError, w)
 			return
@@ -806,10 +811,13 @@ func (t *TrustProvider) SendVerifiableCredential(claims []string, stringVars map
 	return encryptedVerifiableCredential, nil
 }
 
-func (t *TrustProvider) RevokeCredential(did string, pairwiseDid string, ctx context.Context) error {
+func (t *TrustProvider) RevokeCredential(did string, pairwiseDid string, claimsToRevoke []string, ctx context.Context) error {
 	logger := utils.Logger(ctx)
 	var encryptedCredentialRevocation *wallet.RatchetPayload
-	message := MessageDto{Type: "revocation"}
+
+	revocationPayload := RevocationPayload{ClaimsToRevoke: claimsToRevoke}
+	payloadJson, _ := json.Marshal(revocationPayload)
+	message := MessageDto{Type: "revocation", Payload: string(payloadJson)}
 	m, _ := json.Marshal(message)
 	rp, err := t.Wallet.Messaging().RatchetEncrypt(pairwiseDid, string(m))
 	if err != nil {
