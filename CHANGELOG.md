@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.23.0"></a>
+# [1.23.0](https://github.com/Vivvo/go-sdk/compare/v1.22.7...v1.23.0) (2020-04-24)
+
+
+### Features
+
+* **[RDNG-776]:** claims to revoke ([dbe1799](https://github.com/Vivvo/go-sdk/commit/dbe1799))
+
+
+
 <a name="1.22.7"></a>
 ## [1.22.7](https://github.com/Vivvo/go-sdk/compare/v1.22.6...v1.22.7) (2020-04-23)
 
