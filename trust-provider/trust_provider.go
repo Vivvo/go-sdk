@@ -41,6 +41,7 @@ const CertKey = "tp.key"
 const DataBundlePrivateKey = "DATA_BUNDLE_PRIVATE_KEY"
 
 type OnboardingFunc func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}) (account interface{}, err error, token string)
+type ClaimsFunc func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}, token string) (claims map[string]interface{}, statusUrl string, statusType string, err error)
 type RevocationFunc func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}, wallet *wallet.Wallet) (did string, pairwiseDid string, err error)
 type RevocationStatusFunc func(s map[string]string) (bool, error)
 
@@ -55,8 +56,14 @@ type RevocationStatusFunc func(s map[string]string) (bool, error)
 type Onboarding struct {
 	Parameters           []Parameter
 	Claims               []string
+	Credentials          []CredentialConfig
 	OnboardingFunc       OnboardingFunc
 	VerifiableCredential bool
+}
+
+type CredentialConfig struct {
+	Type   string
+	Claims ClaimsFunc
 }
 
 // RevocationFunc:
@@ -358,14 +365,37 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	var vc *wallet.RatchetPayload
-	if (onboardingVC != nil || stringVars["did"] != "") && len(t.onboarding.Claims) > 0 {
-		vc, err = t.SendVerifiableCredential(t.onboarding.Claims, stringVars, onboardingVC, account, token, pairwiseDoc, r.Context())
-		if err != nil {
-			utils.SendError(err, w)
-			return
+	if onboardingVC != nil || stringVars["did"] != "" {
+		if len(t.onboarding.Claims) > 0 {
+			vc, err = t.SendVerifiableCredential(t.onboarding.Claims, stringVars, onboardingVC, account, token, pairwiseDoc, r.Context())
+			if err != nil {
+				utils.SendError(err, w)
+				return
+			}
+		}
+		if t.onboarding.Credentials != nil && len(t.onboarding.Credentials) > 0{
+			for _, credential := range t.onboarding.Credentials {
+				claims, statusUrl, statusType, err := credential.Claims(stringVars, numberVars, boolVars, arrayVars, token)
+				c, err := t.CreateVerifiableClaim(VerifiableClaimConfig{
+					Claims:     claims,
+					Subject:    stringVars["did"],
+					Token:      token,
+					Types:      []string{credential.Type},
+					StatusUrl:  statusUrl,
+					StatusType: statusType,
+				})
+				if err != nil {
+					utils.SendError(err, w)
+					return
+				}
+				vc, err = t.SendVerifiableCredential(c.Type, stringVars, &c, account, token, pairwiseDoc, r.Context())
+				if err != nil {
+					utils.SendError(err, w)
+					return
+				}
+			}
 		}
 	}
-
 	res := TrustProviderResponse{Status: true, OnBoardingRequired: false, Token: token, VerifiableClaim: vc}
 	utils.WriteJSON(res, http.StatusCreated, w)
 
