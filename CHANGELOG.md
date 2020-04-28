@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.24.0"></a>
+# [1.24.0](https://github.com/Vivvo/go-sdk/compare/v1.23.0...v1.24.0) (2020-04-28)
+
+
+### Features
+
+* **[RDNG-826]:** claimConfig claimsFunc definitions and implementions ([dc0795e](https://github.com/Vivvo/go-sdk/commit/dc0795e))
+
+
+
 <a name="1.23.0"></a>
 # [1.23.0](https://github.com/Vivvo/go-sdk/compare/v1.22.7...v1.23.0) (2020-04-24)
 
