@@ -358,6 +358,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if stringVars["did"] != "" {
+		logger.Infow("found did, attempting to initialize encryption", "did", stringVars["did"])
 		pairwiseDoc, err = t.InitializeEncryption(stringVars, w, pairwiseDoc)
 		if err != nil {
 			utils.SendError(err, w)
@@ -366,6 +367,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 	}
 	var vc *wallet.RatchetPayload
 	if onboardingVC != nil || stringVars["did"] != "" {
+		logger.Infow("found did, attempting to send credentials", "did", stringVars["did"])
 		if len(t.onboarding.Claims) > 0 {
 			vc, err = t.SendVerifiableCredential(t.onboarding.Claims, stringVars, onboardingVC, account, token, pairwiseDoc, r.Context())
 			if err != nil {
@@ -373,9 +375,16 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		if t.onboarding.Credentials != nil && len(t.onboarding.Credentials) > 0{
+		if t.onboarding.Credentials != nil && len(t.onboarding.Credentials) > 0 {
+			logger.Infow("onboarding credentials found, attempting to get claims and send", "numOfCredentials", len(t.onboarding.Credentials))
 			for _, credential := range t.onboarding.Credentials {
+				logger.Infow("attempting to get claims for and send credential", "credential", credential.Type)
 				claims, statusUrl, statusType, err := credential.Claims(stringVars, numberVars, boolVars, arrayVars, token)
+				if err != nil {
+					logger.Errorw("failed to get claims for and send credential", "credential", credential.Type, "error", err.Error())
+					utils.SendError(err, w)
+					return
+				}
 				c, err := t.CreateVerifiableClaim(VerifiableClaimConfig{
 					Claims:     claims,
 					Subject:    stringVars["did"],
@@ -385,11 +394,13 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 					StatusType: statusType,
 				})
 				if err != nil {
+					logger.Errorw("failed to generate verifiable claim", "credential", credential.Type, "error", err.Error())
 					utils.SendError(err, w)
 					return
 				}
 				vc, err = t.SendVerifiableCredential(c.Type, stringVars, &c, account, token, pairwiseDoc, r.Context())
 				if err != nil {
+					logger.Errorw("failed to send verifiable claim", "credential", credential.Type, "error", err.Error())
 					utils.SendError(err, w)
 					return
 				}
