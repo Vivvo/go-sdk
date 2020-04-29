@@ -41,7 +41,7 @@ const CertKey = "tp.key"
 const DataBundlePrivateKey = "DATA_BUNDLE_PRIVATE_KEY"
 
 type OnboardingFunc func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}) (account interface{}, err error, token string)
-type ClaimsFunc func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}, token string) (claims map[string]interface{}, statusUrl string, statusType string, err error)
+type ClaimsFunc func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}, token string, pairwiseDid string) (claims map[string]interface{}, statusUrl string, statusType string, err error)
 type RevocationFunc func(s map[string]string, n map[string]float64, b map[string]bool, i map[string]interface{}, wallet *wallet.Wallet) (did string, pairwiseDid string, err error)
 type RevocationStatusFunc func(s map[string]string) (bool, error)
 
@@ -379,7 +379,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 			logger.Infow("onboarding credentials found, attempting to get claims and send", "numOfCredentials", len(t.onboarding.Credentials))
 			for _, credential := range t.onboarding.Credentials {
 				logger.Infow("attempting to get claims for and send credential", "credential", credential.Type)
-				claims, statusUrl, statusType, err := credential.Claims(stringVars, numberVars, boolVars, arrayVars, token)
+				claims, statusUrl, statusType, err := credential.Claims(stringVars, numberVars, boolVars, arrayVars, token, pairwiseDoc.Id)
 				if err != nil {
 					logger.Errorw("failed to get claims for and send credential", "credential", credential.Type, "error", err.Error())
 					utils.SendError(err, w)
