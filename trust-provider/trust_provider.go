@@ -357,18 +357,19 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if stringVars["did"] != "" {
-		logger.Infow("found did, attempting to initialize encryption", "did", stringVars["did"])
-		pairwiseDoc, err = t.InitializeEncryption(stringVars, w, pairwiseDoc)
-		if err != nil {
-			utils.SendError(err, w)
-			return
-		}
-	}
 	var vc *wallet.RatchetPayload
 	if onboardingVC != nil || stringVars["did"] != "" {
 		logger.Infow("found did, attempting to send credentials", "did", stringVars["did"])
 		if len(t.onboarding.Claims) > 0 {
+			if stringVars["did"] != "" {
+				logger.Infow("found did, attempting to initialize encryption", "did", stringVars["did"])
+				pairwiseDoc, err = t.InitializeEncryption(stringVars, w, pairwiseDoc)
+				if err != nil {
+					utils.SendError(err, w)
+					return
+				}
+			}
+
 			vc, err = t.SendVerifiableCredential(t.onboarding.Claims, stringVars, onboardingVC, account, token, pairwiseDoc, r.Context())
 			if err != nil {
 				utils.SendError(err, w)
@@ -378,8 +379,15 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 		if t.onboarding.Credentials != nil && len(t.onboarding.Credentials) > 0 {
 			logger.Infow("onboarding credentials found, attempting to get claims and send", "numOfCredentials", len(t.onboarding.Credentials))
 			for _, credential := range t.onboarding.Credentials {
+				logger.Infow("found did, attempting to initialize encryption", "did", stringVars["did"])
+				pwDoc, err := t.InitializeEncryption(stringVars, w, pairwiseDoc)
+				if err != nil {
+					utils.SendError(err, w)
+					return
+				}
+
 				logger.Infow("attempting to get claims for and send credential", "credential", credential.Type)
-				claims, statusUrl, statusType, err := credential.Claims(stringVars, numberVars, boolVars, arrayVars, token, pairwiseDoc.Id)
+				claims, statusUrl, statusType, err := credential.Claims(stringVars, numberVars, boolVars, arrayVars, token, pwDoc.Id)
 				if err != nil {
 					logger.Errorw("failed to get claims for and send credential", "credential", credential.Type, "error", err.Error())
 					utils.SendError(err, w)
@@ -398,7 +406,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 					utils.SendError(err, w)
 					return
 				}
-				vc, err = t.IssueVerifiableCredential(stringVars["did"], &c, pairwiseDoc.Id, r.Context())
+				vc, err = t.IssueVerifiableCredential(stringVars["did"], &c, pwDoc.Id, r.Context())
 				if err != nil {
 					logger.Errorw("failed to send verifiable claim", "credential", credential.Type, "error", err.Error())
 					utils.SendError(err, w)
