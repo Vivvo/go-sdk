@@ -389,7 +389,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 					Claims:     claims,
 					Subject:    stringVars["did"],
 					Token:      token,
-					Types:      []string{credential.Type},
+					Types:      []string{did.VerifiableCredential, credential.Type},
 					StatusUrl:  statusUrl,
 					StatusType: statusType,
 				})
@@ -398,7 +398,7 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 					utils.SendError(err, w)
 					return
 				}
-				vc, err = t.SendVerifiableCredential(c.Type, stringVars, &c, account, token, pairwiseDoc, r.Context())
+				vc, err = t.IssueVerifiableCredential(stringVars["did"], &c, pairwiseDoc.Id, r.Context())
 				if err != nil {
 					logger.Errorw("failed to send verifiable claim", "credential", credential.Type, "error", err.Error())
 					utils.SendError(err, w)
@@ -849,6 +849,23 @@ func (t *TrustProvider) SendVerifiableCredential(claims []string, stringVars map
 	rp.Sender = getWalletConfigValue(WalletConfigDID)
 	encryptedVerifiableCredential = rp
 	t.pushNotification(subject, encryptedVerifiableCredential)
+	return encryptedVerifiableCredential, nil
+}
+
+func (t *TrustProvider) IssueVerifiableCredential(subjectDid string, vc *did.VerifiableClaim, pairwiseDid string, ctx context.Context) (*wallet.RatchetPayload, error) {
+	logger := utils.Logger(ctx)
+	logger.Infow("attempting to issue vc", "subjectDid", subjectDid)
+	var encryptedVerifiableCredential *wallet.RatchetPayload
+	claimJson, _ := json.Marshal(vc)
+	message := MessageDto{Type: "credential", Payload: string(claimJson)}
+	m, _ := json.Marshal(message)
+	rp, err := t.Wallet.Messaging().RatchetEncrypt(pairwiseDid, string(m))
+	if err != nil {
+		return nil, err
+	}
+	rp.Sender = getWalletConfigValue(WalletConfigDID)
+	encryptedVerifiableCredential = rp
+	t.pushNotification(subjectDid, encryptedVerifiableCredential)
 	return encryptedVerifiableCredential, nil
 }
 
