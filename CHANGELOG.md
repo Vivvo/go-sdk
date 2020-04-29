@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.24.4"></a>
+## [1.24.4](https://github.com/Vivvo/go-sdk/compare/v1.24.3...v1.24.4) (2020-04-29)
+
+
+### Bug Fixes
+
+* **[RDNG-826]:** init encryption for each cred ([f41f913](https://github.com/Vivvo/go-sdk/commit/f41f913))
+
+
+
 <a name="1.24.3"></a>
 ## [1.24.3](https://github.com/Vivvo/go-sdk/compare/v1.24.2...v1.24.3) (2020-04-29)
 
