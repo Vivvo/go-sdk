@@ -903,9 +903,11 @@ func (t *TrustProvider) InitializeEncryption(s map[string]string, w http.Respons
 		res := TrustProviderResponse{Status: false, OnBoardingRequired: true}
 		utils.WriteJSON(res, http.StatusBadRequest, w)
 	}
-	pairwiseDoc, err = t.createPairwiseDid(t.Wallet, t.resolver)
-	if err != nil {
-		return nil, err
+	if pairwiseDoc != nil {
+		pairwiseDoc, err = t.createPairwiseDid(t.Wallet, t.resolver)
+		if err != nil {
+			return nil, err
+		}
 	}
 	var contactPubkey string
 	for _, k := range contactDoc.PublicKey {
