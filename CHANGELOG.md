@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.24.5"></a>
+## [1.24.5](https://github.com/Vivvo/go-sdk/compare/v1.24.4...v1.24.5) (2020-04-29)
+
+
+### Bug Fixes
+
+* **[RDNG-826]:** check for pairwise before creating new one ([dd8e0c3](https://github.com/Vivvo/go-sdk/commit/dd8e0c3))
+
+
+
 <a name="1.24.4"></a>
 ## [1.24.4](https://github.com/Vivvo/go-sdk/compare/v1.24.3...v1.24.4) (2020-04-29)
 
