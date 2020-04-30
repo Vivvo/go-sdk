@@ -17,11 +17,11 @@ const (
 type ServiceCardTaskStyle string
 
 const (
-	PRIMARY ServiceCardTaskStyle = "PRIMARY"
-	SUCCESS ServiceCardTaskStyle = "SUCCESS"
-	DANGER  ServiceCardTaskStyle = "DANGER"
-	WARNING ServiceCardTaskStyle = "WARNING"
-	INFO    ServiceCardTaskStyle = "INFO"
+	PRIMARY ServiceCardTaskStyle = "primary"
+	SUCCESS ServiceCardTaskStyle = "success"
+	DANGER  ServiceCardTaskStyle = "danger"
+	WARNING ServiceCardTaskStyle = "warning"
+	INFO    ServiceCardTaskStyle = "info"
 )
 
 //Service Card Sub Task Structure
