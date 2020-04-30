@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.24.8"></a>
+## [1.24.8](https://github.com/Vivvo/go-sdk/compare/v1.24.7...v1.24.8) (2020-04-30)
+
+
+### Bug Fixes
+
+* **serviceCardTaskDto:** add Action field to taskDtto ([6c8bcbf](https://github.com/Vivvo/go-sdk/commit/6c8bcbf))
+
+
+
 <a name="1.24.7"></a>
 ## [1.24.7](https://github.com/Vivvo/go-sdk/compare/v1.24.6...v1.24.7) (2020-04-30)
 
