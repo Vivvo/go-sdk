@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.24.11"></a>
+## [1.24.11](https://github.com/Vivvo/go-sdk/compare/v1.24.10...v1.24.11) (2020-05-07)
+
+
+### Bug Fixes
+
+* **trust_provider:** don't init encryption unless claims ([a94f1e6](https://github.com/Vivvo/go-sdk/commit/a94f1e6))
+
+
+
 <a name="1.24.10"></a>
 ## [1.24.10](https://github.com/Vivvo/go-sdk/compare/v1.24.9...v1.24.10) (2020-04-30)
 
