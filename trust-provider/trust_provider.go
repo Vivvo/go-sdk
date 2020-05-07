@@ -839,7 +839,7 @@ func (t *TrustProvider) SendVerifiableCredential(claims []string, stringVars map
 		Claims:     c,
 		Subject:    subject,
 		Token:      token,
-		Types:      append([]string{did.VerifiableCredential}, claims...),
+		Types:      claims,
 		StatusUrl:  onboardingVC.CredentialStatus.Id,
 		StatusType: onboardingVC.CredentialStatus.Type,
 	})
@@ -1015,7 +1015,7 @@ func (t *TrustProvider) CreateVerifiableClaim(config VerifiableClaimConfig) (did
 
 	var claim = did.Claim{
 		Id:     uuid.New().String(),
-		Type:   config.Types,
+		Type:   append([]string{did.VerifiableCredential}, config.Types...),
 		Issuer: id,
 		Issued: time.Now().Format("2006-01-02"),
 		Claim:  config.Claims,
