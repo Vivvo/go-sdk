@@ -548,7 +548,7 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 		// Inside the rule function they can update the account object and we will persist it for them!
 		t.account.Update(account, token)
 
-		if stringVars["did"] != "" {
+		if stringVars["did"] != "" && len(rule.Claims) > 0 {
 			pairwiseDoc, err = t.InitializeEncryption(stringVars, w, pairwiseDoc)
 			if err != nil {
 				utils.SendError(err, w)
