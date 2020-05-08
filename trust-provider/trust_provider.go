@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -376,42 +377,53 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
+
 		if t.onboarding.Credentials != nil && len(t.onboarding.Credentials) > 0 {
 			logger.Infow("onboarding credentials found, attempting to get claims and send", "numOfCredentials", len(t.onboarding.Credentials))
+			c := make(chan error)
+			var wg sync.WaitGroup
+			wg.Add(len(t.onboarding.Credentials))
 			for _, credential := range t.onboarding.Credentials {
-				logger.Infow("found did, attempting to initialize encryption", "did", stringVars["did"])
-				pwDoc, err := t.InitializeEncryption(stringVars, w, pairwiseDoc)
-				if err != nil {
-					utils.SendError(err, w)
-					return
-				}
-
-				logger.Infow("attempting to get claims for and send credential", "credential", credential.Type)
-				claims, statusUrl, statusType, err := credential.Claims(stringVars, numberVars, boolVars, arrayVars, token, pwDoc.Id)
-				if err != nil {
-					logger.Errorw("failed to get claims for and send credential", "credential", credential.Type, "error", err.Error())
-					utils.SendError(err, w)
-					return
-				}
-				c, err := t.CreateVerifiableClaim(VerifiableClaimConfig{
-					Claims:     claims,
-					Subject:    stringVars["did"],
-					Token:      token,
-					Types:      []string{did.VerifiableCredential, credential.Type},
-					StatusUrl:  statusUrl,
-					StatusType: statusType,
-				})
-				if err != nil {
-					logger.Errorw("failed to generate verifiable claim", "credential", credential.Type, "error", err.Error())
-					utils.SendError(err, w)
-					return
-				}
-				vc, err = t.IssueVerifiableCredential(stringVars["did"], &c, pwDoc.Id, r.Context())
-				if err != nil {
-					logger.Errorw("failed to send verifiable claim", "credential", credential.Type, "error", err.Error())
-					utils.SendError(err, w)
-					return
-				}
+				go func(cred CredentialConfig, ch chan error, wg sync.WaitGroup) {
+					defer wg.Done()
+					logger.Infow("found did, attempting to initialize encryption", "did", stringVars["did"])
+					pwDoc, err := t.InitializeEncryption(stringVars, w, pairwiseDoc)
+					if err != nil {
+						ch <- err
+						return
+					}
+					logger.Infow("attempting to get claims for and send credential", "credential", credential.Type)
+					claims, statusUrl, statusType, err := credential.Claims(stringVars, numberVars, boolVars, arrayVars, token, pwDoc.Id)
+					if err != nil {
+						logger.Errorw("failed to get claims for and send credential", "credential", credential.Type, "error", err.Error())
+						ch <- err
+						return
+					}
+					c, err := t.CreateVerifiableClaim(VerifiableClaimConfig{
+						Claims:     claims,
+						Subject:    stringVars["did"],
+						Token:      token,
+						Types:      []string{did.VerifiableCredential, credential.Type},
+						StatusUrl:  statusUrl,
+						StatusType: statusType,
+					})
+					if err != nil {
+						logger.Errorw("failed to generate verifiable claim", "credential", credential.Type, "error", err.Error())
+						ch <- err
+						return
+					}
+					vc, err = t.IssueVerifiableCredential(stringVars["did"], &c, pwDoc.Id, r.Context())
+					if err != nil {
+						logger.Errorw("failed to send verifiable claim", "credential", credential.Type, "error", err.Error())
+						ch <- err
+						return
+					}
+				}(credential, c, wg)
+			}
+			wg.Wait()
+			select {
+			case err := <-c:
+				utils.SendError(err, w)
 			}
 		}
 	}
