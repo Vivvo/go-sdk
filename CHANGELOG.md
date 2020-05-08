@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.24.15](https://github.com/Vivvo/go-sdk/compare/v1.24.14...v1.24.15) (2020-05-08)
+
+
+### Bug Fixes
+
+* remove wait group, just fire and forget creds for demo ([0a95fa7](https://github.com/Vivvo/go-sdk/commit/0a95fa7aec07288f38f90a35ae2463511f06401e))
+
 ### [1.24.14](https://github.com/Vivvo/go-sdk/compare/v1.24.13...v1.24.14) (2020-05-08)
 
 ### [1.24.13](https://github.com/Vivvo/go-sdk/compare/v1.24.12...v1.24.13) (2020-05-08)
