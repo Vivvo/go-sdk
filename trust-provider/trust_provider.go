@@ -23,7 +23,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -381,11 +380,13 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 		if t.onboarding.Credentials != nil && len(t.onboarding.Credentials) > 0 {
 			logger.Infow("onboarding credentials found, attempting to get claims and send", "numOfCredentials", len(t.onboarding.Credentials))
 			c := make(chan error)
-			var wg sync.WaitGroup
-			wg.Add(len(t.onboarding.Credentials))
+			//var wg sync.WaitGroup
+			//wg.Add(len(t.onboarding.Credentials))
+
 			for _, credential := range t.onboarding.Credentials {
-				go func(cred CredentialConfig, ch chan error, wg sync.WaitGroup) {
-					defer wg.Done()
+				go func(cred CredentialConfig, ch chan error) {
+					startTime := time.Now()
+					defer log.Printf("endTime: %s", time.Now().Sub(startTime))
 					logger.Infow("found did, attempting to initialize encryption", "did", stringVars["did"])
 					pwDoc, err := t.InitializeEncryption(stringVars, w, pairwiseDoc)
 					if err != nil {
@@ -418,13 +419,13 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 						ch <- err
 						return
 					}
-				}(credential, c, wg)
+				}(credential, c)
 			}
-			wg.Wait()
-			select {
-			case err := <-c:
-				utils.SendError(err, w)
-			}
+			//wg.Wait()
+			//select {
+			//case err := <-c:
+			//	utils.SendError(err, w)
+			//}
 		}
 	}
 	res := TrustProviderResponse{Status: true, OnBoardingRequired: false, Token: token, VerifiableClaim: vc}
