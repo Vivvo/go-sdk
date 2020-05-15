@@ -292,9 +292,16 @@ func (t *TrustProvider) ListenAndServeTLS(hostname string) error {
 }
 
 func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
-
 	logger := utils.Logger(r.Context())
 
+	if t.onboarding.OnboardingFunc == nil {
+		err := errors.New("TrustProvider.onboarding.OnboardingFunc not implemented!")
+		logger.Error(err)
+		utils.SetErrorStatus(err, http.StatusInternalServerError, w)
+		return
+	}
+
+	// parse the onboarding body hydrated via form input, identity-server, or an encrypted VC
 	err, onboardingVC, pairwiseDoc, stringVars, numberVars, boolVars, arrayVars := t.parseRequestBody(w, r, t.onboarding.Parameters, t.onboarding.VerifiableCredential)
 	if err != nil {
 		res := TrustProviderResponse{Status: false, OnBoardingRequired: true, Message: err.Error()}
@@ -302,14 +309,8 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if t.onboarding.OnboardingFunc == nil {
-		err := errors.New("TrustProvider.onboarding.OnboardingFunc not implemented!")
-		logger.Errorf("TrustProvider.onboarding.OnboardingFunc not implemented!")
-		utils.SetErrorStatus(err, http.StatusInternalServerError, w)
-		return
-	}
-
 	if onboardingVC != nil {
+		// if onboarded with a VC, check revocation
 		isRevoked, err := t.isRevoked(onboardingVC, r.Context())
 		if err != nil {
 			res := TrustProviderResponse{Status: false, OnBoardingRequired: true, Message: err.Error()}
@@ -326,8 +327,8 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// call the adapters defined onboarding func
 	account, err, token := t.onboarding.OnboardingFunc(stringVars, numberVars, boolVars, arrayVars)
-	//log.Print("Account - ", account)
 	if err != nil {
 		if e, ok := err.(TrustProviderErrorResponse); ok {
 			res := TrustProviderResponse{
@@ -345,11 +346,14 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// if no token was returned from adapter onboarding func, we'll generate one
+	// token is simply the unique identifier that the adapter will use to identify its accounts
 	if token == "" {
 		token = uuid.New().String()
 		log.Printf("[INFO] Created token for user: %s", token)
 	}
 
+	// save the newly onboarded account
 	err = t.account.Update(account, token)
 	if err != nil {
 		res := TrustProviderResponse{Status: false, OnBoardingRequired: true}
@@ -358,79 +362,70 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var vc *wallet.RatchetPayload
-	if onboardingVC != nil || stringVars["did"] != "" {
-		logger.Infow("found did, attempting to send credentials", "did", stringVars["did"])
-		if len(t.onboarding.Claims) > 0 {
-			if stringVars["did"] != "" {
-				logger.Infow("found did, attempting to initialize encryption", "did", stringVars["did"])
-				pairwiseDoc, err = t.InitializeEncryption(stringVars, w, pairwiseDoc)
-				if err != nil {
-					utils.SendError(err, w)
-					return
-				}
-			}
+	if len(t.onboarding.Claims) > 0 || len(t.onboarding.Credentials) > 0 {
+		// the adapter would like to issue a VC to DID users
+		var subject string
+		if onboardingVC != nil {
+			// grab subject from onboarding VC
+			subject = onboardingVC.Claim[did.SubjectClaim].(string)
+		} else if stringVars["did"] != "" {
+			// grab subject from hydrated did
+			subject = stringVars["did"]
+		}
 
-			vc, err = t.SendVerifiableCredential(t.onboarding.Claims, stringVars, onboardingVC, account, token, pairwiseDoc, r.Context())
+		if len(t.onboarding.Claims) > 0 {
+			pairwiseDoc, err := t.InitializeEncryption(stringVars, pairwiseDoc)
+			if err != nil {
+				utils.SendError(err, w)
+				return
+			}
+			vc, err = t.SendVerifiableCredential(t.onboarding.Claims, subject, account, token, pairwiseDoc, r.Context())
 			if err != nil {
 				utils.SendError(err, w)
 				return
 			}
 		}
 
-		if t.onboarding.Credentials != nil && len(t.onboarding.Credentials) > 0 {
-			logger.Infow("onboarding credentials found, attempting to get claims and send", "numOfCredentials", len(t.onboarding.Credentials))
-			c := make(chan error)
-			//var wg sync.WaitGroup
-			//wg.Add(len(t.onboarding.Credentials))
-
-			for _, credential := range t.onboarding.Credentials {
-				go func(cred CredentialConfig, ch chan error) {
-					startTime := time.Now()
-					defer log.Printf("endTime: %s", time.Now().Sub(startTime))
-					logger.Infow("found did, attempting to initialize encryption", "did", stringVars["did"])
-					pwDoc, err := t.InitializeEncryption(stringVars, w, pairwiseDoc)
+		if len(t.onboarding.Credentials) > 0 {
+			go func() {
+				// spin off new thread because this takes a long time & causes timeouts
+				for _, cred := range t.onboarding.Credentials {
+					// initialize a new encryption every time because the did that identity-server hydrates
+					// most likely is not the actual pairwise did for this adapter
+					// therefore we'll send to a new pairwise and the phone will use its public did to decrypt
+					pairwiseDoc, err := t.InitializeEncryption(stringVars, pairwiseDoc)
 					if err != nil {
-						ch <- err
+						log.Printf("error initializing encryption during onboarding credentia: %s", err.Error())
 						return
 					}
-					logger.Infow("attempting to get claims for and send credential", "credential", credential.Type)
-					claims, statusUrl, statusType, err := credential.Claims(stringVars, numberVars, boolVars, arrayVars, token, pwDoc.Id)
+					claims, statusUrl, statusType, err := cred.Claims(stringVars, numberVars, boolVars, arrayVars, token, pairwiseDoc.Id)
 					if err != nil {
-						logger.Errorw("failed to get claims for and send credential", "credential", credential.Type, "error", err.Error())
-						ch <- err
+						logger.Errorw("failed to get claims for and send credential", "credential", cred.Type, "error", err.Error())
 						return
 					}
 					c, err := t.CreateVerifiableClaim(VerifiableClaimConfig{
 						Claims:     claims,
-						Subject:    stringVars["did"],
+						Subject:    subject,
 						Token:      token,
-						Types:      []string{did.VerifiableCredential, credential.Type},
+						Types:      []string{cred.Type},
 						StatusUrl:  statusUrl,
 						StatusType: statusType,
 					})
 					if err != nil {
-						logger.Errorw("failed to generate verifiable claim", "credential", credential.Type, "error", err.Error())
-						ch <- err
+						logger.Errorw("failed to generate verifiable claim", "credential", cred.Type, "error", err.Error())
 						return
 					}
-					vc, err = t.IssueVerifiableCredential(stringVars["did"], &c, pwDoc.Id, r.Context())
+					vc, err = t.IssueVerifiableCredential(subject, &c, pairwiseDoc.Id, r.Context())
 					if err != nil {
-						logger.Errorw("failed to send verifiable claim", "credential", credential.Type, "error", err.Error())
-						ch <- err
+						logger.Errorw("failed to send verifiable claim", "credential", cred.Type, "error", err.Error())
 						return
 					}
-				}(credential, c)
-			}
-			//wg.Wait()
-			//select {
-			//case err := <-c:
-			//	utils.SendError(err, w)
-			//}
+				}
+			}()
 		}
 	}
 	res := TrustProviderResponse{Status: true, OnBoardingRequired: false, Token: token, VerifiableClaim: vc}
 	utils.WriteJSON(res, http.StatusCreated, w)
-
 }
 
 func (t *TrustProvider) getRevocationStatus(w http.ResponseWriter, r *http.Request) {
@@ -527,7 +522,7 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 
 		logger := utils.Logger(r.Context())
 
-		err, onboardingVC, pairwiseDoc, stringVars, numberVars, boolVars, arrayVars := t.parseRequestBody(w, r, rule.Parameters, rule.VerifiableCredential)
+		err, _, pairwiseDoc, stringVars, numberVars, boolVars, arrayVars := t.parseRequestBody(w, r, rule.Parameters, rule.VerifiableCredential)
 		if err != nil {
 			utils.WriteJSON(TrustProviderResponse{Status: false, OnBoardingRequired: true}, http.StatusBadRequest, w)
 			return
@@ -562,14 +557,14 @@ func (t *TrustProvider) handleRule(rule Rule) http.HandlerFunc {
 		t.account.Update(account, token)
 
 		if stringVars["did"] != "" && len(rule.Claims) > 0 {
-			pairwiseDoc, err = t.InitializeEncryption(stringVars, w, pairwiseDoc)
+			pairwiseDoc, err = t.InitializeEncryption(stringVars, pairwiseDoc)
 			if err != nil {
 				utils.SendError(err, w)
 				return
 			}
 		}
 		if status && stringVars["did"] != "" && len(rule.Claims) > 0 {
-			_, err = t.SendVerifiableCredential(rule.Claims, stringVars, onboardingVC, account, token, pairwiseDoc, r.Context())
+			_, err = t.SendVerifiableCredential(rule.Claims, stringVars["did"], account, token, pairwiseDoc, r.Context())
 			if err != nil {
 				utils.SendError(err, w)
 				return
@@ -834,60 +829,47 @@ func (t *TrustProvider) parseRequestBody(w http.ResponseWriter, r *http.Request,
 	return err, onboardingVC, pairwiseDoc, stringVars, numberVars, boolVars, arrayVars
 }
 
-func (t *TrustProvider) SendVerifiableCredential(claims []string, stringVars map[string]string, onboardingVC *did.VerifiableClaim, account interface{}, token string, pairwiseDoc *did.Document, ctx context.Context) (*wallet.RatchetPayload, error) {
+func (t *TrustProvider) SendVerifiableCredential(claims []string, subject string, account interface{}, token string, pairwiseDoc *did.Document, ctx context.Context) (*wallet.RatchetPayload, error) {
 	logger := utils.Logger(ctx)
-
-	var encryptedVerifiableCredential *wallet.RatchetPayload
-
-	var subject string
-	if stringVars["did"] != "" {
-		subject = stringVars["did"]
-	} else {
-		subject = onboardingVC.Claim[did.SubjectClaim].(string)
-	}
 	c := make(map[string]interface{})
 	acctJson, _ := json.Marshal(account)
-	json.Unmarshal(acctJson, &c)
-	claim, err := t.CreateVerifiableClaim(VerifiableClaimConfig{
-		Claims:     c,
-		Subject:    subject,
-		Token:      token,
-		Types:      claims,
-		StatusUrl:  onboardingVC.CredentialStatus.Id,
-		StatusType: onboardingVC.CredentialStatus.Type,
-	})
+	err := json.Unmarshal(acctJson, &c)
+	if err != nil {
+		logger.Errorf("Problem unmarshalling account to claims", "error", err.Error())
+		return nil, err
+	}
+	claim, err := t.GenerateVerifiableClaim(c, subject, token, append([]string{did.VerifiableCredential}, claims...))
 	if err != nil {
 		logger.Errorf("Problem generating a verifiable credential response", "error", err.Error())
 		return nil, err
 	}
-	claimJson, _ := json.Marshal(claim)
-	message := MessageDto{Type: "credential", Payload: string(claimJson)}
-	m, _ := json.Marshal(message)
-	rp, err := t.Wallet.Messaging().RatchetEncrypt(pairwiseDoc.Id, string(m))
-	if err != nil {
-		return nil, err
-	}
-	rp.Sender = getWalletConfigValue(WalletConfigDID)
-	encryptedVerifiableCredential = rp
-	t.pushNotification(subject, encryptedVerifiableCredential)
-	return encryptedVerifiableCredential, nil
+
+	return t.IssueVerifiableCredential(subject, &claim, pairwiseDoc.Id, ctx)
 }
 
 func (t *TrustProvider) IssueVerifiableCredential(subjectDid string, vc *did.VerifiableClaim, pairwiseDid string, ctx context.Context) (*wallet.RatchetPayload, error) {
 	logger := utils.Logger(ctx)
 	logger.Infow("attempting to issue vc", "subjectDid", subjectDid)
-	var encryptedVerifiableCredential *wallet.RatchetPayload
-	claimJson, _ := json.Marshal(vc)
-	message := MessageDto{Type: "credential", Payload: string(claimJson)}
-	m, _ := json.Marshal(message)
+
+	claimJson, err := json.Marshal(vc)
+	if err != nil {
+		return nil, errors.Wrap(err, "error while marshaling vc")
+	}
+
+	message := &MessageDto{Type: "credential", Payload: string(claimJson)}
+	m, err := json.Marshal(message)
+	if err != nil {
+		return nil, errors.Wrap(err, "error while marshaling message")
+	}
+
 	rp, err := t.Wallet.Messaging().RatchetEncrypt(pairwiseDid, string(m))
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "error while ratchet encrypting")
 	}
+
 	rp.Sender = getWalletConfigValue(WalletConfigDID)
-	encryptedVerifiableCredential = rp
-	t.pushNotification(subjectDid, encryptedVerifiableCredential)
-	return encryptedVerifiableCredential, nil
+	err = t.pushNotification(subjectDid, rp)
+	return rp, errors.Wrap(err, "error while sending push notification")
 }
 
 func (t *TrustProvider) RevokeCredential(did string, pairwiseDid string, claimsToRevoke []string, ctx context.Context) error {
@@ -909,33 +891,30 @@ func (t *TrustProvider) RevokeCredential(did string, pairwiseDid string, claimsT
 	return nil
 }
 
-func (t *TrustProvider) InitializeEncryption(s map[string]string, w http.ResponseWriter, pairwiseDoc *did.Document) (*did.Document, error) {
+func (t *TrustProvider) InitializeEncryption(s map[string]string, pairwiseDoc *did.Document) (*did.Document, error) {
 	messaging := t.Wallet.Messaging()
 	contactDoc, err := t.resolver.Resolve(s["did"])
 	if err != nil {
-		res := TrustProviderResponse{Status: false, OnBoardingRequired: true}
-		utils.WriteJSON(res, http.StatusBadRequest, w)
+		return nil, errors.Wrapf(err, "InitializeEncryption: unable to resolve contact did %s", s["did"])
 	}
 	if pairwiseDoc == nil {
 		pairwiseDoc, err = t.createPairwiseDid(t.Wallet, t.resolver)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "InitializeEncryption: unable to create a pairwiseDid did")
 		}
 	}
 	var contactPubkey string
 	for _, k := range contactDoc.PublicKey {
 		if k.T == wallet.TypeEd25519KeyExchange2018 {
 			contactPubkey = k.PublicKeyBase58
+			break
 		}
 	}
 	if contactPubkey == "" {
 		return nil, errors.New("no ed25519 exchange key found")
 	}
 	err = messaging.InitDoubleRatchet(pairwiseDoc.Id, contactPubkey)
-	if err != nil {
-		return nil, err
-	}
-	return pairwiseDoc, nil
+	return pairwiseDoc, err
 }
 
 func (t *TrustProvider) isDoubleRatchetEncrypted(b map[string]interface{}) bool {
@@ -945,8 +924,7 @@ func (t *TrustProvider) isDoubleRatchetEncrypted(b map[string]interface{}) bool 
 func (t *TrustProvider) pushNotification(subject string, vc *wallet.RatchetPayload) error {
 	ddoc, err := t.resolver.Resolve(subject)
 	if err != nil {
-		log.Println(err.Error())
-		return err
+		return fmt.Errorf("failed to resolve subject for push notification: %w", err)
 	}
 
 	for _, s := range ddoc.Service {
@@ -994,7 +972,7 @@ func (t *TrustProvider) parseVerifiableCredential(body interface{}, logger *zap.
 	}
 
 	if !containsType(cred.Type, did.IAmMeCredential) {
-		//TODO:  only accept verifiable credentials from issuers we TrustProvider!
+		//TODO:  only accept verifiable credentials from issuers we trust!
 	}
 
 	return vc, ve
