@@ -353,12 +353,14 @@ func (t *TrustProvider) register(w http.ResponseWriter, r *http.Request) {
 		log.Printf("[INFO] Created token for user: %s", token)
 	}
 
-	// save the newly onboarded account
-	err = t.account.Update(account, token)
-	if err != nil {
-		res := TrustProviderResponse{Status: false, OnBoardingRequired: true}
-		utils.WriteJSON(res, http.StatusInternalServerError, w)
-		return
+	if account != nil {
+		// save the newly onboarded account
+		err = t.account.Update(account, token)
+		if err != nil {
+			res := TrustProviderResponse{Status: false, OnBoardingRequired: true}
+			utils.WriteJSON(res, http.StatusInternalServerError, w)
+			return
+		}
 	}
 
 	var vc *wallet.RatchetPayload
