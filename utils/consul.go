@@ -1,7 +1,9 @@
 package utils
 
 import (
+	"context"
 	"fmt"
+	"github.com/Vivvo/language-service/utils"
 	"github.com/hashicorp/consul/api"
 	"log"
 	"math/rand"
@@ -63,6 +65,9 @@ func (c *ConsulService) filterByUntagged(services []*api.ServiceEntry) []*api.Se
 }
 
 func (c *ConsulService) GetService(service string, _tag ...string) string {
+	logger := utils.Logger(context.Background())
+	logger.Debugf("ConsulService GetService service %s, _tag [%v]", service, _tag)
+
 	var tag string
 	if len(_tag) > 0 && _tag[0] != "" {
 		tag = _tag[0]
@@ -73,8 +78,10 @@ func (c *ConsulService) GetService(service string, _tag ...string) string {
 		}
 	}
 
+	logger.Debugf("GetService resolved tag is %s", tag)
 	var newHost string
 	if tag == "" {
+		logger.Debug("Tag was blank, looking up via consul health api")
 		services, _, err := c.health.Service(service, tag, true, nil)
 		if err != nil {
 			log.Println("Error looking up service in consul", "errorMsg", err.Error(), "service", service)
@@ -112,7 +119,7 @@ func (c *ConsulService) GetService(service string, _tag ...string) string {
 		newHost = fmt.Sprintf("%s:%d", addrs[0].Target, addrs[0].Port)
 	}
 
-	log.Println("Remapping host", "service", service, "serviceMapping", newHost)
+	logger.Debugf("Remapping service %s to %s", service, newHost)
 
 	return newHost
 }
