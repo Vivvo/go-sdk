@@ -3,7 +3,6 @@ package utils
 import (
 	"context"
 	"fmt"
-	"github.com/Vivvo/language-service/utils"
 	"github.com/hashicorp/consul/api"
 	"log"
 	"math/rand"
@@ -65,7 +64,7 @@ func (c *ConsulService) filterByUntagged(services []*api.ServiceEntry) []*api.Se
 }
 
 func (c *ConsulService) GetService(service string, _tag ...string) string {
-	logger := utils.Logger(context.Background())
+	logger := Logger(context.Background())
 	logger.Debugf("ConsulService GetService service %s, _tag [%v]", service, _tag)
 
 	var tag string
