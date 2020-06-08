@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.24.21"></a>
+## [1.24.21](https://github.com/Vivvo/go-sdk/compare/v1.24.20...v1.24.21) (2020-06-08)
+
+
+### Bug Fixes
+
+* **logger:** in consul.go use the proper logger ([b3bc8ce](https://github.com/Vivvo/go-sdk/commit/b3bc8ce))
+
+
+
 <a name="1.24.20"></a>
 ## [1.24.20](https://github.com/Vivvo/go-sdk/compare/v1.24.19...v1.24.20) (2020-06-08)
 
