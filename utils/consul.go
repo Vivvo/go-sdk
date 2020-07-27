@@ -105,13 +105,16 @@ func (c *ConsulService) GetService(service string, _tag ...string) string {
 		// K8s Lookup
 		_, addrs, err := net.LookupSRV("", "", fmt.Sprintf("_https._tcp.%s.%s.svc.cluster.local", service, tag))
 		if err != nil || len(addrs) == 0 {
-			log.Println("No matching srv record found. Falling back to Consul lookup", "service", service)
-
-			// Consul Lookup
-			_, addrs, err = net.LookupSRV(service, tag, "service.consul")
+			_, addrs, err = net.LookupSRV("", "", fmt.Sprintf("%s.%s.svc.cluster.local", service, tag)) // try more generic lookup
 			if err != nil || len(addrs) == 0 {
-				log.Println("No matching srv record found.", "service", service)
-				return service
+				log.Println("No matching srv record found. Falling back to Consul lookup", "service", service)
+
+				// Consul Lookup
+				_, addrs, err = net.LookupSRV(service, tag, "service.consul")
+				if err != nil || len(addrs) == 0 {
+					log.Println("No matching srv record found.", "service", service)
+					return service
+				}
 			}
 		}
 
