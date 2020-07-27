@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.24.22"></a>
+## [1.24.22](https://github.com/Vivvo/go-sdk/compare/v1.24.21...v1.24.22) (2020-07-27)
+
+
+### Bug Fixes
+
+* **dns:** added a generic k8s dns lookup before falling back to consul ([67aa804](https://github.com/Vivvo/go-sdk/commit/67aa804))
+
+
+
 <a name="1.24.21"></a>
 ## [1.24.21](https://github.com/Vivvo/go-sdk/compare/v1.24.20...v1.24.21) (2020-06-08)
 
