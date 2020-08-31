@@ -106,6 +106,10 @@ func RetrieveCaCertificate(request SignRequest) []byte {
 
 		//Public key
 		certOut, err := os.Create("ca.crt")
+		if err != nil {
+			log.Printf("Error creating ca.crt, error: %s", err.Error())
+		}
+
 		pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: caCert.Certificate})
 
 		certOut.Close()
