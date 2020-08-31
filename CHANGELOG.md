@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+<a name="1.24.23"></a>
+## [1.24.23](https://github.com/Vivvo/go-sdk/compare/v1.24.22...v1.24.23) (2020-08-31)
+
+
+### Bug Fixes
+
+* Handle error creating ca.cert ([f138a02](https://github.com/Vivvo/go-sdk/commit/f138a02))
+
+
+
 <a name="1.24.22"></a>
 ## [1.24.22](https://github.com/Vivvo/go-sdk/compare/v1.24.21...v1.24.22) (2020-07-27)
 
