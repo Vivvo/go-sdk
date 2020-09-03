@@ -4,7 +4,7 @@ go 1.14
 
 require (
 	github.com/Vivvo/go-wallet v1.2.4
-	github.com/Vivvo/vivvo-go-common v0.1.18
+	github.com/Vivvo/vivvo-go-common v0.1.19
 	github.com/apex/log v1.9.0
 	github.com/armon/go-metrics v0.3.4 // indirect
 	github.com/btcsuite/btcutil v1.0.2
