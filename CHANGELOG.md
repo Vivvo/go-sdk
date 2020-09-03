@@ -2,6 +2,8 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.24.26](https://github.com/Vivvo/go-sdk/compare/v1.24.25...v1.24.26) (2020-09-03)
+
 ### [1.24.25](https://github.com/Vivvo/go-sdk/compare/v1.24.24...v1.24.25) (2020-09-03)
 
 
