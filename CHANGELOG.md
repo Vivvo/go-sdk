@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.24.25](https://github.com/Vivvo/go-sdk/compare/v1.24.24...v1.24.25) (2020-09-03)
+
+
+### Bug Fixes
+
+* consul cleanup ([d96d2fb](https://github.com/Vivvo/go-sdk/commit/d96d2fb2c59be2b6f133ffe759edb80e7c47c848))
+
 ### [1.24.24](https://github.com/Vivvo/go-sdk/compare/v1.24.23...v1.24.24) (2020-09-03)
 
 <a name="1.24.23"></a>
