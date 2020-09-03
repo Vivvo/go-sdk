@@ -3,6 +3,7 @@ package utils
 import (
 	"context"
 	"fmt"
+	vivvoConsul "github.com/Vivvo/vivvo-go-common/consul"
 	"github.com/hashicorp/consul/api"
 	"log"
 	"math/rand"
@@ -24,25 +25,9 @@ type ConsulService struct {
 	rng    *rand.Rand
 }
 
-func NewConsulService(address string) (ConsulServiceInterface, error) {
+func NewConsulService(address ...string) (ConsulServiceInterface, error) {
 	service := ConsulService{}
-	client, err := api.NewClient(&api.Config{Address: address})
-	if err == nil {
-		service.health = client.Health()
-
-		s := rand.NewSource(time.Now().Unix())
-		service.rng = rand.New(s)
-	}
-
-	return &service, err
-}
-
-func NewConsulTLSService() (ConsulServiceInterface, error) {
-	service := ConsulService{}
-	client, err := api.NewClient(&api.Config{
-		Address:   "https://consul-consul-server.sd.svc.cluster.local:8501",
-		TLSConfig: api.TLSConfig{InsecureSkipVerify: true},
-	})
+	client, err := vivvoConsul.GetClient(address...)
 	if err == nil {
 		service.health = client.Health()
 

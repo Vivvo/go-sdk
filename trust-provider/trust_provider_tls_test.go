@@ -166,7 +166,7 @@ func setupEnvironment(port int, commonName string) {
 func setup() {
 	cleanup()
 
-	consul, err := utils.NewConsulService(os.Getenv("CONSUL_HTTP_ADDR") + ":8500")
+	consul, err := utils.NewConsulService()
 	if err != nil {
 		panic(err)
 	}

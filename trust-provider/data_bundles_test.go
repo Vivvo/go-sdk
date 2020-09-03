@@ -20,7 +20,7 @@ type MockDataBundle struct {
 }
 
 func setupMockIdentityServer() string {
-	c, _ := utils.NewConsulTLSService()
+	c, _ := utils.NewConsulService()
 	utils.InitResty(c)
 	mockIdentityServer := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		if strings.Contains(r.URL.Path, "publicKeys") {
